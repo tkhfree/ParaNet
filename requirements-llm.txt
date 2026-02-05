@@ -1,0 +1,15 @@
+# ParaNet - LLM Integration Dependencies
+# Install: pip install -r requirements-llm.txt
+
+-r requirements.txt
+
+# LangChain Core
+langchain>=0.1.0
+langchain-core>=0.1.0
+
+# LLM Providers
+langchain-anthropic>=0.1.0
+langchain-openai>=0.1.0
+
+# LangGraph for Agent orchestration
+langgraph>=0.0.20

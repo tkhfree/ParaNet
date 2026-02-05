@@ -1,0 +1,104 @@
+.container {
+  min-height: 100%;
+}
+
+.healthStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.healthItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.label {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+}
+
+.statusDot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #52c41a;
+  }
+  
+  &[data-status="success"]::before {
+    background: #52c41a;
+  }
+  
+  &[data-status="warning"]::before {
+    background: #faad14;
+  }
+  
+  &[data-status="error"]::before {
+    background: #ff4d4f;
+  }
+}
+
+.alertList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.alertItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.alertContent {
+  flex: 1;
+}
+
+.alertTitle {
+  color: rgba(0, 0, 0, 0.85);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.alertTime {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.quickAction {
+  text-align: center;
+  cursor: pointer;
+  
+  :global {
+    .ant-card-body {
+      padding: 24px 16px;
+    }
+  }
+}
+
+.quickIcon {
+  font-size: 32px;
+  color: #1890ff;
+  margin-bottom: 8px;
+}

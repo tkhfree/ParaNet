@@ -1,0 +1,33 @@
+.ant-descriptions {
+  &&-bordered &-view {
+    border: none;
+    border-bottom: 0.5px solid @bgGapColor;
+  }
+
+  &&-bordered &-row {
+    border: 0.5px solid @bgGapColor;
+  }
+
+  &&-bordered &-item-label {
+    border-inline-end: 0.5px solid @bgGapColor !important;
+    font-weight: 500;
+  }
+
+  &&-bordered &-item-content {
+    border-left: 0.5px solid @bgGapColor;
+  }
+
+  &&-bordered &-item {
+    &-label,
+    &-content {
+      padding: 10.5px 16px !important;
+      color: @colorText !important;
+    }
+  }
+
+  &-view {
+    table {
+      table-layout: fixed !important;
+    }
+  }
+}

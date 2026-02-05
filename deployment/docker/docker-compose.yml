@@ -1,0 +1,67 @@
+# ParaNet Docker Compose Configuration
+# Development and testing environment
+
+version: '3.8'
+
+services:
+  # ParaNet Controller
+  paranet:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    container_name: paranet-controller
+    ports:
+      - "8000:8000"
+    environment:
+      - PARANET_ENV=development
+      - REDIS_HOST=redis
+      - LOG_LEVEL=INFO
+    volumes:
+      - ../../paranet:/app/paranet:ro
+      - ../../dsl:/app/dsl:ro
+    depends_on:
+      - redis
+    networks:
+      - paranet-network
+
+  # Redis for state storage
+  redis:
+    image: redis:7-alpine
+    container_name: paranet-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - paranet-network
+
+  # NFD node for NDN testing
+  nfd:
+    image: named-data/nfd:latest
+    container_name: paranet-nfd
+    ports:
+      - "6363:6363"
+      - "6363:6363/udp"
+    networks:
+      - paranet-network
+    profiles:
+      - ndn
+
+  # BMv2 for P4 testing
+  bmv2:
+    image: p4lang/behavioral-model:latest
+    container_name: paranet-bmv2
+    ports:
+      - "9090:9090"  # P4Runtime
+      - "50051:50051"  # gRPC
+    networks:
+      - paranet-network
+    profiles:
+      - p4
+
+volumes:
+  redis-data:
+
+networks:
+  paranet-network:
+    driver: bridge

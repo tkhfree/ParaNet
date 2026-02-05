@@ -1,0 +1,37 @@
+.ant-steps {
+  &-item {
+    &-finish &-icon {
+      border: 2px solid @colorPrimary !important;
+      background: url('../icons/check.svg?url') center no-repeat;
+
+      svg {
+        color: transparent;
+      }
+    }
+
+    &-title {
+      font-weight: 500;
+    }
+
+    &-wait &-icon {
+      border: 2px solid @colorTextSecondary !important;
+      background: transparent !important;
+
+      span {
+        top: -1px !important;
+      }
+    }
+
+    &-wait &-title {
+      color: @colorTextSecondary !important;
+    }
+
+    &-description {
+      color: @colorTextSecondary !important;
+    }
+
+    &-process &-description {
+      color: @colorPrimary !important;
+    }
+  }
+}

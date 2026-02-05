@@ -1,0 +1,155 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  // justify-content: center;
+  width: 80px;
+  height: 100%;
+  // padding: 16px;
+  background-color: rgb(51 51 51);
+
+  &:global(.ant-layout-header) {
+    padding: 0;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    color: #fff;
+  }
+}
+
+.menu {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  // padding: 24px;
+  background-color: transparent;
+  font-size: 0.8333vw;
+  font-weight: 500;
+
+  :global {
+    .ant-menu-title-content {
+      color: rgb(255 255 255 / 80%);
+    }
+
+    .ant-menu-submenu-title {
+      z-index: 1;
+    }
+
+    // .ant-menu-overflow-item {
+    //   margin-right: 2.8125vw;
+    // }
+
+    .ant-menu-item-selected,
+    .ant-menu-submenu-selected {
+      /* warning: gradient uses a rotation that is not supported by CSS and may not behave as expected */
+      background-repeat: no-repeat !important;
+      background-size: 100% 100% !important;
+
+      .ant-menu-title-content {
+        display: inline-block;
+        color: #fff;
+      }
+    }
+
+    .ant-menu-item,
+    .ant-menu-submenu {
+      &:hover {
+        .ant-menu-title-content {
+          color: #fff;
+        }
+      }
+    }
+  }
+}
+
+// .menu-popup {
+//   :global {
+//     .ant-menu-submenu-selected .ant-menu-submenu-title {
+//       background-color: #ecf1ff;
+
+//       &:hover {
+//         background-color: #ecf1ff !important;
+//       }
+//     }
+//   }
+// }
+
+.tools {
+  flex: 1 0 auto;
+}
+
+.username {
+  display: flex;
+  flex: 1 0 auto;
+  align-items: center;
+  margin-right: 24px;
+}
+
+.icon {
+  width: 1.25vw;
+  height: 2.2222vh;
+  margin-right: 0.4166vw;
+  background: url('@/assets/img/user.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.nickname {
+  margin-right: 0.4166vw;
+}
+
+.login-out {
+  width: 0.8333vw;
+  height: 1.4814vh;
+  margin-right: 0.4166vw;
+  background: url('@/assets/img/login_out.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  cursor: pointer;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  padding: 0 4.1666vw 0 1.25vw;
+
+  &__img {
+    width: 2.6041vw;
+    height: 3.287vh;
+    object-fit: contain;
+  }
+
+  &__name {
+    margin-left: 0.8333vw;
+    background:
+      linear-gradient(180deg, #fff 31.77%, rgb(255 255 255 / 80%) 100%),
+      linear-gradient(180deg, rgb(102 208 255 / 0%) 44.27%, rgb(102 208 255 / 80%) 100%);
+    background-clip: text;
+    box-shadow: 0 4px 4px 0 #0c05db40;
+    color: transparent;
+    font-family: YouSheBiaoTiHei;
+    font-size: 1.6666vw;
+    font-weight: 400;
+    letter-spacing: 2px;
+    line-height: 41.6px;
+    text-align: center;
+    white-space: nowrap;
+  }
+}
+
+.notification-icon {
+  cursor: pointer;
+}
+
+.notification-drawer {
+  :global {
+    .ant-drawer-header-title {
+      justify-content: flex-end;
+    }
+
+    .ant-drawer-body {
+      padding: 0;
+    }
+  }
+}

@@ -1,0 +1,58 @@
+// ParaNet DSL Example: NDN Content Distribution
+// Defines an NDN-based content delivery network
+
+network cdn_network {
+    name: "NDN Content Delivery"
+    description: "Content distribution using Named Data Networking"
+
+    node producer :ndn_producer {
+        prefix: "/ndn/video/channel1"
+        address: "producer.local"
+    }
+
+    node cache1 :ndn_cache {
+        prefix: "/ndn/video"
+        cache_size: "10GB"
+        strategy: "lru"
+    }
+
+    node cache2 :ndn_cache {
+        prefix: "/ndn/video"
+        cache_size: "10GB"
+        strategy: "lru"
+    }
+
+    node consumer1 :ndn_consumer {
+        interests: ["/ndn/video/channel1"]
+    }
+
+    node consumer2 :ndn_consumer {
+        interests: ["/ndn/video/channel1"]
+    }
+
+    // Links
+    link { endpoints: [producer, cache1] }
+    link { endpoints: [cache1, cache2] }
+    link { endpoints: [cache1, consumer1] }
+    link { endpoints: [cache2, consumer2] }
+}
+
+// Content route with caching
+route video_distribution {
+    from: prefix("/ndn/video/channel1")
+    to: prefix("/ndn/video")
+    protocol: ndn
+}
+
+// Caching policy
+policy video_cache_policy {
+    match: {
+        prefix: "/ndn/video"
+        content_type: "video"
+    }
+    action: {
+        cache: true
+        ttl: "3600"
+        priority: "high"
+    }
+}

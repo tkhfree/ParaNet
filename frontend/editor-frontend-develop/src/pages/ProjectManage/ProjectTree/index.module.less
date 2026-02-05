@@ -1,0 +1,130 @@
+.project-tree {
+  width: 270px;
+  height: 100%;
+  padding-top: 16px;
+  overflow-x: hidden;
+  background: #313335;
+
+  &::-webkit-scrollbar {
+    width: 2px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #222;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #888;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+
+    .item-before {
+      display: flex;
+      align-items: center;
+    }
+
+    .title {
+      max-width: 100px; /* 设置容器宽度 */
+      overflow: hidden; /* 隐藏超出部分 */
+      text-overflow: ellipsis;
+      white-space: nowrap; /* 不换行 */
+    }
+
+    .project {
+      width: 90px !important;
+    }
+
+    &:hover {
+      background-color: rgb(55 55 61);
+
+      .tool {
+        display: block;
+      }
+    }
+  }
+
+  .tool {
+    display: none;
+  }
+
+  .icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    background-size: 100% 100%;
+  }
+
+  .icon1 {
+    background: url('../../../assets/img/project/file.png');
+  }
+
+  .icon0 {
+    background: url('../../../assets/img/project/project.png');
+  }
+
+  .icon2 {
+    background: url('../../../assets/img/project/motai.png');
+  }
+
+  .icon3 {
+    background: url('../../../assets/img/project/topo.png');
+  }
+
+  .icon4 {
+    background: url('../../../assets/img/project/else.png');
+  }
+
+  .icon5 {
+    background: url('../../../assets/img/project/p4.png');
+  }
+
+  .icon6 {
+    background: url('../../../assets/img/project/domain.png');
+  }
+
+  :global {
+    .ant-tree {
+      background: #313335;
+    }
+
+    .ant-tree-node-selected {
+      background-color: rgb(55 55 61) !important;
+    }
+
+    .ant-tree-treenode {
+      width: 100%;
+    }
+
+    .ant-tree-node-content-wrapper {
+      width: 100%;
+      padding-inline: 0 !important;
+      color: white !important;
+    }
+
+    .ant-dropdown-menu {
+      border: 1px solid rgb(55 55 61);
+      background-color: rgb(37 37 38) !important;
+    }
+
+    .ant-modal-confirm-title {
+      color: rgb(55 55 61) !important;
+    }
+
+    .ant-tree-treenode-disabled .ant-tree-node-content-wrapper {
+      cursor: pointer;
+    }
+
+    .ant-empty-description {
+      color: #c5cee0;
+    }
+  }
+}

@@ -1,0 +1,51 @@
+.upload-file {
+  &__container {
+    display: flex;
+    align-items: center;
+  }
+
+  &__default-btn {
+    display: flex;
+    align-items: center;
+
+    /* stylelint-disable-next-line selector-class-pattern */
+    .default-btn__text {
+      margin-left: 8px;
+    }
+  }
+
+  &__tips {
+    margin-left: 8px;
+    color: @colorTextSecondary;
+  }
+
+  &__list {
+    padding: 0 8px;
+  }
+
+  &__item {
+    display: flex;
+    position: relative;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  .file-item {
+    &__progress {
+      position: absolute;
+      bottom: -10px;
+      width: 320px;
+    }
+
+    &__link {
+      flex: none;
+      height: auto;
+      margin-left: 8px;
+      padding: 0;
+
+      .anticon-loading::before {
+        display: none;
+      }
+    }
+  }
+}

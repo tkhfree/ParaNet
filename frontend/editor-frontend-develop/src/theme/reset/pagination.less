@@ -1,0 +1,43 @@
+.ant-pagination {
+  &-item {
+    &:not(&-active) {
+      border: 1px solid @colorTextDisabled !important;
+    }
+
+    &:hover {
+      border: 1px solid @colorPrimary !important;
+      background-color: transparent !important;
+
+      a {
+        color: @colorPrimary;
+      }
+    }
+
+    &-active:not(&-active:hover) a {
+      color: #fff !important;
+    }
+  }
+
+  &-prev,
+  &-next {
+    border: 1px solid @colorTextDisabled;
+
+    &:hover:not(.ant-pagination-disabled) {
+      border: 1px solid @colorPrimary !important;
+
+      .ant-pagination-item-link {
+        background-color: transparent !important;
+        color: @colorPrimary;
+      }
+    }
+
+    &.ant-pagination-disabled {
+      background: #edf1f7;
+    }
+  }
+
+  .ant-select:not(.ant-select-customize-input) .ant-select-selector,
+  & &-options-quick-jumper input {
+    background-color: transparent;
+  }
+}

@@ -1,0 +1,41 @@
+// ParaNet DSL Example: Simple IP Route
+// Defines a basic routing topology
+
+network mynetwork {
+    name: "Example Network"
+    description: "A simple network with IP routing"
+
+    node router1 :router {
+        address: "192.168.1.1"
+        location: "building-a"
+    }
+
+    node router2 :router {
+        address: "192.168.2.1"
+        location: "building-b"
+    }
+
+    node host1 :host {
+        address: "192.168.1.100"
+        gateway: "192.168.1.1"
+    }
+
+    node host2 :host {
+        address: "192.168.2.100"
+        gateway: "192.168.2.1"
+    }
+
+    link {
+        endpoints: [router1, router2]
+        bandwidth: "1Gbps"
+        latency: "5ms"
+    }
+}
+
+// Route from host1 to host2 subnet
+route host1_to_subnet2 {
+    from: host1
+    to: prefix("192.168.2.0/24")
+    via: router1, router2
+    protocol: ip
+}

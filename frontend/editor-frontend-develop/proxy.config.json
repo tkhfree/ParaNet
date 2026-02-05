@@ -1,0 +1,17 @@
+[
+  {
+    "path": "/api/snp",
+    "target": "http://10.10.48.2:30497",
+    "description": "测试环境"
+  },
+  {
+    "path": "/api/ncs",
+    "target": "http://10.10.48.32:30001/mock/450",
+    "description": "mock"
+  },
+  {
+    "path": "/api",
+    "target": "http://10.10.48.2:40065",
+    "description": "开发环境"
+  }
+]

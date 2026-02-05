@@ -1,0 +1,330 @@
+export const getPowerStation = (params: { districtId?: number; increase?: number }) => {
+  return params?.districtId
+    ? {
+        code: 0,
+        msg: '成功',
+        data: {
+          addressType: 0,
+          line: [
+            {
+              cityName: '许昌市',
+              proviceName: '河南省',
+              value: '16',
+              proviceId: '410000',
+              cityId: '411000',
+              type: '1', //1施工中2已竣工3计划中
+            },
+            {
+              cityName: '武汉市',
+              proviceName: '湖北省',
+              value: '16',
+              proviceId: '420000',
+              cityId: '420100',
+              type: '2', //1施工中2已竣工3计划中
+            },
+            {
+              cityName: '杭州市',
+              proviceName: '浙江省',
+              value: '16',
+              proviceId: '330000',
+              cityId: '330100',
+              type: '3', //1施工中2已竣工3计划中
+            },
+          ],
+        },
+      }
+    : ({
+        code: 0,
+        msg: '成功',
+        data: {
+          addressType: 0,
+          line: [
+            {
+              cityName: '郑州市',
+              proviceName: '河南省',
+              value: '16',
+              proviceId: '410000',
+              cityId: '410100',
+            },
+          ],
+        },
+      } as any)
+}
+
+export const getRank = (params: { districtId?: number; increase?: number }) => {
+  return params.districtId
+    ? {
+        code: 0,
+        msg: '成功',
+        data: [
+          {
+            name: '北京',
+            value1: 2113,
+            percent1: 100,
+            value2: 296,
+            percent2: 16,
+          },
+          {
+            name: '江苏',
+            value1: 1691,
+            percent1: 100,
+            value2: 18,
+            percent2: 16,
+          },
+          {
+            name: '河北',
+            value1: 1380,
+            percent1: 100,
+            value2: 20,
+            percent2: 16,
+          },
+          {
+            name: '山西',
+            value1: 1169,
+            percent1: 100,
+            value2: 13,
+            percent2: 16,
+          },
+          {
+            name: '黑龙江',
+            value1: 1144,
+            percent1: 100,
+            value2: 46,
+            percent2: 16,
+          },
+          {
+            name: '山东',
+            value1: 1048,
+            percent1: 100,
+            value2: 55,
+            percent2: 16,
+          },
+          {
+            name: '内蒙古',
+            value1: 755,
+            percent1: 100,
+            value2: 130,
+            percent2: 16,
+          },
+          {
+            name: '河南',
+            value1: 754,
+            percent1: 100,
+            value2: 31,
+            percent2: 16,
+          },
+          {
+            name: '贵州',
+            value1: 115,
+            percent1: 100,
+            value2: 10,
+            percent2: 16,
+          },
+          {
+            name: '吉林',
+            value1: 112,
+            percent1: 100,
+            value2: 19,
+            percent2: 16,
+          },
+          {
+            name: '海南',
+            value1: 95,
+            percent1: 100,
+            value2: 5,
+            percent2: 16,
+          },
+          {
+            name: '广东',
+            value1: 80,
+            percent1: 100,
+            value2: 12,
+            percent2: 16,
+          },
+          {
+            name: '辽宁',
+            value1: 62,
+            percent1: 100,
+            value2: 7,
+            percent2: 16,
+          },
+          {
+            name: '天津',
+            value1: 57,
+            percent1: 100,
+            value2: 19,
+            percent2: 16,
+          },
+          {
+            name: '上海',
+            value1: 18,
+            percent1: 100,
+            value2: 6,
+            percent2: 16,
+          },
+        ],
+      }
+    : ({} as any)
+}
+
+// 省分数据概览
+export const getOverviewTabel = (params: { districtId?: string; increase?: number }) => {
+  return params.districtId
+    ? {
+        code: 0,
+        msg: '成功',
+        data: [
+          {
+            name: '北京',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '江苏',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '河北',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '山西',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '黑龙江',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '山东',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '内蒙古',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '河南',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '贵州',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '吉林',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '海南',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '广东',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '辽宁',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '天津',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+          {
+            name: '上海',
+            projectNum: 11,
+            scaleNum: 11,
+            invest: 11,
+            picNum: 11,
+            finishNum: 11,
+            openNum: 11,
+            deliverNum: 11,
+          },
+        ],
+      }
+    : ({} as any)
+}

@@ -1,0 +1,27 @@
+.ant-cascader {
+  &-dropdown &-menu-item-active:not(&-menu-item-disabled) {
+    background-color: rgb(@colorPrimary 0.1) !important;
+    color: @colorPrimary;
+
+    .ant-cascader-menu-item-expand-icon {
+      color: @colorPrimary;
+    }
+  }
+
+  &-dropdown &-menu {
+    padding: 8px;
+
+    &-item {
+      margin-bottom: 4px;
+
+      &:hover {
+        background-color: rgb(@colorPrimary 0.1);
+        color: @colorPrimary;
+
+        .ant-cascader-menu-item-expand-icon {
+          color: @colorPrimary;
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,34 @@
+<svg width="90" height="42" viewBox="0 0 90 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path
+    d="M13.598 5.57143C13.598 4.37213 14.3851 3.598 15.1333 3.598H74.8667C75.6149 3.598 76.402 4.37213 76.402 5.57143V36.4286C76.402 37.6279 75.6149 38.402 74.8667 38.402H15.1333C14.3851 38.402 13.598 37.6279 13.598 36.4286V5.57143Z"
+    stroke="#B7BAC6" stroke-width="1.196" />
+  <line x1="13" y1="14.402" x2="77" y2="14.402" stroke="#B7BAC6" stroke-width="1.196" />
+  <line x1="13" y1="26.402" x2="77" y2="26.402" stroke="#B7BAC6" stroke-width="1.196" />
+  <rect x="18" y="8" width="26" height="2" rx="1" fill="#B7BAC6" />
+  <circle cx="54" cy="9" r="2" fill="#B7BAC6" />
+  <circle cx="62" cy="9" r="2" fill="#B7BAC6" />
+  <circle cx="70" cy="9" r="2" fill="#B7BAC6" />
+  <rect x="18" y="20" width="26" height="2" rx="1" fill="#B7BAC6" />
+  <circle cx="54" cy="21" r="2" fill="#B7BAC6" />
+  <circle cx="62" cy="21" r="2" fill="#B7BAC6" />
+  <circle cx="70" cy="21" r="2" fill="#B7BAC6" />
+  <rect x="18" y="32" width="26" height="2" rx="1" fill="#B7BAC6" />
+  <circle cx="54" cy="33" r="2" fill="#B7BAC6" />
+  <circle cx="62" cy="33" r="2" fill="#B7BAC6" />
+  <circle cx="70" cy="33" r="2" fill="#B7BAC6" />
+  <path d="M12 8H3C1.89543 8 1 8.89543 1 10V32C1 33.1046 1.89543 34 3 34H12" stroke="#B7BAC6"
+    stroke-width="1.196" />
+  <line y1="-0.5" x2="7" y2="-0.5" transform="matrix(1 0 0 -1 1 13.0323)" stroke="#B7BAC6" />
+  <line y1="-0.5" x2="7" y2="-0.5" transform="matrix(1 0 0 -1 1 18.0323)" stroke="#B7BAC6" />
+  <line y1="-0.5" x2="7" y2="-0.5" transform="matrix(1 0 0 -1 1 23.0323)" stroke="#B7BAC6" />
+  <line y1="-0.5" x2="7" y2="-0.5" transform="matrix(1 0 0 -1 1 28.0323)" stroke="#B7BAC6" />
+  <path d="M78 8H87C88.1046 8 89 8.89543 89 10V32C89 33.1046 88.1046 34 87 34H78" stroke="#B7BAC6"
+    stroke-width="1.196" />
+  <line x1="89" y1="13.5323" x2="82" y2="13.5323" stroke="#B7BAC6" />
+  <line x1="89" y1="18.5323" x2="82" y2="18.5323" stroke="#B7BAC6" />
+  <line x1="89" y1="23.5323" x2="82" y2="23.5323" stroke="#B7BAC6" />
+  <line x1="89" y1="28.5323" x2="82" y2="28.5323" stroke="#B7BAC6" />
+  <path
+    d="M13 14.2202C13 13.7247 13.9551 14.2202 15.1333 14.2202H74.8667C76.0449 14.2202 77 13.7247 77 14.2202V26.7798C77 27.2753 76.0449 26.7798 74.8667 26.7798H15.1333C13.9551 26.7798 13 27.2753 13 26.7798V14.2202Z"
+    fill="#B7BAC6" fill-opacity="0.12" />
+</svg>

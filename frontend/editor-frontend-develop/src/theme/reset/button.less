@@ -1,0 +1,134 @@
+/* 无法通过antd变量覆盖的样式，通过此文件样式覆盖 */
+.ant-btn {
+  // mixin
+  .shadow(@shadow) {
+    &:not(:disabled, .ant-btn-disabled) {
+      &:hover {
+        box-shadow: @shadow !important;
+      }
+
+      &:active {
+        box-shadow: none !important;
+      }
+    }
+  }
+  .borderHover(@color;@shadow;@activeColor) {
+    .shadow(@shadow);
+
+    &:not(:disabled, .ant-btn-disabled) {
+      &:hover {
+        border-color: @color !important;
+        background-color: rgb(@color 0.1) !important;
+        color: @color !important;
+      }
+
+      &:active {
+        border-color: @activeColor !important;
+        background-color: rgb(@color 0.1) !important;
+        box-shadow: none !important;
+        color: @activeColor !important;
+      }
+    }
+  }
+  .textHover(@color;@activeColor) {
+    &:not(:disabled, .ant-btn-disabled) {
+      &:hover {
+        background-color: rgb(@color 0.1) !important;
+        color: @color !important;
+      }
+
+      &:active {
+        background-color: transparent !important;
+        color: @activeColor !important;
+      }
+    }
+  }
+  .linkHover(@color;@activeColor) {
+    &:hover,
+    &:active {
+      & span {
+        position: relative;
+
+        &::before {
+          content: '';
+          position: absolute;
+          bottom: 2.5px;
+          width: 100%;
+          height: 1px;
+          background-color: @color;
+        }
+      }
+    }
+
+    &:active span::before {
+      background-color: @activeColor;
+    }
+  }
+
+  // primary
+  &-primary {
+    &:disabled {
+      border-color: transparent !important;
+    }
+
+    .shadow(@primaryShadow);
+
+    &.ant-btn-dangerous {
+      .shadow(@errorShadow);
+    }
+  }
+
+  // link
+  &-link {
+    color: @colorPrimary;
+
+    &:not(:disabled, .ant-btn-disabled) {
+      .linkHover(@colorPrimary,@colorPrimaryActive);
+
+      &.ant-btn-dangerous {
+        .linkHover(@colorError,@colorErrorActive);
+      }
+    }
+  }
+
+  &-text {
+    color: @colorPrimary;
+    .textHover(@colorPrimary,@colorPrimaryActive);
+
+    &.ant-btn-dangerous {
+      .textHover(@colorError,@colorErrorActive);
+    }
+  }
+
+  // ghost
+  &-primary.ant-btn-background-ghost {
+    &:disabled {
+      border-color: @colorTextDisabled !important;
+      background-color: transparent;
+      color: @colorTextDisabled;
+    }
+
+    .borderHover(@colorPrimary,@primaryShadow,@colorPrimaryActive);
+
+    &.ant-btn-dangerous {
+      .borderHover(@colorError,@errorShadow,@colorErrorActive);
+    }
+  }
+
+  // dashed
+  &-dashed {
+    border-color: @colorPrimary;
+    background-color: transparent;
+    color: @colorPrimary;
+
+    .borderHover(@colorPrimary,@primaryShadow,@colorPrimaryActive);
+
+    &.ant-btn-dangerous {
+      .borderHover(@colorError,@errorShadow,@colorErrorActive);
+    }
+
+    &:disabled {
+      background-color: transparent !important;
+    }
+  }
+}

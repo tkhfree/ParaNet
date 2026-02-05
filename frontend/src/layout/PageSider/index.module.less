@@ -1,0 +1,38 @@
+.sider {
+  height: calc(100vh - 64px);
+  overflow: auto;
+  
+  // 自定义滚动条
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+.menu {
+  height: 100%;
+  border-right: none;
+  
+  :global {
+    .ant-menu-item {
+      margin: 4px 8px;
+      border-radius: 6px;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+    }
+    
+    .ant-menu-item-selected {
+      background: #1890ff !important;
+    }
+  }
+}

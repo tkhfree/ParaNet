@@ -1,0 +1,21 @@
+.react-resize-handle {
+  position: absolute;
+  // 表格冻结列的z-index为2，所以此处不能超过2
+  z-index: 1;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  cursor: col-resize;
+}
+// 鼠标悬停在表格时出现可拖动标识
+.ant-table:hover {
+  .react-resize-handle {
+    background-color: @bgGapColor;
+  }
+}
+
+.react-resizable {
+  position: relative;
+  overflow: visible;
+}

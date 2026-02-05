@@ -1,0 +1,66 @@
+.step-flow-chart {
+  &__steps {
+    width: 100%;
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  &__flow-table {
+    margin-top: 16px;
+
+    .pro-table-content {
+      padding-bottom: 0;
+      padding-inline: 0;
+    }
+  }
+
+  &__step-title {
+    cursor: pointer;
+  }
+
+  &__popover-steps {
+    &-text {
+      cursor: pointer;
+    }
+
+    .popover-step-item {
+      margin-bottom: 24px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      &__title {
+        margin-bottom: 16px;
+        color: @colorTextSecondary;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: 24px;
+      }
+    }
+
+    .ant-popover-inner {
+      max-width: 60vw;
+      max-height: 40vh;
+      padding: 36px 48px;
+      overflow: auto;
+    }
+
+    .ant-popover-inner,
+    .ant-popover-arrow::before,
+    .ant-popover-arrow::after {
+      border: 1px solid #a9bfff;
+      background: @bgBaseColor;
+    }
+
+    &.ant-popover-placement-bottom > .ant-popover-arrow {
+      z-index: 1;
+      top: 1px !important;
+    }
+
+    &.ant-popover-placement-top > .ant-popover-arrow {
+      z-index: 1;
+      bottom: 1px !important;
+    }
+  }
+}

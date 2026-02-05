@@ -1,0 +1,25 @@
+.pro-table-content {
+  padding: 16px;
+  border-radius: @borderRadiusM;
+  background-color: #fff;
+
+  &__tools {
+    margin-bottom: 16px;
+  }
+
+  &__ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ant-table-placeholder .ant-table-cell {
+    height: 325px;
+  }
+
+  &__bordered {
+    .ant-table .ant-table-cell {
+      border-right: 1px solid @bgGapColor !important;
+    }
+  }
+}

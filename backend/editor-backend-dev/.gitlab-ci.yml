@@ -1,0 +1,20 @@
+image: docker:stable
+stages:
+  - package
+variables:
+  PROJECT_VERSION: 1.0.0
+  PROJECT_NAME: editor-backend
+  REPO_NAME: ${CI_COMMIT_REF_NAME}
+package:
+  image: kubesphere/builder-maven:v3.1.0
+  stage: package
+  script:
+    - mvn clean -U install -Dmaven.test.skip=true
+    - docker build -t $dockerRegistry/${REPO_NAME}/${PROJECT_NAME}:${PROJECT_VERSION} .
+    - docker login $dockerRegistry -u $dockerUser -p $dockerPassword
+    - docker push $dockerRegistry/${REPO_NAME}/${PROJECT_NAME}:${PROJECT_VERSION}
+  allow_failure: false
+  only:
+    - dev
+#    - test
+#    - main

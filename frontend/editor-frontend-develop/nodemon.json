@@ -1,0 +1,6 @@
+{
+  "watch": [
+    "vigour.config.ts"
+  ],
+  "exec": "npm run dev"
+}

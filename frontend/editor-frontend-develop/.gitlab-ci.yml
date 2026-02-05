@@ -1,0 +1,54 @@
+# 因为我们Runner执行器设置为docker, 所以这里需要指定docker的版本
+image: docker:stable
+variables:
+  REPO_NAME: ${CI_COMMIT_REF_NAME}
+  PROJECT_VERSION: 1.0-SNAPSHOT
+  PROJECT_NAME: jcxt-front
+
+stages:
+  - compile
+  - push
+compile:
+  # variables:
+  #   CI_DEBUG_TRACE: "true"
+  image: node:20.12.2
+  # 指定阶段
+  stage: compile
+  cache:
+    key: '${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}'
+    paths:
+      - node_modules/
+  # 运行脚本, 使用变量时要用到 $ 符号
+  script:
+    - yarn config set registry http://nexus.software.dimpt.com/repository/npm-public/
+    # - rm -f yarn.lock
+    - yarn install
+    - echo ${CI_JOB_NAME}
+    - yarn run build
+    - echo "cache-key is ${CI_PROJECT_NAME}-${CI_COMMIT_REF_NAME}"
+    - ls ./dist
+  # 只作用在master分支
+  only:
+    - master
+    - test
+    - develop
+  tags:
+    - runner-cache
+  artifacts:
+    # expire_in: 1 week
+    name: ${CI_COMMIT_BRANCH}
+    paths:
+      - ./dist
+push:
+  stage: push
+  only:
+    - master
+    - test
+    - develop
+
+  script:
+    - docker build -t $dockerRegistry/${CI_COMMIT_REF_NAME}/$PROJECT_NAME:$PROJECT_VERSION  .
+    - docker login -u "$dockerUser" -p "$dockerPassword" $dockerRegistry
+    - docker push $dockerRegistry/${CI_COMMIT_REF_NAME}/$PROJECT_NAME:$PROJECT_VERSION
+#   tags:
+#     - citc-fe

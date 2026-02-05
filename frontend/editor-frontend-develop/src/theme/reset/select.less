@@ -1,0 +1,35 @@
+.ant-select {
+  &-item {
+    margin-bottom: 4px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &-dropdown {
+    // background-color: rgb(37 37 38) !important;
+    background-color: rgb(60 60 60) !important;
+    box-shadow: @dropdownShadow;
+
+    .ant-select-item-option-active {
+      background: rgb(55 55 60) !important;
+    }
+  }
+
+  &-dropdown &-item-option-selected {
+    background: rgb(55 55 60) !important;
+
+    &:not(.ant-select-item-option-disabled) {
+      color: @colorPrimary;
+    }
+  }
+
+  &-selection-overflow-item-suffix {
+    margin-block: 0 !important;
+  }
+
+  .ant-select-selector {
+    background: transparent !important;
+  }
+}

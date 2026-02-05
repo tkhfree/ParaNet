@@ -1,0 +1,65 @@
+// ParaNet DSL Example: Geographic Routing
+// Defines a geographic routing scenario
+
+network geo_network {
+    name: "Geographic Routing Network"
+    description: "Location-aware routing for mobile nodes"
+
+    node base_station1 :geo_router {
+        location: {
+            latitude: "40.7128",
+            longitude: "-74.0060"
+        }
+        region: "manhattan"
+        range: "5km"
+    }
+
+    node base_station2 :geo_router {
+        location: {
+            latitude: "40.7580",
+            longitude: "-73.9855"
+        }
+        region: "midtown"
+        range: "5km"
+    }
+
+    node mobile1 :geo_mobile {
+        location: {
+            latitude: "40.7200",
+            longitude: "-74.0000"
+        }
+        velocity: "5m/s"
+    }
+
+    node mobile2 :geo_mobile {
+        location: {
+            latitude: "40.7500",
+            longitude: "-73.9900"
+        }
+        velocity: "3m/s"
+    }
+
+    // Wireless links (automatically managed based on location)
+    link { 
+        endpoints: [base_station1, base_station2]
+        type: "backbone"
+    }
+}
+
+// Route between geographic regions
+route manhattan_to_midtown {
+    from: region("manhattan")
+    to: region("midtown")
+    protocol: geo
+}
+
+// Location-based forwarding policy
+policy geo_forward_policy {
+    match: {
+        destination_region: "midtown"
+    }
+    action: {
+        mode: "greedy"
+        fallback: "perimeter"
+    }
+}

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.citc.editor.file.mapper.CompileDeployRecordMapper">
+    <select id="getDeployCountByProjectId" resultType="java.lang.String">
+        select count(*) from
+        (select COUNT(DISTINCT operation_ip) from compile_deploy_record
+        where
+        delete_flag=0
+        and operation_type in (2)
+        and response_code = '200'
+        and project_id = #{projectId}
+        group by operation_ip) as tem_con
+    </select>
+    <select id="getFrontendCompileCountByProjectId" resultType="java.lang.String">
+        select count(*) from
+        (select COUNT(DISTINCT operation_ip) from compile_deploy_record
+        where
+        delete_flag=0
+        and operation_type in (3)
+        and response_code = '200'
+        and project_id = #{projectId}
+        group by operation_ip) as tem_con
+    </select>
+    <select id="getOneDeployRecordNew" resultType="com.citc.editor.file.entity.CompileDeployRecordEntity">
+        select * from compile_deploy_record
+        where
+        delete_flag=0
+        and operation_type in (2)
+        and response_code = '200'
+        and project_id = #{projectId}
+        and operation_ip = #{ip}
+        order by update_at desc
+        limit 1
+    </select>
+    <select id="getDeployCountByProjectIdAndIp" resultType="java.lang.Integer">
+        select count(*) from compile_deploy_record
+        where
+        delete_flag=0
+        and operation_type in (2)
+        and response_code = '200'
+        and project_id = #{projectId}
+        and operation_ip = #{ip}
+
+    </select>
+    <select id="getOneCompileRecordNew" resultType="com.citc.editor.file.entity.CompileDeployRecordEntity">
+        select * from compile_deploy_record
+        where delete_flag=0
+        and operation_type = 1
+        and response_code = '200'
+        and project_id = #{projectId}
+        and operation_ip = #{ip}
+        and create_at=(
+        select create_at from compile_deploy_record
+        where
+        delete_flag=0
+        and operation_type = 1
+        and response_code = '200'
+        and project_id = #{projectId}
+        and operation_ip = #{ip}
+        group by create_at
+        ORDER BY create_at desc
+        limit 1);
+    </select>
+    <select id="getFrontendCompileFiles" resultType="com.citc.editor.file.vo.CompileDeployRecordVo">
+        select * from compile_deploy_record
+        where delete_flag=0
+        and project_id = #{projectId}
+        and operation_type = 1
+        and create_at=(select create_at from compile_deploy_record
+        where
+        delete_flag=0
+        and project_id = #{projectId}
+        and operation_type = 1
+        group by create_at
+        ORDER BY create_at desc
+        limit 1);
+    </select>
+    <insert id="insertList">
+        insert into compile_deploy_record
+        (id, project_id, operation_ip, operation_type, file_type,
+        file_name, file_path, network_element_type,
+        request_path, request_parameter, response_result, response_code,create_by,update_by,create_at,update_at)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.projectId}, #{item.operationIp}, #{item.operationType}, #{item.fileType},
+            #{item.fileName}, #{item.filePath}, #{item.networkElementType},
+            #{item.requestPath}, #{item.requestParameter}, #{item.responseResult}, #{item.responseCode},
+            #{item.createBy},#{item.updateBy},#{item.createAt},#{item.updateAt})
+        </foreach>
+    </insert>
+    <update id="updateDeleteFlagProjectId">
+        update compile_deploy_record
+        set delete_flag = 1
+        where project_id = #{projectId}
+    </update>
+    <select id="getOneByProjectIdAndFileName"
+            resultType="com.citc.editor.file.entity.CompileDeployRecordEntity">
+        select * from compile_deploy_record
+        where project_id = #{projectId}
+        and file_name = #{fileName}
+        and delete_flag = 0
+        order by create_at desc
+        limit 1
+    </select>
+</mapper>

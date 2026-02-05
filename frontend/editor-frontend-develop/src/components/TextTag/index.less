@@ -1,0 +1,44 @@
+.text-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  font-size: 12px;
+  line-height: 22px;
+
+  &--click-enabled {
+    cursor: pointer;
+  }
+
+  &-circle {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    margin-right: 8px;
+    border-radius: 50%;
+  }
+
+  each({
+  primary:@colorPrimary;
+  success: @colorSuccess;
+  warning:@colorWarning;
+  error:@colorError;
+  off-line: @colorTextDisabled;
+},
+{
+  &--@{key}{
+    color: @value;
+    .text-tag-circle{
+      background-color: @value;
+    }
+    &.text-tag--bg{
+      padding: 0 8px;
+      border-radius: 4px;
+      background-color: rgba(@value,0.1);
+    }
+  }
+})
+    &--custom-bg {
+    padding: 0 8px;
+    border-radius: 4px;
+  }
+}

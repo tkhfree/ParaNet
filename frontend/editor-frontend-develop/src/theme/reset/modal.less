@@ -1,0 +1,68 @@
+.ant-modal {
+  & &-content {
+    padding: 0;
+    background-color: rgb(37 37 38);
+  }
+
+  &-confirm &-content {
+    padding: 24px;
+  }
+
+  & &-header {
+    margin-bottom: 0;
+    padding: 12px 16px;
+    background-color: rgb(37 37 38);
+    // box-shadow: 0 -1px 0 0 #e9ebf0 inset;
+  }
+
+  & &-close {
+    width: 24px;
+    height: 24px;
+    color: @colorTextSecondary;
+  }
+
+  & &-title {
+    position: relative;
+    padding-left: 16px;
+    color: #c5cee0 !important;
+    font-weight: 500;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 0;
+      width: 8px;
+      height: 8px;
+      transform: rotate(45deg);
+      background: @colorPrimary;
+    }
+  }
+
+  & &-body {
+    max-height: 70vh;
+    padding: 24px;
+    overflow: hidden auto;
+    background-color: rgb(37 37 38);
+  }
+
+  & &-footer {
+    padding: 8px 24px;
+    background-color: rgb(37 37 38);
+
+    .ant-btn-default {
+      background: transparent !important;
+    }
+  }
+
+  .ant-modal-confirm-title {
+    color: white !important;
+  }
+
+  .ant-modal-confirm-btns {
+    .ant-btn-default {
+      background: transparent !important;
+      color: @colorTextSecondary;
+    }
+  }
+}

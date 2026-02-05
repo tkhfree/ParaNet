@@ -1,0 +1,91 @@
+// ParaNet DSL Grammar
+// Defines the syntax for network intent specification
+
+// Program structure
+program: statement*
+
+statement: network_def
+         | node_def
+         | link_def
+         | route_def
+         | policy_def
+         | import_stmt
+
+// Import statements
+import_stmt: "import" STRING
+
+// Network definition
+network_def: "network" IDENTIFIER "{" network_body "}"
+network_body: (network_attr | node_def | link_def)*
+network_attr: IDENTIFIER ":" value
+
+// Node definition
+node_def: "node" IDENTIFIER node_type? "{" node_body "}"
+node_type: ":" IDENTIFIER
+node_body: node_attr*
+node_attr: IDENTIFIER ":" value
+
+// Link definition
+link_def: "link" IDENTIFIER? "{" link_body "}"
+link_body: link_attr*
+link_attr: IDENTIFIER ":" value
+         | "endpoints" ":" "[" endpoint_pair "]"
+endpoint_pair: IDENTIFIER "," IDENTIFIER
+
+// Route definition (intent-based)
+route_def: "route" IDENTIFIER? "{" route_body "}"
+route_body: route_attr*
+route_attr: IDENTIFIER ":" value
+          | "from" ":" endpoint_spec
+          | "to" ":" endpoint_spec
+          | "via" ":" via_spec
+          | "protocol" ":" protocol_spec
+
+endpoint_spec: IDENTIFIER
+             | prefix_spec
+             | region_spec
+
+prefix_spec: "prefix" "(" STRING ")"
+region_spec: "region" "(" STRING ")"
+
+via_spec: IDENTIFIER ("," IDENTIFIER)*
+
+protocol_spec: "ip" | "ndn" | "geo" | "any"
+
+// Policy definition
+policy_def: "policy" IDENTIFIER "{" policy_body "}"
+policy_body: policy_attr*
+policy_attr: IDENTIFIER ":" value
+           | "match" ":" match_spec
+           | "action" ":" action_spec
+
+match_spec: "{" match_body "}"
+match_body: match_attr*
+match_attr: IDENTIFIER ":" value
+
+action_spec: "{" action_body "}"
+action_body: action_attr*
+action_attr: IDENTIFIER ":" value
+
+// Values
+value: STRING
+     | NUMBER
+     | BOOLEAN
+     | list_value
+     | object_value
+
+list_value: "[" (value ("," value)*)? "]"
+object_value: "{" (object_pair ("," object_pair)*)? "}"
+object_pair: IDENTIFIER ":" value
+
+// Terminals
+IDENTIFIER: /[a-zA-Z_][a-zA-Z0-9_-]*/
+STRING: /"[^"]*"/ | /'[^']*'/
+NUMBER: /[-+]?[0-9]*\.?[0-9]+/
+BOOLEAN: "true" | "false"
+
+// Comments and whitespace
+COMMENT: "//" /[^\n]/*
+       | "/*" /(.|\n)*?/ "*/"
+%ignore COMMENT
+%ignore /\s+/

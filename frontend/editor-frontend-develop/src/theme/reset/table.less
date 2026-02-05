@@ -1,0 +1,208 @@
+/* stylelint-disable no-descending-specificity */
+.ant-table {
+  border-color: @bgGapColor;
+
+  & &-thead {
+    background-color: #f6f9fb;
+
+    & > tr > th {
+      font-weight: 500;
+    }
+
+    & .ant-table-cell {
+      background-color: #f6f9fb;
+      color: @colorText;
+    }
+  }
+
+  &.ant-table-bordered > &-title {
+    border-color: @bgGapColor;
+  }
+
+  &.ant-table-bordered > &-container {
+    border-right: 1px solid @bgGapColor;
+    border-left: 1px solid @bgGapColor;
+  }
+
+  &.ant-table-bordered > &-container > &-body > table > tbody > tr > td,
+  &.ant-table-bordered > &-container > &-body > table > tfoot > tr > td,
+  &.ant-table-bordered > &-container > &-body > table > tfoot > tr > th,
+  &.ant-table-bordered > &-container > &-body > table > thead > tr > th,
+  &.ant-table-bordered > &-container > &-content > table > tbody > tr > td,
+  &.ant-table-bordered > &-container > &-content > table > tfoot > tr > td,
+  &.ant-table-bordered > &-container > &-content > table > tfoot > tr > th,
+  &.ant-table-bordered > &-container > &-content > table > thead > tr > th,
+  &.ant-table-bordered > &-container > &-header > table > tbody > tr > td,
+  &.ant-table-bordered > &-container > &-header > table > tfoot > tr > td,
+  &.ant-table-bordered > .ant-table-container > .ant-table-header > table > tfoot > tr > th,
+  &.ant-table-bordered > &-container > &-header > table > thead > tr > th,
+  &.ant-table-bordered > &-container > &-summary > table > tbody > tr > td,
+  &.ant-table-bordered > &-container > &-summary > table > tfoot > tr > td,
+  &.ant-table-bordered > &-container > &-summary > table > tfoot > tr > th,
+  &.ant-table-bordered > &-container > &-summary > table > thead > tr > th {
+    border-right: 1px solid @bgGapColor;
+  }
+
+  &.ant-table-bordered > &-container > &-body > table > thead > tr:not(:last-child) > th,
+  &.ant-table-bordered > &-container > &-content > table > thead > tr:not(:last-child) > th,
+  &.ant-table-bordered > &-container > &-header > table > thead > tr:not(:last-child) > th,
+  &.ant-table-bordered > &-container > &-summary > table > thead > tr:not(:last-child) > th,
+  &-summary > tr > td,
+  &-summary > tr > th {
+    border-bottom: 1px solid @bgGapColor;
+  }
+
+  &.ant-table-bordered > &-container > &-body > table > tbody > tr > &-cell-fix-right-first::after,
+  &.ant-table-bordered > &-container > &-body > table > tfoot > tr > &-cell-fix-right-first::after,
+  &.ant-table-bordered > &-container > &-body > table > thead > tr > &-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > &-container
+    > &-content
+    > table
+    > tbody
+    > tr
+    > &-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > &-container
+    > &-content
+    > table
+    > tfoot
+    > tr
+    > &-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > &-container
+    > &-content
+    > table
+    > thead
+    > tr
+    > &-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > &-container
+    > &-header
+    > table
+    > tbody
+    > tr
+    > &-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > &-container
+    > &-header
+    > table
+    > tfoot
+    > tr
+    > &-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > &-container
+    > &-header
+    > table
+    > thead
+    > tr
+    > &-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > &-container
+    > &-summary
+    > table
+    > tbody
+    > tr
+    > &-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > &-container
+    > &-summary
+    > table
+    > tfoot
+    > tr
+    > &-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > &-container
+    > &-summary
+    > table
+    > thead
+    > tr
+    > &-cell-fix-right-first::after {
+    border-right: 1px solid @bgGapColor;
+  }
+
+  &.ant-table-bordered
+    > .ant-table-container
+    > .ant-table-summary
+    > table
+    > tfoot
+    > tr
+    > .ant-table-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > .ant-table-container
+    > .ant-table-body
+    > table
+    > tbody
+    > tr
+    > .ant-table-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > .ant-table-container
+    > .ant-table-header
+    > table
+    > thead
+    > tr
+    > .ant-table-cell-fix-right-first::after {
+    border-right: none;
+  }
+
+  &.ant-table-bordered > &-container > &-content > table,
+  &.ant-table-bordered > &-container > &-header > table {
+    border-top: 1px solid @bgGapColor;
+  }
+
+  &.ant-table-bordered > &-footer {
+    border: 1px solid @bgGapColor;
+  }
+
+  // 表格样式
+  &:not(.ant-table-small) {
+    .ant-table-cell {
+      height: 43px;
+      padding: 0 16px;
+      border-right: none !important;
+      border-bottom: 1px solid @bgGapColor;
+      line-height: 43px;
+
+      &::before {
+        width: 0 !important;
+      }
+    }
+  }
+
+  &-tbody > tr.ant-table-row:hover > td,
+  &-tbody > tr > td.ant-table-cell-row-hover,
+  &-tbody > tr.ant-table-row-selected > .ant-table-cell {
+    background-color: @bgBaseColor !important;
+  }
+
+  // 表格分页样式
+  &-pagination {
+    .ant-pagination-total-text {
+      flex: 1 1;
+      color: @colorTextSecondary;
+      line-height: 32px;
+    }
+  }
+
+  // 排序样式
+  td.ant-table-column-sort {
+    background: @bgBaseColor;
+  }
+
+  &.ant-table-bordered
+    > .ant-table-container
+    > .ant-table-content
+    > table
+    > thead
+    > tr
+    > .ant-table-cell-fix-right-first::after,
+  &.ant-table-bordered
+    > .ant-table-container
+    > .ant-table-content
+    > table
+    > tbody
+    > tr
+    > .ant-table-cell-fix-right-first::after {
+    border-right: none;
+  }
+}

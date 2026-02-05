@@ -1,0 +1,92 @@
+.container {
+  width: 100%;
+  height: 100vh;
+}
+
+.top {
+  width: 100%;
+  height: 46px;
+  background-color: rgb(60 60 60);
+}
+
+.body {
+  display: flex;
+  width: 100vw;
+  height: calc(100% - 46px);
+  overflow: hidden;
+  background: #1e1e1e;
+}
+
+.content {
+  width: 100%;
+  height: 100%;
+
+  .tabs {
+    width: 100%;
+    height: 100%;
+  }
+
+  .label {
+    display: 'flex';
+    position: relative;
+    align-items: 'center';
+
+    .title {
+      margin-left: 4px;
+    }
+
+    .point {
+      position: absolute;
+      top: 50%;
+      right: -10px;
+      width: 8px;
+      height: 8px;
+      margin-left: 8px;
+      transform: translateY(-50%);
+      border-radius: 50%;
+      background-color: white;
+    }
+  }
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.titles {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding-left: 8px;
+  background: rgb(35 35 35);
+  line-height: 30px;
+  gap: 8px;
+
+  .icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    background-size: 100% 100%;
+  }
+
+  .icon1 {
+    background: url('../../assets/img/project/project.png');
+  }
+
+  .icon0 {
+    background: url('../../assets/img/project/file.png');
+  }
+}
+
+:global {
+  .ant-empty-description {
+    display: none;
+  }
+
+  .ant-tabs-tab-btn {
+    margin-right: 5px !important;
+  }
+}
