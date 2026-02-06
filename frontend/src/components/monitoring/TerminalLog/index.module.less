@@ -1,0 +1,47 @@
+.wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #252526;
+  border-bottom: 1px solid #333;
+}
+
+.status {
+  font-size: 12px;
+}
+
+.terminal {
+  flex: 1;
+  min-height: 200px;
+  padding: 8px;
+}
+
+// xterm 视口滚动条
+:global(.xterm-viewport) {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #222;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: #666;
+  }
+}

@@ -28,6 +28,7 @@ export const useWebSocket = (url: string, options: UseWebSocketOptions = {}) => 
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const connect = () => {
+    if (!url) return
     try {
       const ws = new WebSocket(url)
       
@@ -70,13 +71,14 @@ export const useWebSocket = (url: string, options: UseWebSocketOptions = {}) => 
   }
 
   useEffect(() => {
-    connect()
+    if (url) connect()
 
     return () => {
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current)
       }
       wsRef.current?.close()
+      wsRef.current = null
     }
   }, [url])
 

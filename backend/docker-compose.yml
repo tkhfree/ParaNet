@@ -1,0 +1,13 @@
+# 仅启动新后端（backend/app），与 editor-backend-dev 分开运行
+# 若需同时跑 editor-backend-dev，在宿主机或另一 compose 中启动，通过 PARANET_EDITOR_BACKEND_URL 关联
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PARANET_API_HOST=0.0.0.0
+      - PARANET_API_PORT=8000
+      - PARANET_EDITOR_BACKEND_URL=${PARANET_EDITOR_BACKEND_URL:-http://host.docker.internal:8080/api}
+    # 可选：与前端同机联调时改为 host 网络或再暴露端口
+    # extra_hosts: ["host.docker.internal:host-gateway"]

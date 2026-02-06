@@ -43,6 +43,12 @@ export interface IntentCompileRequest {
   topologyId: string
 }
 
+/** 编译预览请求（无需保存意图，直接编译 DSL 内容） */
+export interface CompilePreviewRequest {
+  content: string
+  topologyId?: string
+}
+
 export interface IntentCompileResponse {
   success: boolean
   config?: CompiledConfig

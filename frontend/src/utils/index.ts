@@ -1,5 +1,6 @@
 // 导出工具函数
 export { default as storage } from './storage'
+export { getWsBaseUrl, getDeployProgressWsUrl } from './ws'
 
 /**
  * 格式化文件大小

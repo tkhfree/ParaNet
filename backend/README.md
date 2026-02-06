@@ -174,6 +174,8 @@ Frontend  <-->  Backend API  <-->  ParaNet Core
 
 ## 运行方式 (规划)
 
+当前实现（不修改 `editor-backend-dev`）的启动命令、环境变量、与前端 baseURL/WebSocket 路径及 Docker 方式，见 **[README_API.md](README_API.md)**。
+
 ```bash
 # 开发环境
 cd backend

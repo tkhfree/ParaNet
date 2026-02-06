@@ -67,4 +67,9 @@ export const monitorApi = {
   deleteAlertRule: (id: string) => {
     return axios.delete<void, ApiResponse<void>>(`/monitor/alert-rules/${id}`)
   },
+
+  // 获取终端日志（历史片段，用于非 WebSocket 场景）
+  getTerminalLogs: (params?: { nodeId?: string; lines?: number }) => {
+    return axios.get<typeof params, ApiResponse<string>>('/monitor/terminal/logs', { params })
+  },
 }

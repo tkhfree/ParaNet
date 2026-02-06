@@ -13,6 +13,8 @@ import {
   LogoutOutlined,
   SettingOutlined,
   BellOutlined,
+  SunOutlined,
+  MoonOutlined,
 } from '@ant-design/icons'
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -33,8 +35,13 @@ const PageHeader: React.FC = () => {
     useShallow((state) => [state.userInfo, state.logout])
   )
   
-  const [collapsed, toggleCollapsed] = useSystemStore(
-    useShallow((state) => [state.collapsed, state.toggleCollapsed])
+  const [collapsed, toggleCollapsed, themeMode, toggleThemeMode] = useSystemStore(
+    useShallow((state) => [
+      state.collapsed,
+      state.toggleCollapsed,
+      state.themeMode,
+      state.toggleThemeMode,
+    ])
   )
 
   const handleLogout = () => {
@@ -89,6 +96,13 @@ const PageHeader: React.FC = () => {
 
       <div className={styles.right}>
         <Space size={16}>
+          <Button
+            type="text"
+            icon={themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
+            onClick={toggleThemeMode}
+            className={styles.iconButton}
+            title={themeMode === 'dark' ? '切换为浅色' : '切换为深色'}
+          />
           <Button 
             type="text" 
             icon={<BellOutlined />} 

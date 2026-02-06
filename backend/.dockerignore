@@ -1,0 +1,10 @@
+# 仅构建 app 与配置，不包含 editor-backend-dev 及无关文件
+editor-backend-dev
+.git
+__pycache__
+*.pyc
+.pytest_cache
+*.md
+.env
+.env.*
+data/

@@ -67,9 +67,9 @@ export const deployApi = {
     return axios.post<void, ApiResponse<void>>(`/deployments/${id}/cancel`)
   },
 
-  // 预览部署配置
+  // 预览部署配置（返回 IP/NDN/GEO/P4 等）
   preview: (data: DeployRequest) => {
-    return axios.post<DeployRequest, ApiResponse<{ configs: Record<string, unknown> }>>(
+    return axios.post<DeployRequest, ApiResponse<{ configs: import('@/model/deploy').DeploymentPreviewConfig }>>(
       '/deployments/preview',
       data
     )

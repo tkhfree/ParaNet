@@ -11,14 +11,27 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
+    "@monaco-editor/react": "^4.7.0",
+    "monaco-editor": "^0.52.0",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@antv/x6": "^2.18.1",
+    "@antv/x6-plugin-clipboard": "^2.1.6",
+    "@antv/x6-plugin-history": "^2.2.4",
+    "@antv/x6-plugin-keyboard": "^2.2.3",
+    "@antv/x6-plugin-selection": "^2.2.2",
+    "@antv/x6-plugin-snapline": "^2.1.7",
     "antd": "^5.23.1",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
+    "mitt": "^3.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "echarts": "^5.6.0",
+    "@xterm/xterm": "^5.5.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "socket.io-client": "^4.8.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.7",

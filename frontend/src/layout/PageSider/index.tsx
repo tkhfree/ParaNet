@@ -42,11 +42,15 @@ const PageSider: React.FC = () => {
     navigate(key)
   }
 
+  const setCollapsed = useSystemStore(useShallow((state) => state.setCollapsed))
+
   return (
     <Sider
       trigger={null}
       collapsible
       collapsed={collapsed}
+      onBreakpoint={(broken) => setCollapsed(broken)}
+      breakpoint="lg"
       className={styles.sider}
       width={220}
       collapsedWidth={80}

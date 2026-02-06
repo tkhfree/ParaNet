@@ -5,6 +5,7 @@ import type {
   IntentCreateRequest,
   IntentCompileRequest,
   IntentCompileResponse,
+  CompilePreviewRequest,
   NaturalLanguageRequest,
   NaturalLanguageResponse,
 } from '@/model/intent'
@@ -42,6 +43,14 @@ export const intentApi = {
   compile: (data: IntentCompileRequest) => {
     return axios.post<IntentCompileRequest, ApiResponse<IntentCompileResponse>>(
       '/intents/compile',
+      data
+    )
+  },
+
+  // 编译预览（直接编译 DSL 内容，无需保存意图）
+  compilePreview: (data: CompilePreviewRequest) => {
+    return axios.post<CompilePreviewRequest, ApiResponse<IntentCompileResponse>>(
+      '/intents/compile-preview',
       data
     )
   },

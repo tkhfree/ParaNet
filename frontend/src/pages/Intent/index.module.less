@@ -1,5 +1,8 @@
 .intent {
+  display: flex;
+  flex-direction: column;
   min-height: 100%;
+  height: calc(100vh - 120px);
 }
 
 .header {
@@ -7,8 +10,80 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  
+  flex-shrink: 0;
+
   h4 {
     margin: 0;
+  }
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.leftPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 16px;
+}
+
+.editorCard {
+  flex: 1;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  :global(.ant-card-body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .editorWrap {
+    flex: 1;
+    min-height: 200px;
+  }
+}
+
+.chatCard {
+  flex-shrink: 0;
+  max-height: 280px;
+  min-height: 180px;
+
+  :global(.ant-card-body) {
+    padding: 12px;
+  }
+}
+
+.rightPanel {
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.previewCard {
+  flex: 1;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  :global(.ant-card-body) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: auto;
   }
 }

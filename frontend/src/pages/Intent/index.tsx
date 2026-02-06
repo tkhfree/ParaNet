@@ -1,112 +1,116 @@
-import React, { useState } from 'react'
-import { Card, Button, Space, Typography, Empty, Modal, Form, Input, Select, message } from 'antd'
-import { PlusOutlined, CodeOutlined } from '@ant-design/icons'
-import type { IntentType } from '@/model/intent'
+import React, { useCallback } from 'react'
+import { Card, Typography, Button, message } from 'antd'
+import { PlusOutlined } from '@ant-design/icons'
+import { DSLEditor, ChatInput, CompilePreview } from '@/components/editor'
+import { useIntentStore, useTopologyStore } from '@/stores'
+import { intentApi } from '@/api/intent'
+import type { IntentCompileResponse } from '@/model/intent'
+import styles from './index.module.less'
 
 const { Title } = Typography
-const { TextArea } = Input
-const { Option } = Select
-
-interface CreateIntentForm {
-  name: string
-  description?: string
-  type: IntentType
-  content: string
-}
 
 const Intent: React.FC = () => {
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [form] = Form.useForm<CreateIntentForm>()
+  const {
+    dslContent,
+    setDslContent,
+    compileResult,
+    setCompileResult,
+    compileLoading,
+    setCompileLoading,
+    selectedTopologyId,
+  } = useIntentStore()
 
-  const openCreateModal = () => {
-    form.resetFields()
-    form.setFieldsValue({ type: 'dsl' })
-    setCreateModalOpen(true)
-  }
+  const { topology } = useTopologyStore()
+  const topologyId = (selectedTopologyId ?? topology?.id ?? '') || undefined
 
-  const handleCreateOk = async () => {
-    try {
-      const values = await form.validateFields()
-      // TODO: 调用 intentApi.create(values)，开发阶段仅做本地提示
-      message.success(`意图「${values.name}」创建成功（开发模式）`)
-      setCreateModalOpen(false)
-    } catch (err) {
-      // 表单校验失败
+  const handleCompilePreview = useCallback(async () => {
+    const content = dslContent?.trim()
+    if (!content) {
+      message.warning('请先输入 DSL 内容')
+      return
     }
-  }
+    setCompileLoading(true)
+    setCompileResult(null)
+    try {
+      const res = await intentApi.compilePreview({
+        content,
+        topologyId,
+      })
+      const data = res.data as IntentCompileResponse
+      setCompileResult(data)
+      if (data.success) {
+        message.success('编译成功')
+      } else {
+        message.error(data.errors?.[0] ?? '编译失败')
+      }
+    } catch (err) {
+      // 开发阶段：后端可能未实现 compile-preview，展示模拟结果
+      const mockResult: IntentCompileResponse = {
+        success: true,
+        config: {
+          ip: { routes: ['192.168.1.0/24 -> 10.0.0.0/8 via core-1'] },
+          ndn: {},
+          geo: {},
+          p4: {},
+        },
+        warnings: ['当前为开发模式模拟结果，请部署后端 /intents/compile-preview 后使用真实编译'],
+      }
+      setCompileResult(mockResult)
+      message.info('已使用模拟编译结果（后端未实现 compile-preview 时）')
+    } finally {
+      setCompileLoading(false)
+    }
+  }, [dslContent, topologyId, setCompileLoading, setCompileResult])
 
-  const handleCreateCancel = () => {
-    setCreateModalOpen(false)
-  }
+  const handleApplyDSL = useCallback(
+    (dslCode: string) => {
+      setDslContent(dslCode)
+      message.success('已应用到编辑器')
+    },
+    [setDslContent]
+  )
 
   return (
-    <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={2}>模态开发智能体</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
-          创建意图
+    <div className={styles.intent} style={{ padding: 0 }}>
+      <div className={styles.header}>
+        <Title level={4} style={{ margin: 0 }}>
+          意图编程
+        </Title>
+        <Button type="primary" icon={<PlusOutlined />}>
+          保存意图
         </Button>
       </div>
 
-      <Card>
-        <Empty
-          image={<CodeOutlined style={{ fontSize: 64, color: '#bfbfbf' }} />}
-          description="暂无意图配置，使用 DSL 或自然语言创建您的网络意图"
-        >
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
-            立即创建
-          </Button>
-        </Empty>
-      </Card>
-
-      <Modal
-        title="创建意图"
-        open={createModalOpen}
-        onOk={handleCreateOk}
-        onCancel={handleCreateCancel}
-        width={560}
-        okText="创建"
-        cancelText="取消"
-        destroyOnClose
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{ type: 'dsl' }}
-        >
-          <Form.Item
-            name="name"
-            label="意图名称"
-            rules={[{ required: true, message: '请输入意图名称' }]}
-          >
-            <Input placeholder="例如：园区网路由策略" />
-          </Form.Item>
-          <Form.Item name="description" label="描述">
-            <Input placeholder="可选，简要描述该意图" />
-          </Form.Item>
-          <Form.Item
-            name="type"
-            label="创建方式"
-            rules={[{ required: true }]}
-          >
-            <Select placeholder="选择创建方式">
-              <Option value="dsl">DSL 代码</Option>
-              <Option value="natural_language">自然语言</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="content"
-            label="意图内容"
-            rules={[{ required: true, message: '请输入意图内容' }]}
-          >
-            <TextArea
-              rows={6}
-              placeholder="输入 ParaNet DSL 代码或自然语言描述"
+      <div className={styles.main}>
+        <div className={styles.leftPanel}>
+          <Card title="DSL 编辑器" className={styles.editorCard}>
+            <div className={styles.editorWrap}>
+              <DSLEditor
+                value={dslContent}
+                onChange={setDslContent}
+                height="100%"
+                width="100%"
+              />
+            </div>
+          </Card>
+          <Card title="自然语言描述" className={styles.chatCard}>
+            <ChatInput
+              onApplyDSL={handleApplyDSL}
+              topologyId={topologyId}
             />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </Space>
+          </Card>
+        </div>
+        <div className={styles.rightPanel}>
+          <Card title="编译预览" className={styles.previewCard}>
+            <CompilePreview
+              result={compileResult}
+              loading={compileLoading}
+              onCompile={handleCompilePreview}
+            />
+          </Card>
+        </div>
+      </div>
+    </div>
   )
 }
 
