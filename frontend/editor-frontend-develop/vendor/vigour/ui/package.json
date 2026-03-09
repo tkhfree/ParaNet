@@ -1,0 +1,30 @@
+{
+  "name": "@vigour/ui",
+  "version": "0.2.7",
+  "description": "",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "author": "renzp94",
+  "license": "MIT",
+  "repository": {
+    "type": "gitlab",
+    "url": "gitlab+http://git.software.dimpt.com/citc-fe/vigour"
+  },
+  "bugs": {
+    "url": "http://git.software.dimpt.com/citc-fe/vigour/issues"
+  },
+  "homepage": "http://git.software.dimpt.com/citc-fe/vigour#readme",
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "scripts": {
+    "dev": "pnpm client:dev & pnpm server:dev",
+    "client:dev": "node ./scripts/client-dev.js",
+    "server:dev": "node ./scripts/server-dev.js",
+    "build": "pnpm --parallel --filter=./client --filter=./server build",
+    "pub": "pnpm build && pnpm publish --no-git-checks"
+  }
+}

@@ -1,5 +1,15 @@
 [
   {
+    "path": "/api/control-plane",
+    "target": "http://127.0.0.1:8080",
+    "description": "本地控制面后端"
+  },
+  {
+    "path": "/api/chat",
+    "target": "http://127.0.0.1:8080",
+    "description": "本地大模型聊天后端"
+  },
+  {
     "path": "/api/snp",
     "target": "http://10.10.48.2:30497",
     "description": "测试环境"

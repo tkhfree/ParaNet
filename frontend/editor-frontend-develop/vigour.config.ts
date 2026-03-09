@@ -19,6 +19,11 @@ export default defineConfig({
   },
   buildInfo: true,
   webpackChain: webpackChain => {
+    webpackChain.plugins.delete('eslint')
+    webpackChain.performance
+      .hints('warning')
+      .maxAssetSize(5 * 1024 * 1024)
+      .maxEntrypointSize(5 * 1024 * 1024)
     webpackChain.resolve.set('fallback', {
       assert: require.resolve('assert/'),
       http: require.resolve('stream-http'),

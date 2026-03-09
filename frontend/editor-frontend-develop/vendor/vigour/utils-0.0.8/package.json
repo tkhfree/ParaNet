@@ -1,0 +1,38 @@
+{
+  "name": "@vigour/utils",
+  "version": "0.0.8",
+  "description": "vigour工具箱",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "keywords": [
+    "vigour",
+    "utils"
+  ],
+  "files": [
+    "dist"
+  ],
+  "author": "renzp94",
+  "license": "MIT",
+  "repository": {
+    "type": "gitlab",
+    "url": "gitlab+http://git.software.dimpt.com/citc-fe/vigour"
+  },
+  "bugs": {
+    "url": "http://git.software.dimpt.com/citc-fe/vigour/issues"
+  },
+  "homepage": "http://git.software.dimpt.com/citc-fe/vigour#readme",
+  "dependencies": {
+    "address": "^1.2.0",
+    "check-dependencies": "^1.1.0",
+    "dotenv": "^16.0.2",
+    "dotenv-expand": "^9.0.0",
+    "esbuild": "^0.15.5",
+    "kolorist": "^1.5.1",
+    "portfinder": "^1.0.32"
+  },
+  "scripts": {
+    "dev": "tsup --watch src",
+    "build": "tsup",
+    "pub": "pnpm build && pnpm publish --no-git-checks"
+  }
+}

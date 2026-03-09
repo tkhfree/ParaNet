@@ -4,7 +4,7 @@ import { Tabs } from 'antd'
 
 import React, { useEffect, useRef, useState } from 'react'
 import { Terminal } from './Terminal'
-import { Logs } from './Logs'
+// import { Logs } from './Logs'
 import sideBarStore from '@/stores/side-bar'
 import { useShallow } from 'zustand/shallow'
 import topologyStore from '@/stores/topology'
@@ -19,7 +19,7 @@ export const Terminals = (props: IProps) => {
   const { projectId } = props
   const [activeKey, setActiveKey] = useState('0')
   const [items, setItems] = useState([
-    { label: '日志', key: '0', children: <Logs />, closable: false },
+    { label: '日志', key: '0', children: <div>日志加载中...</div>, closable: false },
     { label: '终端', key: '1', children: <Terminal /> },
   ])
   const newTabIndex = useRef(0)

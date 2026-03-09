@@ -1,17 +1,48 @@
+import { ApartmentOutlined, RobotOutlined } from '@ant-design/icons'
 import styles from './index.module.less'
 
 import React from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import sideBarStore from '@/stores/side-bar'
 import { useShallow } from 'zustand/shallow'
 
 export const SideBar = () => {
-  const [treeVisible, setTreeVisible, setTerminalsVisible] = sideBarStore(
-    useShallow(state => [state.treeVisible, state.setTreeVisible, state.setTerminalsVisible]),
-  )
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [treeVisible, agentVisible, setTreeVisible, setAgentVisible, setTerminalsVisible] =
+    sideBarStore(
+      useShallow(state => [
+        state.treeVisible,
+        state.agentVisible,
+        state.setTreeVisible,
+        state.setAgentVisible,
+        state.setTerminalsVisible,
+      ]),
+    )
+  const agentClassName = `${styles.agent} ${agentVisible ? styles.active : ''}`.trim()
+  const controlPlaneClassName = `${styles.controlPlane} ${
+    location.pathname === '/control-plane' ? styles.active : ''
+  }`.trim()
+  const topologyClassName = `${styles.topology} ${treeVisible ? styles.active : ''}`.trim()
+
   return (
     <div className={styles.container}>
       <div>
-        <div className={styles.topology} onClick={() => setTreeVisible(!treeVisible)}></div>
+        <div className={topologyClassName} onClick={() => setTreeVisible(!treeVisible)}></div>
+        <div
+          className={controlPlaneClassName}
+          onClick={() => navigate('/control-plane')}
+          title="控制面操作"
+        >
+          <ApartmentOutlined />
+        </div>
+        <div
+          className={agentClassName}
+          onClick={() => setAgentVisible(!agentVisible)}
+          title="智能体对话"
+        >
+          <RobotOutlined />
+        </div>
         <div
           className={styles.terminal}
           onClick={() => setTerminalsVisible(true, 'terminal')}

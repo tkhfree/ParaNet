@@ -11,6 +11,7 @@ import ImportFileModal from './ImportFileModal'
 import MoveFileModal from './MoveFileModal'
 import { SideBar } from './SideBar'
 import { Terminals } from './Terminals'
+import AgentChat from './AgentChat'
 import Editor from '@monaco-editor/react'
 import { setupP4Language } from './Editor/monacoConfig'
 import { P4Language } from './Editor/p4Language'
@@ -45,9 +46,22 @@ const ProjectManage = () => {
   const [popupVisible, setPopupVisible] = useState(false)
   const [popupTopologyId, setPopupTopologyId] = useState('')
   const [popupTopologyTitle, setPopupTopologyTitle] = useState('')
-  const [treeVisible, terminalsVisible, setTerminalsVisible] = sideBarStore(
-    useShallow(state => [state.treeVisible, state.terminalsVisible, state.setTerminalsVisible]),
-  )
+  const [treeVisible, terminalsVisible, agentVisible, setAgentVisible, setTerminalsVisible] =
+    sideBarStore(
+      useShallow(state => [
+        state.treeVisible,
+        state.terminalsVisible,
+        state.agentVisible,
+        state.setAgentVisible,
+        state.setTerminalsVisible,
+      ]),
+    )
+
+  const onMainResize = (newSizes: number[]) => {
+    if (newSizes[3] <= 0) {
+      setAgentVisible(false)
+    }
+  }
   const [setTopology] = topologyStore(useShallow(state => [state.setTopology]))
   const [topology] = topologyStore(useShallow(state => [state.topology]))
   //获取项目列表
@@ -138,6 +152,12 @@ const ProjectManage = () => {
     setItems(filterList)
   }
   const [activeKey, setActiveKey] = useState<any>()
+  const currentProject = projectList?.data?.find((item: any) => item.id == projectId)
+  const currentFile = items.find((item: any) => item.key === activeKey)
+  const currentFileId =
+    currentFile?.key !== undefined && /^\d+$/.test(String(currentFile.key))
+      ? currentFile.key
+      : undefined
 
   const editorsRef = useRef<Record<string, any>>({})
   const handleEditorDidMount = (editor: any, monacoInstance: any, fileId: any) => {
@@ -268,7 +288,7 @@ const ProjectManage = () => {
         />
       </div>
       <div className={styles['body']}>
-        <Splitter>
+        <Splitter onResize={onMainResize}>
           <Splitter.Panel
             defaultSize="46px"
             size="46px"
@@ -391,6 +411,21 @@ const ProjectManage = () => {
                 <Terminals projectId={projectId} />
               </Splitter.Panel>
             </Splitter>
+          </Splitter.Panel>
+          <Splitter.Panel
+            defaultSize="360px"
+            min={agentVisible ? '320px' : 0}
+            size={agentVisible ? '360px' : 0}
+          >
+            {agentVisible && (
+              <AgentChat
+                projectId={projectId}
+                currentFileId={currentFileId}
+                projectName={currentProject?.name}
+                currentFileName={currentFile?.label}
+                currentFileContent={currentFile?.data}
+              />
+            )}
           </Splitter.Panel>
         </Splitter>
       </div>

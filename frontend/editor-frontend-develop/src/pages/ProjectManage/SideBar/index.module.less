@@ -16,6 +16,28 @@
   cursor: pointer;
 }
 
+.agent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  color: #d0d6df;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.controlPlane {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  color: #d0d6df;
+  font-size: 20px;
+  cursor: pointer;
+}
+
 .terminal {
   width: 46px;
   height: 46px;
@@ -46,4 +68,23 @@
   background: url('../../../assets/svg/side-bar/setting.svg?url') no-repeat;
   background-size: 100% 100%;
   cursor: pointer;
+}
+
+.topology,
+.controlPlane,
+.agent,
+.terminal,
+.log,
+.avatar,
+.setting {
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: rgb(255 255 255 / 8%);
+  }
+}
+
+.active {
+  background-color: rgb(255 255 255 / 8%);
+  box-shadow: inset 2px 0 0 #1677ff;
 }

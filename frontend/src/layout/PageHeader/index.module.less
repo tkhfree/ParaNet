@@ -3,8 +3,22 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
+  height: 56px;
   background: #001529;
   box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+  position: relative;
+  z-index: 100;
+
+  // 添加底部渐变边框
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(22, 119, 255, 0.5), transparent);
+  }
 
   @media (max-width: 768px) {
     padding: 0 12px;
@@ -14,16 +28,28 @@
 .left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
 }
 
 .trigger {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 18px;
-  
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 16px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+
   &:hover {
     color: #fff;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.08);
+    transform: scale(0.95);
   }
 }
 
@@ -34,15 +60,35 @@
 }
 
 .logoText {
-  font-size: 20px;
-  font-weight: 600;
-  color: #fff;
-  letter-spacing: 1px;
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff 0%, #bae0ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 1.5px;
+  position: relative;
+
+  // 添加微光效果
+  &::after {
+    content: 'ParaNet';
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: linear-gradient(135deg, rgba(22, 119, 255, 0.3) 0%, rgba(114, 46, 209, 0.3) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: blur(8px);
+    opacity: 0.5;
+  }
 }
 
 .slogan {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.45) !important;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
 
   @media (max-width: 768px) {
     display: none;
@@ -55,27 +101,44 @@
 }
 
 .iconButton {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.75);
   font-size: 16px;
-  
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+
   &:hover {
     color: #fff;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.08);
+    transform: scale(0.95);
   }
 }
 
 .userInfo {
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background 0.2s;
-  
+  padding: 4px 12px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
   }
 }
 
 .username {
   color: rgba(255, 255, 255, 0.85);
   font-size: 14px;
+  font-weight: 500;
+
+  @media (max-width: 576px) {
+    display: none;
+  }
 }

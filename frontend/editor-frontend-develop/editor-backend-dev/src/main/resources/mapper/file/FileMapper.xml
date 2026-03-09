@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.citc.editor.file.mapper.FileMapper">
+
+    <insert id="insert" parameterType="com.citc.editor.file.entity.FileEntity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO editor_file (
+        id, file_name, is_folder, file_type, project_id, parent_id,
+        remark, file_path, delete_flag, create_by, update_by, create_at, update_at
+        )
+        VALUES (
+        #{file.id}, #{file.fileName}, #{file.isFolder}, #{file.fileType}, #{file.projectId}, #{file.parentId},
+        #{file.remark}, #{file.filePath}, 0, 1, 1, NOW(), NOW()
+        )
+    </insert>
+
+    <select id="findByProjectId" resultType="com.citc.editor.file.entity.FileEntity">
+        SELECT * FROM editor_file WHERE project_id = #{projectId} AND delete_flag = 0
+    </select>
+
+    <select id="findById" resultType="com.citc.editor.file.entity.FileEntity">
+        SELECT * FROM editor_file WHERE id = #{id} AND delete_flag = 0
+    </select>
+
+    <delete id="deleteById">
+        UPDATE editor_file SET delete_flag = 1, update_at = NOW() WHERE id = #{id}
+    </delete>
+
+    <update id="update" parameterType="com.citc.editor.file.entity.FileEntity">
+        UPDATE editor_file
+        SET file_name = #{file.fileName},
+        file_type = #{file.fileType},
+        parent_id = #{file.parentId},
+        remark = #{file.remark},
+        file_path = #{file.filePath},
+        update_by = 1,
+        update_at = NOW()
+        WHERE id = #{file.id} AND delete_flag = 0
+    </update>
+
+    <select id="findByParentId" resultType="com.citc.editor.file.entity.FileEntity">
+        SELECT * FROM editor_file WHERE parent_id = #{parentId} AND delete_flag = 0
+    </select>
+
+    <select id="findByNameAndProjectId" resultType="com.citc.editor.file.entity.FileEntity">
+        SELECT * FROM editor_file
+        WHERE file_name = #{fileName} AND project_id = #{projectId} AND delete_flag = 0
+    </select>
+
+    <select id="findByNameAndParentId" resultType="com.citc.editor.file.entity.FileEntity">
+        SELECT * FROM editor_file
+        WHERE file_name = #{fileName}
+        <if test="parentId != null">
+            AND parent_id = #{parentId}
+        </if>
+        <if test="parentId == null">
+            AND parent_id is NULL
+        </if>
+        AND project_id = #{projectId} AND is_folder = #{isFolder} AND delete_flag = 0
+    </select>
+
+    <select id="findFileByNameAndParentId" resultType="com.citc.editor.file.entity.FileEntity">
+        SELECT * FROM editor_file
+        WHERE file_name = #{fileName}
+        <if test="parentId != null">
+            AND parent_id = #{parentId}
+        </if>
+        <!--由于文件是平铺在项目路径下的，所以一个项目中的文件名称只能唯一（如果后缀名不一致，则名称可以重复，只是文件后缀不一致）-->
+        <!--        <if test="parentId == null">-->
+        <!--            AND parent_id is NULL-->
+        <!--        </if>-->
+        <if test="fileType != null">
+            AND file_type = #{fileType}
+        </if>
+        AND project_id = #{projectId} AND is_folder = #{isFolder} AND delete_flag = 0
+    </select>
+
+    <select id="findByNameAndProjectIdNewTime" resultType="com.citc.editor.file.entity.FileEntity">
+        SELECT * FROM editor_file
+        WHERE file_name = #{fileName} AND project_id = #{projectId} AND delete_flag = 0 order by update_at desc limit 1
+    </select>
+    <select id="selectFileIdsByProjectId" resultType="java.lang.Long">
+        SELECT id FROM editor_file WHERE project_id = #{projectId} AND parent_id is NULL AND delete_flag = 0
+    </select>
+    <select id="getCountByProjectIdAndFileType" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM editor_file WHERE project_id = #{projectId} AND file_type = #{fileType} AND delete_flag = 0
+    </select>
+
+    <select id="getByProjectIdAndFileType" resultType="com.citc.editor.file.entity.FileEntity">
+        SELECT * FROM editor_file WHERE project_id = #{projectId} AND file_type = #{fileType} AND delete_flag = 0
+    </select>
+
+    <delete id="deleteByParentIdAndFileTypes">
+        DELETE FROM editor_file
+        WHERE parent_id = #{parentId}
+        <if test="fileTypes != null">
+            AND file_type IN
+            <foreach collection="fileTypes" item="item" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+    </delete>
+
+    <insert id="insertList">
+        INSERT INTO editor_file (
+        id, file_name, is_folder, file_type,
+        project_id, parent_id, remark, file_path
+        )
+        VALUES
+        <foreach collection="fileEntityList" item="file" separator=",">
+            (
+            #{file.id}, #{file.fileName}, #{file.isFolder}, #{file.fileType},
+            #{file.projectId}, #{file.parentId}, #{file.remark}, #{file.filePath}
+            )
+        </foreach>
+    </insert>
+
+    <select id="getCountByProjectIdAndFileName" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM editor_file WHERE project_id = #{projectId} AND file_name = #{fileName} AND delete_flag = 0
+    </select>
+    <select id="getByProjectIdAndFileTypeAndFileName" resultType="com.citc.editor.file.entity.FileEntity">
+        SELECT * FROM editor_file WHERE project_id = #{projectId} AND file_type = #{fileType} AND file_name LIKE
+        CONCAT('%', #{fileName}, '%') AND delete_flag = 0
+    </select>
+</mapper>
