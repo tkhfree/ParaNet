@@ -20,8 +20,8 @@
     "not op_mini all"
   ],
   "simple-git-hooks": {
-    "pre-commit": "npx lint-staged",
-    "commit-msg": "npx --no -- commitlint --edit $1"
+    "pre-commit": "cd frontend/editor-frontend-develop && npx lint-staged",
+    "commit-msg": "cd frontend/editor-frontend-develop && npx --no -- @commitlint/cli --edit $1"
   },
   "lint-staged": {
     "src/**/*.{js,jsx,ts,tsx}": [

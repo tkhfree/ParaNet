@@ -10,13 +10,53 @@
 > - 后端项目：`editor-frontend-develop/editor-backend-dev`
 > - 大模型配置文件：`editor-backend-dev/src/main/resources/llm-config.properties`
 
-## 先说结论
+## TODO / 当前阻塞
+
+当前后端**还没有成功启动**，最主要的阻塞是 `editor-backend-dev/lib/` 下缺少两个本地 jar：
+
+- 缺失文件：`editor-backend-dev/lib/pty4j-0.12.10-jdk8.jar`
+- 缺失文件：`editor-backend-dev/lib/purejavacomm-0.0.11.1.jar`
+
+已经确认的事实：
+
+- 当前仓库和 `/Users/tangkaifei/Documents/code` 目录下都没有这两个 jar
+- `pom.xml` 里写的精确坐标 / 文件名无法从公开 Maven Central 直接下载
+- 所以它们更像是历史遗留的本地依赖，可能需要从原始项目包、同事机器或旧版本工程里找回
+
+已经核验过的“近似可下载版本”：
+
+- `purejavacomm` 可下载近似版本：`com.github.purejavacomm:purejavacomm:1.0.2.RELEASE`
+- 下载地址：[purejavacomm-1.0.2.RELEASE.jar](https://repo1.maven.org/maven2/com/github/purejavacomm/purejavacomm/1.0.2.RELEASE/purejavacomm-1.0.2.RELEASE.jar)
+- `pty4j` 可下载近似版本：`org.jetbrains.pty4j:pty4j:0.12.10`
+- 下载地址：[pty4j-0.12.10.jar](https://repo1.maven.org/maven2/org/jetbrains/pty4j/pty4j/0.12.10/pty4j-0.12.10.jar)
+- 另一个可下载版本：`uk.co.slimjimsoftware:pty4j:0.12.7`
+- 下载地址：[pty4j-0.12.7.jar](https://repo1.maven.org/maven2/uk/co/slimjimsoftware/pty4j/0.12.7/pty4j-0.12.7.jar)
+
+注意：
+
+- 上面这些只是“近似版本”，不是当前 `pom.xml` 里缺失文件的同名同版本替代物
+- 下次修复时，优先顺序建议是：先找原始 `lib/*.jar`，再检查这些近似版本是否可等价替代
+
+## 项目概览
 
 这个项目已经改成：
 
 - 公网环境可以直接 `npm install`
 - 不再依赖公司内网 `nexus`
 - 项目拷贝到别的电脑时，只要把当前项目目录完整带走，就可以继续安装和运行
+
+## 项目结构
+
+当前目录下有两部分：
+
+- 前端：`/Users/tangkaifei/Documents/code/ParaNet/frontend/editor-frontend-develop`
+- 后端：`/Users/tangkaifei/Documents/code/ParaNet/frontend/editor-frontend-develop/editor-backend-dev`
+
+其中：
+
+- 前端开发端口默认是 `8000`
+- 后端服务端口默认是 `8080`
+- 前端通过 `proxy.config.json` 把 `/api/chat` 和 `/api/control-plane` 代理到本地后端
 
 ## 环境要求
 
@@ -34,7 +74,9 @@ java -version
 mvn -v
 ```
 
-## 第一次安装
+## 安装与启动
+
+### 1. 第一次安装前端依赖
 
 在项目根目录执行：
 
@@ -48,63 +90,44 @@ npm install
 - `.npmrc` 已改为公网源，并开启了 `legacy-peer-deps=true`
 - 所以外网环境也可以安装
 
-## 项目结构
+### 2. 准备后端运行环境
 
-当前目录下有两部分：
-
-- 前端：`/Users/tangkaifei/Documents/code/ParaNet/frontend/editor-frontend-develop`
-- 后端：`/Users/tangkaifei/Documents/code/ParaNet/frontend/editor-frontend-develop/editor-backend-dev`
-
-其中：
-
-- 前端开发端口默认是 `8000`
-- 后端服务端口默认是 `8080`
-- 前端通过 `proxy.config.json` 把 `/api/chat` 和 `/api/control-plane` 代理到本地后端
-
-## 后端准备
-
-### 1. 安装 JDK
-
-这个后端项目的 `pom.xml` 里配置的是：
+后端 `pom.xml` 中使用的是：
 
 - `java.version=1.8`
 
-所以建议优先安装 `JDK 8`。
+所以建议优先安装并使用 `JDK 8`。
 
-安装完成后执行：
+安装完成后确认：
 
 ```bash
 java -version
-```
-
-如果没有正常显示 Java 版本，后端无法启动。
-
-### 2. 安装 Maven
-
-安装完成后执行：
-
-```bash
 mvn -v
 ```
 
-如果提示 `command not found: mvn`，说明 Maven 还没装好，后端也无法启动。
+如果 `mvn` 已安装但终端仍提示 `command not found: mvn`，在 macOS 上很可能只是 `PATH` 没带上 Homebrew Maven，可检查：
 
-## 大模型配置
+```bash
+which mvn
+ls /opt/homebrew/bin/mvn
+```
 
-智能体对话现在的调用链路是：
+### 3. 配置大模型
+
+智能体对话链路是：
 
 1. 前端对话栏发送请求到本地后端
 2. 后端读取配置文件
 3. 后端调用智谱大模型
 4. 前端以流式方式显示回复
 
-大模型配置文件在：
+配置文件位置：
 
 ```bash
 editor-backend-dev/src/main/resources/llm-config.properties
 ```
 
-你至少要配置这几个字段：
+至少需要配置：
 
 ```properties
 llm.zhipu.enabled=true
@@ -131,7 +154,7 @@ llm.zhipu.max-tokens=2048
 - 如果 `llm.zhipu.api-key` 为空，后端虽然可以启动，但对话请求会失败
 - 这个配置文件是后端读取的，不需要把 API Key 放到前端代码里
 
-## 启动后端
+### 4. 启动后端
 
 进入后端目录：
 
@@ -139,9 +162,23 @@ llm.zhipu.max-tokens=2048
 cd /Users/tangkaifei/Documents/code/ParaNet/frontend/editor-frontend-develop/editor-backend-dev
 ```
 
-启动 Spring Boot：
+正常启动方式：
 
 ```bash
+mvn spring-boot:run
+```
+
+如果你机器上 Maven 在 Homebrew 目录，但当前 shell 找不到，可以临时用绝对路径：
+
+```bash
+/opt/homebrew/bin/mvn spring-boot:run
+```
+
+如果需要显式切到 Java 8：
+
+```bash
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-8.jdk/Contents/Home
+export PATH="$JAVA_HOME/bin:/opt/homebrew/bin:$PATH"
 mvn spring-boot:run
 ```
 
@@ -150,14 +187,14 @@ mvn spring-boot:run
 - 后端端口：`8080`
 - 服务上下文：`/api`
 
-所以聊天接口实际地址是：
+聊天接口实际地址：
 
 ```bash
 http://127.0.0.1:8080/api/chat/message
 http://127.0.0.1:8080/api/chat/stream
 ```
 
-## 本地开发
+### 5. 启动前端
 
 启动开发环境：
 
@@ -170,147 +207,7 @@ npm run dev
 - 本机：`http://127.0.0.1:8000`
 - 局域网：终端里会显示当前机器对应地址
 
-## 控制面页面入口
-
-当前已经新增了“控制面操作”页面。
-
-你可以通过两种方式进入：
-
-- 在 `项目管理` 页左侧边栏点击“控制面操作”图标
-- 直接访问 `http://127.0.0.1:8000/#/control-plane`
-
-说明：
-
-- 之前如果你在 `项目管理` 页面里看不到入口，是因为该页面默认隐藏顶部全局菜单
-- 现在入口已经补到 `项目管理` 左侧边栏，和拓扑、智能体、终端入口放在一起
-
-## 控制面模式说明
-
-当前控制面流表能力支持两种模式：
-
-### 1. 本地项目模式
-
-这是默认模式，适合前后端联调、页面开发和结构验证。
-
-特点：
-
-- 不直接下发真实设备
-- 流表数据会按项目保存在后端本地
-- 不需要额外的 P4Runtime 适配服务
-
-默认保存位置：
-
-```bash
-{file.storage.root}/{projectId}/control_plane_flow_tables.json
-```
-
-只要下面两个条件有任意一个不满足，就会使用本地项目模式：
-
-- `p4runtime.adapter.enabled=false`
-- `p4runtime.adapter.base-url` 为空
-
-### 2. P4Runtime Adapter 模式
-
-这是接真实设备时使用的模式。
-
-特点：
-
-- 前端页面仍然使用统一的控制面操作 UI
-- 后端会把页面填写的结构化流表转换为 P4Runtime 风格请求
-- 后端通过配置好的 Adapter 地址去读取和写入真实设备流表
-
-注意：
-
-- 当前后端封装的是“P4Runtime 风格的 Adapter 请求”
-- 也就是说，后端默认不是直接自己起 gRPC 去连交换机，而是调用你提供的 P4Runtime 适配层 HTTP 接口
-- 如果你们后面有固定的 Adapter 协议，我可以继续按真实协议再做一次精确对齐
-
-## 控制面配置
-
-后端新增了这组控制面 / P4Runtime 配置，在：
-
-```bash
-editor-backend-dev/src/main/resources/application.properties
-```
-
-配置项如下：
-
-```properties
-p4runtime.adapter.enabled=false
-p4runtime.adapter.base-url=
-p4runtime.adapter.read-path=/p4runtime/table-entry/read
-p4runtime.adapter.write-path=/p4runtime/table-entry/write
-p4runtime.adapter.default-device-id=1
-p4runtime.adapter.election-id-high=0
-p4runtime.adapter.election-id-low=1
-```
-
-字段说明：
-
-- `p4runtime.adapter.enabled`：是否开启 P4Runtime Adapter 模式
-- `p4runtime.adapter.base-url`：P4Runtime Adapter 服务地址，例如 `http://127.0.0.1:9559`
-- `p4runtime.adapter.read-path`：读取流表接口路径
-- `p4runtime.adapter.write-path`：写入流表接口路径
-- `p4runtime.adapter.default-device-id`：默认 `device_id`
-- `p4runtime.adapter.election-id-high`：默认 `election_id.high`
-- `p4runtime.adapter.election-id-low`：默认 `election_id.low`
-
-### 本地项目模式示例
-
-```properties
-p4runtime.adapter.enabled=false
-p4runtime.adapter.base-url=
-```
-
-### P4Runtime Adapter 模式示例
-
-```properties
-p4runtime.adapter.enabled=true
-p4runtime.adapter.base-url=http://127.0.0.1:9559
-p4runtime.adapter.read-path=/p4runtime/table-entry/read
-p4runtime.adapter.write-path=/p4runtime/table-entry/write
-p4runtime.adapter.default-device-id=1
-p4runtime.adapter.election-id-high=0
-p4runtime.adapter.election-id-low=1
-```
-
-## 控制面流表表单说明
-
-控制面页面里的“新增流表 / 编辑流表”已经升级为标准化结构表单。
-
-现在表单主要由两部分组成：
-
-- `Match Fields`
-- `Action`
-
-### 1. Match Fields
-
-每一条匹配字段包含：
-
-- `fieldName`：字段名，例如 `hdr.ipv4.dstAddr`
-- `matchType`：匹配类型，例如 `EXACT`、`LPM`、`TERNARY`
-- `value`：匹配值
-- `mask`：掩码或前缀长度，可选
-
-### 2. Action
-
-动作部分包含：
-
-- `actionName`：动作名称，例如 `set_nhop`
-- `actionParams`：动作参数列表，例如 `port=1`
-
-页面会根据这些结构化字段自动生成摘要字符串：
-
-- `matchRule`
-- `action`
-
-这样做的好处是：
-
-- 前端填写更标准
-- 后端更容易转换成 P4Runtime 风格请求
-- 本地项目模式和真实设备模式都能复用同一套页面
-
-## 前后端联调启动顺序
+### 6. 前后端联调顺序
 
 推荐按下面顺序启动：
 
@@ -333,7 +230,147 @@ p4runtime.adapter.election-id-low=1
 npm run dev
 ```
 
-## 智能体对话说明
+## 控制面页面
+
+### 页面入口
+
+当前已经新增了“控制面操作”页面。
+
+你可以通过两种方式进入：
+
+- 在 `项目管理` 页左侧边栏点击“控制面操作”图标
+- 直接访问 `http://127.0.0.1:8000/#/control-plane`
+
+说明：
+
+- `项目管理` 页面默认隐藏顶部全局菜单
+- 所以控制面入口已经补到 `项目管理` 左侧边栏，和拓扑、智能体、终端入口放在一起
+
+### 控制面两种模式
+
+当前控制面流表能力支持两种模式。
+
+#### 1. 本地项目模式
+
+这是默认模式，适合前后端联调、页面开发和结构验证。
+
+特点：
+
+- 不直接下发真实设备
+- 流表数据会按项目保存在后端本地
+- 不需要额外的 P4Runtime 适配服务
+
+默认保存位置：
+
+```bash
+{file.storage.root}/{projectId}/control_plane_flow_tables.json
+```
+
+只要下面两个条件有任意一个不满足，就会使用本地项目模式：
+
+- `p4runtime.adapter.enabled=false`
+- `p4runtime.adapter.base-url` 为空
+
+#### 2. P4Runtime Adapter 模式
+
+这是接真实设备时使用的模式。
+
+特点：
+
+- 前端页面仍然使用统一的控制面操作 UI
+- 后端会把页面填写的结构化流表转换为 P4Runtime 风格请求
+- 后端通过配置好的 Adapter 地址去读取和写入真实设备流表
+
+注意：
+
+- 当前后端封装的是“P4Runtime 风格的 Adapter 请求”
+- 后端默认不是直接自己起 gRPC 去连交换机，而是调用你提供的 P4Runtime 适配层 HTTP 接口
+- 如果后续有固定的 Adapter 协议，可以继续按真实协议精确对齐
+
+### 控制面配置
+
+配置文件位置：
+
+```bash
+editor-backend-dev/src/main/resources/application.properties
+```
+
+配置项：
+
+```properties
+p4runtime.adapter.enabled=false
+p4runtime.adapter.base-url=
+p4runtime.adapter.read-path=/p4runtime/table-entry/read
+p4runtime.adapter.write-path=/p4runtime/table-entry/write
+p4runtime.adapter.default-device-id=1
+p4runtime.adapter.election-id-high=0
+p4runtime.adapter.election-id-low=1
+```
+
+字段说明：
+
+- `p4runtime.adapter.enabled`：是否开启 P4Runtime Adapter 模式
+- `p4runtime.adapter.base-url`：P4Runtime Adapter 服务地址，例如 `http://127.0.0.1:9559`
+- `p4runtime.adapter.read-path`：读取流表接口路径
+- `p4runtime.adapter.write-path`：写入流表接口路径
+- `p4runtime.adapter.default-device-id`：默认 `device_id`
+- `p4runtime.adapter.election-id-high`：默认 `election_id.high`
+- `p4runtime.adapter.election-id-low`：默认 `election_id.low`
+
+本地项目模式示例：
+
+```properties
+p4runtime.adapter.enabled=false
+p4runtime.adapter.base-url=
+```
+
+P4Runtime Adapter 模式示例：
+
+```properties
+p4runtime.adapter.enabled=true
+p4runtime.adapter.base-url=http://127.0.0.1:9559
+p4runtime.adapter.read-path=/p4runtime/table-entry/read
+p4runtime.adapter.write-path=/p4runtime/table-entry/write
+p4runtime.adapter.default-device-id=1
+p4runtime.adapter.election-id-high=0
+p4runtime.adapter.election-id-low=1
+```
+
+### 控制面流表表单
+
+控制面页面里的“新增流表 / 编辑流表”已经升级为标准化结构表单。
+
+表单主要由两部分组成：
+
+- `Match Fields`
+- `Action`
+
+`Match Fields` 中每一条包含：
+
+- `fieldName`：字段名，例如 `hdr.ipv4.dstAddr`
+- `matchType`：匹配类型，例如 `EXACT`、`LPM`、`TERNARY`
+- `value`：匹配值
+- `mask`：掩码或前缀长度，可选
+
+`Action` 中每一条包含：
+
+- `actionName`：动作名称，例如 `set_nhop`
+- `actionParams`：动作参数列表，例如 `port=1`
+
+页面会根据这些结构化字段自动生成摘要字符串：
+
+- `matchRule`
+- `action`
+
+这样做的好处是：
+
+- 前端填写更标准
+- 后端更容易转换成 P4Runtime 风格请求
+- 本地项目模式和真实设备模式都能复用同一套页面
+
+## Agent 说明
+
+### 智能体对话说明
 
 当前智能体对话功能已经支持：
 
@@ -350,11 +387,11 @@ npm run dev
 
 也就是说，模型在回答时不仅能看到你的问题，还能看到当前项目和当前代码上下文，并且在需要时可以主动调用后端工具执行真实操作。
 
-## Agent 能力说明
+### Agent 工作方式
 
 当前这套能力已经不只是“普通聊天框”，而是一套基于大模型 + 后端工具调用的项目智能体。
 
-它现在的工作方式是：
+工作方式：
 
 1. 前端把用户问题、当前项目、当前文件、文件内容发给后端
 2. 后端把这些上下文和工具定义一起发给大模型
@@ -363,9 +400,9 @@ npm run dev
 5. 后端把执行结果再回喂给大模型
 6. 前端流式显示最终回复，并展示工具调用过程
 
-### 这套 Agent 目前能做的事
+### Agent 当前能力
 
-#### 1. 项目理解与分析
+项目理解与分析：
 
 - 理解当前项目结构
 - 读取项目文件树
@@ -373,7 +410,7 @@ npm run dev
 - 结合当前代码上下文回答问题
 - 根据项目文件树分析该改哪里
 
-#### 2. 文件管理
+文件管理：
 
 - 创建文件夹
 - 创建文件
@@ -382,12 +419,12 @@ npm run dev
 - 移动文件或文件夹
 - 删除文件或文件夹
 
-#### 3. 项目管理
+项目管理：
 
 - 创建项目
 - 更新项目名称和备注
 
-#### 4. 编译与部署
+编译与部署：
 
 - 查询项目设备列表
 - 调用前端编译
@@ -397,12 +434,12 @@ npm run dev
 - 查询部署结果
 - 查询后端编译日志
 
-#### 5. 编译产物分析
+编译产物分析：
 
 - 获取最近一次前端编译产物列表
 - 读取前端编译产物内容
 
-### Agent 当前已接入的主要工具能力
+### Agent 已接入工具
 
 后端当前已经向模型暴露了这些工具：
 
@@ -423,7 +460,7 @@ npm run dev
 - `get_frontend_compile_files`
 - `read_frontend_compile_file`
 
-### 在页面里的实际表现
+### 页面中的实际表现
 
 在前端聊天框里，你现在可以看到三类内容：
 
@@ -431,7 +468,7 @@ npm run dev
 - 智能体正式回复
 - 工具调用过程提示
 
-例如你会看到：
+例如：
 
 - `正在调用工具：get_project_file_tree`
 - `工具 get_project_file_tree 执行完成`
@@ -440,8 +477,6 @@ npm run dev
 所以它不是只会“口头建议”，而是已经可以通过后端真正操作项目。
 
 ### 适合让 Agent 做的事情
-
-你现在可以比较自然地让它做这些事：
 
 - `帮我看看当前项目里有哪些关键文件`
 - `帮我解释当前文件的作用`
@@ -454,8 +489,6 @@ npm run dev
 - `帮我读取最近一次前端编译产物`
 
 ### 当前限制
-
-虽然这套 Agent 已经能调用真实接口，但目前仍然有这些限制：
 
 - 危险动作还没有二次确认机制
 - 是否执行工具，当前由模型自主判断
@@ -477,45 +510,32 @@ npm run dev
 
 推荐尽量少说空话，多说目标。
 
-### 1. 理解项目
-
-适合这样问：
+理解项目：
 
 - `请先帮我看看当前项目的文件结构，并告诉我主要目录和文件分别是做什么的`
 - `请结合当前项目文件树，告诉我这个项目大概是怎么工作的`
 - `请帮我分析当前项目里和编译部署最相关的文件有哪些`
 
-### 2. 理解当前文件
-
-适合这样问：
+理解当前文件：
 
 - `请帮我解释当前打开文件的作用`
 - `请阅读当前文件，并告诉我它的主要逻辑`
 - `请告诉我当前文件里哪些部分最重要，后续改功能应该重点看哪里`
 
-### 3. 读取指定文件
-
-适合这样问：
+读取指定文件：
 
 - `请帮我读取 path.json 的内容，并解释它是干什么的`
 - `请帮我读取 topology.json，并总结里面的关键信息`
 - `请帮我找一下项目里和部署有关的配置文件，并读取给我看`
 
-### 4. 创建文件或文件夹
-
-适合这样问：
+创建文件或文件夹：
 
 - `请在当前项目根目录下新建一个名为 demo 的文件夹`
 - `请在 xxx 文件夹下创建一个名为 test.p4 的文件`
 - `请在当前项目中创建一个新的 domain 文件，名字叫 sample，内容先留空`
-
-如果你希望它直接写入初始内容，可以这样问：
-
 - `请在当前项目根目录下创建一个名为 demo.p4 的文件，并把以下内容写进去：...`
 
-### 5. 修改文件
-
-适合这样问：
+修改文件：
 
 - `请把当前文件内容改成下面这段：...`
 - `请帮我修改当前文件，在末尾增加以下内容：...`
@@ -523,25 +543,19 @@ npm run dev
 - `请把 xxx 文件重命名为 yyy`
 - `请把 xxx 文件移动到 demo 文件夹下`
 
-### 6. 删除文件
-
-适合这样问：
+删除文件：
 
 - `请删除当前项目中的 xxx 文件`
 - `请删除 demo 文件夹`
 - `请帮我删除这个无用文件，如果删除前有风险请先提醒我`
 
-### 7. 项目管理
-
-适合这样问：
+项目管理：
 
 - `请帮我创建一个新项目，名称叫 demo_project`
 - `请把当前项目名称改成 xxx`
 - `请把当前项目备注改成：这是一个用于测试 Agent 的项目`
 
-### 8. 编译与部署
-
-适合这样问：
+编译与部署：
 
 - `请帮我触发当前项目的前端编译`
 - `请先列出当前项目的设备名称和 IP`
@@ -549,34 +563,26 @@ npm run dev
 - `请在部署完成后继续执行后端编译`
 - `请对当前项目执行前端编译、部署、后端编译，并把每一步结果告诉我`
 
-### 9. 查询日志
-
-适合这样问：
+查询日志：
 
 - `请帮我查看当前项目最近一次前端编译日志`
 - `请帮我查看设备 xxx 的后端编译日志`
 - `请帮我查看设备 xxx 的部署结果`
 - `请把最近一次编译失败的原因总结给我`
 
-### 10. 查看编译产物
-
-适合这样问：
+查看编译产物：
 
 - `请列出当前项目最近一次前端编译生成了哪些产物`
 - `请帮我读取最近一次前端编译产物里某个 json 文件的内容`
 - `请帮我分析最近一次前端编译产物中最关键的几个文件`
 
-### 11. 先分析，再执行
-
-如果你不想让它一上来就改东西，可以这样问：
+先分析，再执行：
 
 - `请先分析，不要直接修改文件`
 - `请先告诉我应该怎么改，等我确认后再执行`
 - `请先检查当前项目结构，再给我操作建议，不要直接部署`
 
-### 12. 更容易成功的提问方式
-
-推荐你尽量这样描述：
+更容易成功的问法：
 
 - `请帮我做什么`
 - `对象是谁`
@@ -591,26 +597,24 @@ npm run dev
 - `请直接触发当前项目前端编译，并把日志返回给我`
 - `请先分析当前文件，再告诉我应该怎么修改，不要直接保存`
 
-### 13. 不推荐的问法
-
-下面这种问法太模糊，Agent 成功率会下降：
+不推荐的问法：
 
 - `帮我搞一下`
 - `你看着改`
 - `帮我处理这个项目`
 - `我想优化一下`
 
-更好的写法是：
+更好的写法：
 
 - `请读取当前文件，并帮我说明哪里可以优化`
 - `请查看项目文件树后，告诉我新增一个 p4 文件应该放在哪`
 - `请直接把当前项目部署到设备 xxx，并返回部署结果`
 
-## 联调时最常见的问题
+## 联调与排错
 
-### 1. 前端能打开，但智能体对话失败
+### 联调时最常见的问题
 
-优先检查：
+前端能打开，但智能体对话失败：
 
 - 后端是否已经启动
 - `llm-config.properties` 里是否已经填写 `llm.zhipu.api-key`
@@ -618,35 +622,27 @@ npm run dev
 - 前端是否已经重启过
 - 智能体请求经过的 `/api/chat` 代理是否正常
 
-### 2. 执行 `mvn spring-boot:run` 失败
-
-优先检查：
+执行 `mvn spring-boot:run` 失败：
 
 - `java -version` 是否正常
 - `mvn -v` 是否正常
 - 当前目录是否是 `editor-backend-dev`
+- `editor-backend-dev/lib/` 下是否存在缺失的两个本地 jar
 
-### 3. 对话没有返回内容
-
-优先检查：
+对话没有返回内容：
 
 - 智谱 `API Key` 是否正确
 - 模型名是否可用，例如 `glm-4-flash`
 - 当前网络是否能访问 `https://open.bigmodel.cn`
 - 后端是否已经成功读取到项目上下文
 
-### 4. 前端提示接口错误
+前端提示接口错误：
 
-可以先看这两边：
+- 先看前端运行终端
+- 再看后端运行终端
+- 一般以后端日志更关键，因为智谱调用是在后端发起的
 
-- 前端运行终端
-- 后端运行终端
-
-通常以后端日志更关键，因为智谱调用是在后端发起的。
-
-### 5. 工具调用有提示，但执行失败
-
-优先检查：
+工具调用有提示，但执行失败：
 
 - 当前项目是否已经选中
 - 当前文件是否真实存在
@@ -654,7 +650,49 @@ npm run dev
 - 设备名称是否和项目里的设备名称完全一致
 - 如果是编译产物读取，是否已经有最近一次前端编译记录
 
-## 生产打包
+### 常见问题
+
+`npm install` 失败：
+
+- Node 是否是 `20.x`
+- 当前目录是否正确
+- `vendor/vigour/` 是否还在
+- 是否误删了 `.npmrc`
+
+如果想强制重装：
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+后端端口被占用：
+
+- 如果是前端 `8000` 端口被占用，结束旧进程后重新执行 `npm run dev`
+- 如果是后端 `8080` 端口被占用，结束旧的 Java 进程后重新执行 `mvn spring-boot:run`
+
+终端里还有 ESLint 提示：
+
+- 当前项目已经处理到“可以正常安装、构建、运行”
+- 如果后续想继续做代码洁净优化，再单独处理业务代码里的 lint 规则即可
+
+后端启动后对话接口报错：
+
+- `editor-backend-dev/src/main/resources/llm-config.properties`
+- `llm.zhipu.api-key` 是否为空
+- 智谱接口地址是否能访问
+- 模型名是否填写正确
+
+Agent 能聊天，但不会执行项目操作：
+
+- 后端是否是最新代码
+- 聊天接口是否走的是当前项目里的 `editor-backend-dev`
+- 后端日志里是否有工具调用异常
+- 当前问题是否足够明确，例如 `请帮我读取当前文件内容`、`请帮我触发前端编译`
+
+## 打包与迁移
+
+### 生产打包
 
 ```bash
 npm run build
@@ -666,7 +704,7 @@ npm run build
 dist/
 ```
 
-## 拷贝到别的电脑怎么用
+### 拷贝到别的电脑怎么用
 
 把整个 `editor-frontend-develop` 目录完整拷走，尤其不要漏掉这些内容：
 
@@ -689,80 +727,16 @@ npm run dev
 - 不需要连接公司 VPN
 - 只要 `vendor/` 在，私有依赖就能正常安装
 
-## 常见问题
+## 推荐开发工具
 
-### 1. `npm install` 失败怎么办
-
-优先检查：
-
-- Node 是否是 `20.x`
-- 当前目录是否正确
-- `vendor/vigour/` 是否还在
-- 是否误删了 `.npmrc`
-
-如果想强制重装，可以执行：
-
-```bash
-rm -rf node_modules package-lock.json
-npm install
-```
-
-然后再运行：
-
-```bash
-npm run dev
-```
-
-### 2. 启动后端口被占用怎么办
-
-如果 `8000` 端口被占用，可以先结束旧进程，再重新运行：
-
-```bash
-npm run dev
-```
-
-如果是后端 `8080` 端口被占用，需要先结束旧的 Java 进程，再重新执行：
-
-```bash
-cd /Users/tangkaifei/Documents/code/ParaNet/frontend/editor-frontend-develop/editor-backend-dev
-mvn spring-boot:run
-```
-
-### 3. 终端里还有 ESLint 提示怎么办
-
-当前项目已经处理到“可以正常安装、构建、运行”。
-如果后续你想继续做代码洁净优化，再单独处理业务代码里的 lint 规则即可。
-
-### 4. 后端启动后对话接口报错怎么办
-
-优先检查：
-
-- `editor-backend-dev/src/main/resources/llm-config.properties`
-- `llm.zhipu.api-key` 是否为空
-- 智谱接口地址是否能访问
-- 模型名是否填写正确
-
-### 5. Agent 能聊天，但不会执行项目操作怎么办
-
-优先检查：
-
-- 后端是否是最新代码
-- 聊天接口是否走的是当前项目里的 `editor-backend-dev`
-- 后端日志里是否有工具调用异常
-- 当前问题是否足够明确，例如：
-  - `请帮我读取当前文件内容`
-  - `请帮我创建一个名为 demo 的文件夹`
-  - `请帮我触发前端编译`
-  - `请帮我查询最近一次后端编译日志`
-
-## 推荐 VS Code 插件
+### 推荐 VS Code 插件
 
 - `ESLint`
 - `Prettier - Code formatter`
 - `Stylelint`
 - `CSS Modules`
 
-## 推荐 VS Code 设置
+### 推荐 VS Code 设置
 
 在 `settings.json` 中加入：
 
