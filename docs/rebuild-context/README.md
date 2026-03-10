@@ -45,13 +45,24 @@
 - 风险点
 - 推荐里程碑
 
+### `04-workspace-agent-api-contract.md`
+
+新前端集成阶段新增的接口契约文档，覆盖：
+
+- `Workspace` 项目与文件资源模型
+- 项目上下文智能体流式接口
+- 工作台控制台 / 终端 WebSocket 约定
+- 新旧前端接口映射关系
+- 后端推荐实施顺序
+
 ## 使用建议
 
 建议阅读顺序：
 
 1. 先读 `01-current-project-summary.md`，确认当前工程的真实边界。
 2. 再读 `02-target-architecture-and-models.md`，作为新项目的技术设计输入。
-3. 最后读 `03-mvp-rebuild-roadmap.md`，按阶段推进实现。
+3. 再读 `03-mvp-rebuild-roadmap.md`，了解整体落地路线。
+4. 最后读 `04-workspace-agent-api-contract.md`，对齐新前端集成阶段的接口边界。
 
 ## 文档定位
 

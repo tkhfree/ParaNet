@@ -9,6 +9,7 @@ import AuthRoute from '@/components/common/AuthRoute'
 const Login = lazy(() => import('@/pages/Login'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const Topology = lazy(() => import('@/pages/Topology'))
+const Workspace = lazy(() => import('@/pages/Workspace'))
 const Intent = lazy(() => import('@/pages/Intent'))
 const Deploy = lazy(() => import('@/pages/Deploy'))
 const Monitor = lazy(() => import('@/pages/Monitor'))
@@ -39,6 +40,11 @@ export const menuRoutes: RouteMenuItem[] = [
     path: '/topology',
     title: '拓扑管理',
     icon: 'DeploymentUnitOutlined',
+  },
+  {
+    path: '/workspace',
+    title: '项目工作台',
+    icon: 'FolderOpenOutlined',
   },
   {
     path: '/intent',
@@ -82,6 +88,10 @@ export const routes: RouteObject[] = [
       {
         path: 'topology',
         element: LazyLoad(Topology),
+      },
+      {
+        path: 'workspace',
+        element: LazyLoad(Workspace),
       },
       {
         path: 'intent',

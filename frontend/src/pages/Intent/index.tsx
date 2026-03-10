@@ -1,15 +1,18 @@
 import React, { useCallback } from 'react'
-import { Card, Typography, Button, message } from 'antd'
+import { Card, Typography, Button, message, Alert, Space, Tag } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
-import { DSLEditor, ChatInput, CompilePreview } from '@/components/editor'
+import { useNavigate } from 'react-router-dom'
+import { DSLEditor, ChatInput, CompilePreview, ProjectAssistantPanel } from '@/components/editor'
 import { useIntentStore, useTopologyStore } from '@/stores'
 import { intentApi } from '@/api/intent'
 import type { IntentCompileResponse } from '@/model/intent'
+import useWorkspaceStore, { getWorkspaceContextSnapshot } from '@/stores/workspace'
 import styles from './index.module.less'
 
 const { Title } = Typography
 
 const Intent: React.FC = () => {
+  const navigate = useNavigate()
   const {
     dslContent,
     setDslContent,
@@ -21,6 +24,8 @@ const Intent: React.FC = () => {
   } = useIntentStore()
 
   const { topology } = useTopologyStore()
+  const workspaceState = useWorkspaceStore()
+  const workspaceContext = getWorkspaceContextSnapshot(workspaceState)
   const topologyId = (selectedTopologyId ?? topology?.id ?? '') || undefined
 
   const handleCompilePreview = useCallback(async () => {
@@ -76,10 +81,31 @@ const Intent: React.FC = () => {
         <Title level={4} style={{ margin: 0 }}>
           意图编程
         </Title>
-        <Button type="primary" icon={<PlusOutlined />}>
-          保存意图
-        </Button>
+        <Space>
+          <Button onClick={() => navigate('/workspace')}>打开项目工作台</Button>
+          <Button type="primary" icon={<PlusOutlined />}>
+            保存意图
+          </Button>
+        </Space>
       </div>
+
+      <Alert
+        className={styles.contextAlert}
+        type="info"
+        showIcon
+        message="智能体上下文已接入项目工作台"
+        description={
+          <Space wrap>
+            <Tag color={workspaceContext.projectId ? 'blue' : 'default'}>
+              项目：{workspaceContext.projectName ?? '未选择'}
+            </Tag>
+            <Tag color={workspaceContext.currentFileId ? 'purple' : 'default'}>
+              文件：{workspaceContext.currentFileName ?? '未打开'}
+            </Tag>
+            {topologyId && <Tag>拓扑：{topologyId}</Tag>}
+          </Space>
+        }
+      />
 
       <div className={styles.main}>
         <div className={styles.leftPanel}>
@@ -107,6 +133,9 @@ const Intent: React.FC = () => {
               loading={compileLoading}
               onCompile={handleCompilePreview}
             />
+          </Card>
+          <Card title="项目上下文智能体" className={styles.assistantCard}>
+            <ProjectAssistantPanel topologyId={topologyId} />
           </Card>
         </div>
       </div>

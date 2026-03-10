@@ -84,6 +84,23 @@ paranet> 在节点A和B之间建立一条NDN内容分发通道
 
 🚧 项目正在积极开发中
 
+## 前端集成进展
+
+当前仓库中的新前端以 `frontend/` 为主工程，正在按“模块迁移 + API 适配”的路线吸收历史前端能力，而不是直接合并旧工程。
+
+已完成的前端集成工作包括：
+
+- 新增 `项目工作台`，提供项目选择、文件树、多标签编辑器和控制台面板
+- 在 `Intent` 页接入项目上下文智能体，支持传递当前项目、当前文件和文件内容
+- 新增前端 API 适配层，先兼容旧项目接口语义，再逐步切换到新的 `workspace/*` 与 `agent/*` 接口
+- 补充 `Workspace` 与项目上下文智能体的后端接口契约文档
+
+相关文档：
+
+- 前端集成实施方案：`frontend/FRONTEND_INTEGRATION_PLAN.md`
+- Workspace / Agent 接口契约：`docs/rebuild-context/04-workspace-agent-api-contract.md`
+- 前端当前状态与后续 TODO：`frontend/README.md`
+
 ## 许可证
 
 MIT License

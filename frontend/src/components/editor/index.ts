@@ -1,6 +1,7 @@
 export { default as DSLEditor } from './DSLEditor'
 export { default as ChatInput } from './ChatInput'
 export { default as CompilePreview } from './CompilePreview'
+export { default as ProjectAssistantPanel } from './ProjectAssistantPanel'
 export type { DSLEditorProps } from './DSLEditor'
 export type { ChatInputProps, ChatMessage } from './ChatInput'
 export type { CompilePreviewProps } from './CompilePreview'
