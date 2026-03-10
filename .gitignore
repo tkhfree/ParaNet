@@ -151,3 +151,8 @@ data/
 
 # Cursor
 .cursor/
+
+# Frontend / Node
+node_modules/
+node_modules.zip
+*.zip

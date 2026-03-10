@@ -6,12 +6,19 @@ Shared fixtures for ParaNet tests.
 
 import pytest
 from pathlib import Path
+import sys
+
+
+ROOT_DIR = Path(__file__).parent.parent
+SRC_DIR = ROOT_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 
 @pytest.fixture
 def project_root() -> Path:
     """Return the project root directory."""
-    return Path(__file__).parent.parent
+    return ROOT_DIR
 
 
 @pytest.fixture

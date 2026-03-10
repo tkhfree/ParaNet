@@ -1,0 +1,59 @@
+#include <extended.domain>
+
+service[Fabric] { Router }
+
+module Edge(out bool should_drop, in next_hop_t next_hop) {
+    parser { hdr.ethernet; hdr.vlan_tag; hdr.ipv4; }
+
+    control {
+        map<next_hop_t, port_id_t>[16] port_lookup {
+            (1, 7);
+            (2, 9);
+        };
+        static map<bit<32>, bit<16>>[32] counters;
+        static bit<64> packet_counter[64];
+        set<pkt.out_port, gmeta.vlan_id> push_vlan, pop_vlan;
+
+        func push() {
+            hdr.vlan_tag.setValid();
+            hdr.vlan_tag.vlan_id = gmeta.vlan_id;
+        }
+
+        func pop() {
+            hdr.vlan_tag.setInvalid();
+            nop();
+        }
+
+        assert(hdr.ethernet.isValid());
+
+        if (hdr.ipv4.isValid() && hdr.ethernet.etherType == 0x0800) {
+            pkt.out_port = port_lookup[next_hop];
+            packet_counter[pkt.out_port] = packet_counter[pkt.out_port] + 1;
+
+            switch (pkt.out_port, gmeta.vlan_id) {
+                push_vlan: push();
+                pop_vlan: pop();
+                default: drop();
+            }
+        } else if (next_hop == 2 || next_hop == 3) {
+            should_drop = _FALSE;
+        } else {
+            should_drop = _TRUE;
+        }
+    }
+}
+
+module Monitor() {
+    control {
+        drop();
+    }
+}
+
+application Router using Parser {
+    bit<1> should_drop;
+    Edge.apply(should_drop, 1);
+    if (should_drop == _TRUE) {
+        drop();
+    }
+    Monitor.apply();
+}

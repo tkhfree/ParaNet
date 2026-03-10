@@ -1,0 +1,21 @@
+#include <router_modules.pne>
+
+module Forwarding() {
+    parser { hdr.ethernet; hdr.eth_type; }
+
+    control {
+        if (hdr.geo.isValid()) {
+            Geo.apply();
+        }
+    }
+}
+
+module UserModule() {
+    control {
+    }
+}
+
+application Router using Parser {
+    Forwarding.apply();
+    UserModule.apply();
+}

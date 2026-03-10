@@ -1,0 +1,77 @@
+{
+  "services": {
+    "Fabric": [
+      "Router"
+    ]
+  },
+  "applications": {
+    "Router": {
+      "parser_name": "Parser",
+      "locals": [
+        "should_drop"
+      ],
+      "body_kinds": [
+        "apply",
+        "if",
+        "apply"
+      ]
+    }
+  },
+  "modules": {
+    "Edge": {
+      "params": [
+        "should_drop",
+        "next_hop"
+      ],
+      "parser_headers": [
+        "hdr.ethernet",
+        "hdr.vlan_tag",
+        "hdr.ipv4"
+      ],
+      "locals": [],
+      "maps": [
+        "counters",
+        "port_lookup"
+      ],
+      "sets": [
+        "pop_vlan",
+        "push_vlan"
+      ],
+      "registers": [
+        "packet_counter"
+      ],
+      "functions": [
+        "pop",
+        "push"
+      ],
+      "body_kinds": [
+        "assert",
+        "if"
+      ]
+    },
+    "Monitor": {
+      "params": [],
+      "parser_headers": [],
+      "locals": [],
+      "maps": [],
+      "sets": [],
+      "registers": [],
+      "functions": [],
+      "body_kinds": [
+        "primitive"
+      ]
+    },
+    "SharedAudit": {
+      "params": [],
+      "parser_headers": [],
+      "locals": [],
+      "maps": [],
+      "sets": [],
+      "registers": [],
+      "functions": [],
+      "body_kinds": [
+        "primitive"
+      ]
+    }
+  }
+}

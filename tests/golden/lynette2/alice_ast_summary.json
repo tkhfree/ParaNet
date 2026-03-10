@@ -1,0 +1,48 @@
+{
+  "includes": [
+    {
+      "path": "router_modules.pne",
+      "is_domain": false,
+      "source": "alice_router_main.pne"
+    }
+  ],
+  "declarations": [
+    {
+      "type": "module",
+      "name": "Geo",
+      "param_names": [],
+      "parser_headers": [],
+      "statement_types": [
+        "PrimitiveCallNode"
+      ]
+    },
+    {
+      "type": "module",
+      "name": "Forwarding",
+      "param_names": [],
+      "parser_headers": [
+        "hdr.ethernet",
+        "hdr.eth_type"
+      ],
+      "statement_types": [
+        "IfNode"
+      ]
+    },
+    {
+      "type": "module",
+      "name": "UserModule",
+      "param_names": [],
+      "parser_headers": [],
+      "statement_types": []
+    },
+    {
+      "type": "application",
+      "name": "Router",
+      "parser_name": "Parser",
+      "statement_types": [
+        "ApplyCallNode",
+        "ApplyCallNode"
+      ]
+    }
+  ]
+}
