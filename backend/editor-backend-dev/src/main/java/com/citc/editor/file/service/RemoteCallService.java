@@ -855,6 +855,21 @@ public class RemoteCallService {
         return deviceMap;
     }
 
+    public Map<String, String> getProjectDeviceMap(Long projectId) throws IOException, BadRequestException {
+        if (ObjectUtils.isEmpty(projectId)) {
+            throw new BadRequestException("项目id不能为空");
+        }
+        List<FileEntity> pathFiles = fileMapper.getByProjectIdAndFileTypeAndFileName(projectId, FileTypeEnum.OTHER.getType(), "path.json");
+        if (CollectionUtils.isEmpty(pathFiles)) {
+            throw new BusinessException("没有找到path.json文件");
+        }
+        String pathFilePath = pathFiles.get(0).getFilePath();
+        if (!new File(pathFilePath).exists()) {
+            throw new BusinessException("path.json文件不存在，无法解析设备信息");
+        }
+        return getDeviceMapByFilePath(pathFilePath);
+    }
+
     private void getNameIPMap(Map<String, String> deviceMap, Map<String, Object> value) {
         value.forEach((key2, value2) -> {
             Map<String, Object> valueMap = (Map<String, Object>) value2;

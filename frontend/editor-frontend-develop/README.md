@@ -4,11 +4,11 @@
 >
 > 推荐 Node 版本：`20.x`
 >
-> 当前目录同时包含：
+> 当前仓库相关目录：
 >
-> - 前端项目：`editor-frontend-develop`
-> - 后端项目：`editor-frontend-develop/editor-backend-dev`
-> - 大模型配置文件：`editor-backend-dev/src/main/resources/llm-config.properties`
+> - 前端项目：`frontend/editor-frontend-develop`
+> - 后端项目：`backend/editor-backend-dev`
+> - 大模型配置文件：`backend/editor-backend-dev/src/main/resources/llm-config.properties`
 
 ## TODO / 当前阻塞
 
@@ -47,10 +47,10 @@
 
 ## 项目结构
 
-当前目录下有两部分：
+当前仓库里相关部分：
 
-- 前端：`/Users/tangkaifei/Documents/code/ParaNet/frontend/editor-frontend-develop`
-- 后端：`/Users/tangkaifei/Documents/code/ParaNet/frontend/editor-frontend-develop/editor-backend-dev`
+- 前端：`D:/code/ParaNet/frontend/editor-frontend-develop`
+- 后端：`D:/code/ParaNet/backend/editor-backend-dev`
 
 其中：
 
@@ -159,7 +159,7 @@ llm.zhipu.max-tokens=2048
 进入后端目录：
 
 ```bash
-cd /Users/tangkaifei/Documents/code/ParaNet/frontend/editor-frontend-develop/editor-backend-dev
+cd D:/code/ParaNet/backend/editor-backend-dev
 ```
 
 正常启动方式：
@@ -626,8 +626,8 @@ p4runtime.adapter.election-id-low=1
 
 - `java -version` 是否正常
 - `mvn -v` 是否正常
-- 当前目录是否是 `editor-backend-dev`
-- `editor-backend-dev/lib/` 下是否存在缺失的两个本地 jar
+- 当前目录是否是 `backend/editor-backend-dev`
+- `backend/editor-backend-dev/lib/` 下是否存在缺失的两个本地 jar
 
 对话没有返回内容：
 
@@ -678,7 +678,7 @@ npm install
 
 后端启动后对话接口报错：
 
-- `editor-backend-dev/src/main/resources/llm-config.properties`
+- `backend/editor-backend-dev/src/main/resources/llm-config.properties`
 - `llm.zhipu.api-key` 是否为空
 - 智谱接口地址是否能访问
 - 模型名是否填写正确
@@ -686,7 +686,7 @@ npm install
 Agent 能聊天，但不会执行项目操作：
 
 - 后端是否是最新代码
-- 聊天接口是否走的是当前项目里的 `editor-backend-dev`
+- 聊天接口是否走的是当前项目里的 `backend/editor-backend-dev`
 - 后端日志里是否有工具调用异常
 - 当前问题是否足够明确，例如 `请帮我读取当前文件内容`、`请帮我触发前端编译`
 
