@@ -194,5 +194,5 @@ npm run preview
 
 推荐进一步阅读：
 
-- 集成实施方案：`FRONTEND_INTEGRATION_PLAN.md`
-- 接口契约文档：`../docs/rebuild-context/04-workspace-agent-api-contract.md`
+- 集成实施方案：`frontend/FRONTEND_INTEGRATION_PLAN.md`
+- 接口契约文档：`docs/rebuild-context/04-workspace-agent-api-contract.md`
