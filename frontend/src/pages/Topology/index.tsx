@@ -13,7 +13,7 @@ import {
 } from '@ant-design/icons'
 import type { Topology } from '@/model/topology'
 import { topologyApi } from '@/api/topology'
-import { TopologyEditor, TopologyPreviewer } from '@/components/topology'
+import { D3TopologyEditor as TopologyEditor, D3TopologyPreviewer as TopologyPreviewer } from '@/components/topology'
 import styles from './index.module.less'
 
 type ViewMode = 'list' | 'editor' | 'preview'
