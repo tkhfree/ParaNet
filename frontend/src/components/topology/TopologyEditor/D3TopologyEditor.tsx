@@ -2,26 +2,108 @@
  * D3 拓扑编辑器组件
  */
 
-import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { D3Editor, D3Canvas, D3Node, D3Link } from '../d3-engine'
-import { D3SideBar } from './SideBar/D3SideBar'
-import { D3ToolBar } from './ToolBar/D3ToolBar'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { App } from 'antd'
+import { useShallow } from 'zustand/shallow'
+import { CreateDeviceDialog } from './CreateDeviceDialog'
+import { D3Editor, D3Canvas, type D3CanvasHandle, D3Node, D3Link } from '../d3-engine'
+import { DEVICE_NAMES } from '../d3-engine'
 import { D3CreateLinkDialog } from './CreateLinkDialog/D3CreateLinkDialog'
 import { D3EditDeviceDialog } from './EditDeviceDialog/D3EditDeviceDialog'
-import { D3TopologyInfoPanel } from './TopologyInfoPanel/D3TopologyInfoPanel'
 import styles from './index.module.less'
+import { topologyApi } from '@/api/topology'
+import topologyStore from '@/stores/topology'
+import type { IDevice } from '@/model/topology'
+
+const SAVE_DEBOUNCE_MS = 300
+
+export interface D3TopologyEditorStats {
+  topologyTitle: string
+  nodeCount: number
+  linkCount: number
+  deviceCounts: Partial<Record<D3Node['type'], number>>
+}
+
+export interface D3TopologyEditorHandle {
+  fitToContent: () => void
+  resetView: () => void
+  openCreateDeviceDialog: (deviceType: string) => void
+  startLinkMode: () => void
+  flushSave: () => Promise<void>
+}
 
 interface IProps {
   topologyId: string
   title: string
+  className?: string
+  onGraphStatsChange?: (stats: D3TopologyEditorStats) => void
+  onSelectionChange?: (node: D3Node | null) => void
 }
 
-export const D3TopologyEditor: React.FC<IProps> = ({ topologyId, title }) => {
+function buildGraphStats(editor: D3Editor, title: string): D3TopologyEditorStats {
+  const deviceCounts: Partial<Record<D3Node['type'], number>> = {}
+  for (const node of editor.nodes) {
+    deviceCounts[node.type] = (deviceCounts[node.type] ?? 0) + 1
+  }
+
+  return {
+    topologyTitle: title,
+    nodeCount: editor.nodes.length,
+    linkCount: editor.links.length,
+    deviceCounts,
+  }
+}
+
+export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
+  topologyId,
+  title,
+  className,
+  onGraphStatsChange,
+  onSelectionChange,
+}, ref) => {
+  const { message } = App.useApp()
   const containerRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<D3CanvasHandle | null>(null)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const saveNowRef = useRef<(() => Promise<void>) | null>(null)
+  const setTopology = topologyStore(useShallow((s) => s.setTopology))
   const [editor, setEditor] = useState<D3Editor | null>(null)
   const [, setUpdateCounter] = useState(0)
+  const [createVisible, setCreateVisible] = useState(false)
+  const [pendingDeviceType, setPendingDeviceType] = useState('')
+  const [loadingTopology, setLoadingTopology] = useState(false)
 
-  // 初始化编辑器
+  const openCreateDialog = useCallback((deviceType: string) => {
+    setPendingDeviceType(deviceType)
+    setCreateVisible(true)
+  }, [])
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      fitToContent: () => {
+        canvasRef.current?.fitToContent()
+      },
+      resetView: () => {
+        canvasRef.current?.resetView()
+      },
+      openCreateDeviceDialog: (deviceType: string) => {
+        openCreateDialog(deviceType)
+      },
+      startLinkMode: () => {
+        if (!editor || editor.nodes.length < 2) {
+          message.warning('至少需要两个设备后才能创建链路')
+          return
+        }
+        editor.bus.emit('LINK_CREATE_REQUESTED', undefined)
+      },
+      flushSave: async () => {
+        await saveNowRef.current?.()
+      },
+    }),
+    [editor, message, openCreateDialog]
+  )
+
   useEffect(() => {
     if (!containerRef.current) return
     const ed = new D3Editor(containerRef.current)
@@ -32,34 +114,78 @@ export const D3TopologyEditor: React.FC<IProps> = ({ topologyId, title }) => {
     }
   }, [])
 
-  // 加载拓扑数据
   useEffect(() => {
     if (editor && topologyId) {
-      editor.open(topologyId)
+      setLoadingTopology(true)
+      void editor
+        .open(topologyId)
+        .then(() => {
+          setUpdateCounter((c) => c + 1)
+          onGraphStatsChange?.(buildGraphStats(editor, title))
+          requestAnimationFrame(() => {
+            canvasRef.current?.fitToContent()
+          })
+        })
+        .catch(() => {
+          message.error('拓扑加载失败，请稍后重试')
+        })
+        .finally(() => {
+          setLoadingTopology(false)
+        })
+      onSelectionChange?.(null)
     }
-  }, [editor, topologyId])
+  }, [editor, message, onGraphStatsChange, onSelectionChange, title, topologyId])
 
-  // 监听图变化，触发重新渲染
   useEffect(() => {
     if (!editor) return
     const onGraphChanged = () => {
       setUpdateCounter((c) => c + 1)
+      onGraphStatsChange?.(buildGraphStats(editor, title))
     }
     editor.bus.on('GRAPH_CHANGED', onGraphChanged)
+    onGraphChanged()
     return () => editor.bus.off('GRAPH_CHANGED', onGraphChanged)
-  }, [editor])
+  }, [editor, onGraphStatsChange, title])
 
-  // 节点点击
+  useEffect(() => {
+    if (!editor) return
+
+    const save = async () => {
+      if (!editor.autoSave) return
+      const { nodes, links } = editor.toApiPayload()
+      await topologyApi.update(topologyId, { nodes, links })
+      setTopology(topologyId, 'topology')
+    }
+
+    saveNowRef.current = save
+
+    const scheduleSave = () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = setTimeout(() => {
+        void save()
+      }, SAVE_DEBOUNCE_MS)
+    }
+
+    editor.bus.on('GRAPH_CHANGED', scheduleSave)
+    return () => {
+      editor.bus.off('GRAPH_CHANGED', scheduleSave)
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      saveNowRef.current = null
+    }
+  }, [editor, setTopology, topologyId])
+
   const handleNodeClick = useCallback(
     (node: D3Node, _x: number, _y: number) => {
-      if (editor) {
-        editor.selectNode(node.id)
+      if (!editor) {
+        return
       }
+
+      editor.selectNode(node.id)
+      onSelectionChange?.(node)
     },
-    [editor]
+    [editor, onSelectionChange]
   )
 
-  // 节点右键菜单
   const handleNodeContextMenu = useCallback(
     (node: D3Node, x: number, y: number) => {
       if (editor) {
@@ -69,7 +195,6 @@ export const D3TopologyEditor: React.FC<IProps> = ({ topologyId, title }) => {
     [editor]
   )
 
-  // 连线点击
   const handleLinkClick = useCallback(
     (link: D3Link, x: number, y: number) => {
       if (editor) {
@@ -79,50 +204,138 @@ export const D3TopologyEditor: React.FC<IProps> = ({ topologyId, title }) => {
     [editor]
   )
 
-  // 空白点击
   const handleBlankClick = useCallback(() => {
-    if (editor) {
-      editor.selectNode(null)
-      editor.bus.emit('BLANK_CLICK', undefined)
+    if (!editor) {
+      return
     }
-  }, [editor])
 
-  // 图变化
+    editor.selectNode(null)
+    editor.bus.emit('BLANK_CLICK', undefined)
+    onSelectionChange?.(null)
+  }, [editor, onSelectionChange])
+
   const handleGraphChange = useCallback(() => {
     if (editor) {
       editor.bus.emit('GRAPH_CHANGED', undefined)
     }
   }, [editor])
 
-  if (!editor) {
-    return <div className={styles.container}>Loading...</div>
-  }
+  const handleCreateDevice = useCallback(
+    (device: IDevice) => {
+      if (!editor) {
+        return
+      }
+      editor.addDevice(device)
+      editor.bus.emit('GRAPH_CHANGED', undefined)
+    },
+    [editor]
+  )
+
+  const handleDeviceDrop = useCallback(
+    (deviceType: string, x: number, y: number) => {
+      if (!editor) {
+        return
+      }
+      const deviceLabel = DEVICE_NAMES[deviceType as keyof typeof DEVICE_NAMES] ?? deviceType
+      const existingCount = editor.nodes.filter((node) => node.type === deviceType).length
+      const deviceName = `${deviceLabel}-${existingCount + 1}`
+      const created = editor.addDevice(
+        {
+          deviceName,
+          deviceClass: deviceType,
+          deviceForm: '',
+          portForm: '',
+          capacity: '',
+          rate: '',
+          system: '',
+          ssd: '',
+        },
+        { x, y }
+      )
+      if (!created) {
+        message.warning(`${deviceName} 已存在，请重试`)
+        return
+      }
+      editor.bus.emit('GRAPH_CHANGED', undefined)
+      message.success(`已创建设备 ${deviceName}`)
+    },
+    [editor, message]
+  )
 
   return (
-    <div className={styles.container}>
-      <div className={styles['side-bar']}>
-        <D3SideBar editor={editor} />
-      </div>
+    <div className={`${styles.container} ${className ?? ''}`.trim()}>
       <div ref={containerRef} className={styles.content}>
-        <D3Canvas
-          nodes={editor.nodes}
-          links={editor.links}
-          onNodeClick={handleNodeClick}
-          onNodeContextMenu={handleNodeContextMenu}
-          onLinkClick={handleLinkClick}
-          onBlankClick={handleBlankClick}
-          onGraphChange={handleGraphChange}
-          selectedNodeId={editor.selectedNodeId}
-        />
+        {editor ? (
+          <>
+            <D3Canvas
+              ref={canvasRef}
+              nodes={editor.nodes}
+              links={editor.links}
+              onNodeClick={handleNodeClick}
+              onNodeContextMenu={handleNodeContextMenu}
+              onLinkClick={handleLinkClick}
+              onBlankClick={handleBlankClick}
+              onGraphChange={handleGraphChange}
+              onDeviceDrop={handleDeviceDrop}
+              selectedNodeId={editor.selectedNodeId}
+            />
+            {loadingTopology && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(248, 250, 252, 0.72)',
+                  color: '#64748b',
+                  fontSize: 14,
+                  zIndex: 5,
+                }}
+              >
+                正在加载拓扑...
+              </div>
+            )}
+          </>
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              height: '100%',
+              color: '#64748b',
+              fontSize: 14,
+            }}
+          >
+            Loading...
+          </div>
+        )}
       </div>
-      <div className={styles['tool-bar']}>
-        <D3ToolBar editor={editor} id={topologyId} />
-      </div>
-      <D3TopologyInfoPanel editor={editor} title={title} />
-      <D3CreateLinkDialog editor={editor} />
-      <D3EditDeviceDialog editor={editor} />
+      {editor && (
+        <>
+          <CreateDeviceDialog
+            title="新建设备"
+            deviceClass={pendingDeviceType}
+            visible={createVisible}
+            setVisible={(visible) => {
+              setCreateVisible(visible)
+            }}
+            initialValues={{
+              deviceClass: pendingDeviceType,
+              deviceName: pendingDeviceType
+                ? `${DEVICE_NAMES[pendingDeviceType as keyof typeof DEVICE_NAMES]}-${editor.nodes.length + 1}`
+                : '',
+            }}
+            onConfirm={handleCreateDevice}
+          />
+          <D3CreateLinkDialog editor={editor} />
+          <D3EditDeviceDialog editor={editor} />
+        </>
+      )}
     </div>
   )
-}
+})
 
 export default D3TopologyEditor

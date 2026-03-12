@@ -7,7 +7,10 @@ export interface Intent {
   type: IntentType
   content: string
   status: IntentStatus
+  projectId?: string | null
+  topologyId?: string | null
   compiledConfig?: CompiledConfig
+  lastCompileResult?: IntentCompileResponse
   createdAt: string
   updatedAt: string
   deployedAt?: string
@@ -36,6 +39,7 @@ export interface IntentCreateRequest {
   type: IntentType
   content: string
   topologyId?: string
+  projectId?: string | null
 }
 
 export interface IntentCompileRequest {
@@ -47,6 +51,7 @@ export interface IntentCompileRequest {
 export interface CompilePreviewRequest {
   content: string
   topologyId?: string
+  projectId?: string | null
 }
 
 export interface IntentCompileResponse {
@@ -54,6 +59,28 @@ export interface IntentCompileResponse {
   config?: CompiledConfig
   errors?: string[]
   warnings?: string[]
+  projectId?: string | null
+  ast?: {
+    type: string
+    children: Array<{
+      line: number
+      kind: string
+      text: string
+    }>
+  }
+  globalIr?: {
+    summary?: Record<string, unknown>
+    instructions?: Array<Record<string, unknown>>
+  }
+  deviceIr?: Array<{
+    deviceId: string
+    instructions: Array<Record<string, unknown>>
+  }>
+  logs?: Array<{
+    timestamp: string
+    level: 'info' | 'warning' | 'error'
+    message: string
+  }>
 }
 
 export interface NaturalLanguageRequest {

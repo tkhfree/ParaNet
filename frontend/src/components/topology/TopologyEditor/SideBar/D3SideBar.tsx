@@ -5,41 +5,44 @@
 import React, { useState } from 'react'
 import { Input } from 'antd'
 import { SearchOutlined } from '@ant-design/icons'
-import type { IDevice } from '@/model/topology'
-import type { D3Editor } from '../../d3-engine'
-import { DEVICE_COLORS } from '../../d3-engine'
-import { CreateDeviceDialog } from '../CreateDeviceDialog'
+import { DEVICE_COLORS, DEVICE_IMAGE_MAP, DEVICE_NAMES } from '../../d3-engine'
+import {
+  clearActiveDraggedDeviceType,
+  DEVICE_DRAG_FALLBACK_MIME_TYPE,
+  DEVICE_DRAG_MIME_TYPE,
+  setActiveDraggedDeviceType,
+} from '../../d3-engine/dragDrop'
 import styles from './index.module.less'
 
 interface IProps {
-  editor: D3Editor
+  onCreateRequest: (deviceType: string) => void
 }
 
 const DEVICE_TYPES = [
-  { id: 'switch', type: 'switch', label: '交换机' },
-  { id: 'router', type: 'router', label: '路由器' },
-  { id: 'host', type: 'host', label: '主机' },
-  { id: 'controller', type: 'controller', label: '控制器' },
-  { id: 'server', type: 'server', label: '服务器' },
-  { id: 'p4_switch', type: 'p4_switch', label: 'P4 交换机' },
+  { id: 'switch', type: 'switch', label: DEVICE_NAMES.switch },
+  { id: 'router', type: 'router', label: DEVICE_NAMES.router },
+  { id: 'host', type: 'host', label: DEVICE_NAMES.host },
+  { id: 'controller', type: 'controller', label: DEVICE_NAMES.controller },
+  { id: 'server', type: 'server', label: DEVICE_NAMES.server },
+  { id: 'p4_switch', type: 'p4_switch', label: DEVICE_NAMES.p4_switch },
 ]
 
-export const D3SideBar: React.FC<IProps> = ({ editor }) => {
+export const D3SideBar: React.FC<IProps> = ({ onCreateRequest }) => {
   const [filter, setFilter] = useState('')
-  const [createVisible, setCreateVisible] = useState(false)
-  const [deviceType, setDeviceType] = useState('')
+
+  const attachDragData = (event: React.DragEvent<HTMLDivElement>, deviceType: string) => {
+    setActiveDraggedDeviceType(deviceType)
+    event.dataTransfer.effectAllowed = 'copy'
+    event.dataTransfer.setData(DEVICE_DRAG_MIME_TYPE, deviceType)
+    event.dataTransfer.setData(DEVICE_DRAG_FALLBACK_MIME_TYPE, deviceType)
+  }
 
   const filtered = DEVICE_TYPES.filter((d) =>
     d.label.toLowerCase().includes(filter.toLowerCase())
   )
 
   const onClickItem = (item: typeof DEVICE_TYPES[0]) => {
-    setDeviceType(item.type)
-    setCreateVisible(true)
-  }
-
-  const onConfirm = (device: IDevice) => {
-    editor?.addDevice(device)
+    onCreateRequest(item.type)
   }
 
   return (
@@ -57,6 +60,13 @@ export const D3SideBar: React.FC<IProps> = ({ editor }) => {
             className={styles.item}
             key={item.id}
             onClick={() => onClickItem(item)}
+            draggable
+            onDragStart={(event) => {
+              attachDragData(event, item.type)
+            }}
+            onDragEnd={() => {
+              clearActiveDraggedDeviceType()
+            }}
           >
             <div
               style={{
@@ -69,35 +79,22 @@ export const D3SideBar: React.FC<IProps> = ({ editor }) => {
                 background: DEVICE_COLORS[item.type as keyof typeof DEVICE_COLORS] + '20',
               }}
             >
-              <div
+              <img
+                src={DEVICE_IMAGE_MAP[item.type as keyof typeof DEVICE_IMAGE_MAP]}
+                alt={item.label}
+                draggable={false}
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: '50%',
-                  background: DEVICE_COLORS[item.type as keyof typeof DEVICE_COLORS],
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#fff',
-                  fontWeight: 'bold',
-                  fontSize: 18,
+                  width: 72,
+                  height: 34,
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25))',
                 }}
-              >
-                {item.label[0]}
-              </div>
+              />
             </div>
             <div className={styles.title}>{item.label}</div>
           </div>
         ))}
       </div>
-      {createVisible && (
-        <CreateDeviceDialog
-          deviceClass={deviceType}
-          visible={createVisible}
-          setVisible={setCreateVisible}
-          onConfirm={onConfirm}
-        />
-      )}
     </div>
   )
 }

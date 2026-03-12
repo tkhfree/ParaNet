@@ -9,8 +9,13 @@ router = APIRouter(prefix="/intents", tags=["intent"])
 
 
 @router.get("")
-def list_intents(pageNo: int = 1, pageSize: int = 10, status: str | None = None):
-    result = intent_service.list_intents(page_no=pageNo, page_size=pageSize, status=status)
+def list_intents(pageNo: int = 1, pageSize: int = 10, status: str | None = None, projectId: str | None = None):
+    result = intent_service.list_intents(
+        page_no=pageNo,
+        page_size=pageSize,
+        status=status,
+        project_id=projectId,
+    )
     return ok(result)
 
 
@@ -29,7 +34,8 @@ def create_intent(body: dict):
     type_ = body.get("type", "dsl")
     content = body.get("content", "")
     topology_id = body.get("topologyId")
-    intent = intent_service.create_intent(name, description, type_, content, topology_id)
+    project_id = body.get("projectId")
+    intent = intent_service.create_intent(name, description, type_, content, topology_id, project_id)
     return ok(intent)
 
 
@@ -42,6 +48,7 @@ def update_intent(id: str, body: dict):
         type=body.get("type"),
         content=body.get("content"),
         topologyId=body.get("topologyId"),
+        projectId=body.get("projectId"),
     )
     if not intent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="意图不存在")
@@ -67,7 +74,8 @@ def compile_intent(body: dict):
 def compile_preview(body: dict):
     content = body.get("content", "")
     topology_id = body.get("topologyId")
-    result = intent_service.compile_preview(content, topology_id)
+    project_id = body.get("projectId")
+    result = intent_service.compile_preview(content, topology_id, project_id)
     return ok(result)
 
 

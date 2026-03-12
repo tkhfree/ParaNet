@@ -4,7 +4,10 @@ import {
   Avatar, 
   Dropdown, 
   Button,
-  Typography 
+  Typography,
+  Select,
+  Input,
+  Modal,
 } from 'antd'
 import {
   MenuFoldOutlined,
@@ -15,13 +18,15 @@ import {
   BellOutlined,
   SunOutlined,
   MoonOutlined,
+  PlusOutlined,
 } from '@ant-design/icons'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useShallow } from 'zustand/shallow'
 
 import useUserStore from '@/stores/user'
 import useSystemStore from '@/stores/system'
+import useProjectStore from '@/stores/project'
 
 import styles from './index.module.less'
 
@@ -30,6 +35,9 @@ const { Text } = Typography
 
 const PageHeader: React.FC = () => {
   const navigate = useNavigate()
+  const [projectModalOpen, setProjectModalOpen] = useState(false)
+  const [projectName, setProjectName] = useState('')
+  const [projectRemark, setProjectRemark] = useState('')
   
   const [userInfo, logout] = useUserStore(
     useShallow((state) => [state.userInfo, state.logout])
@@ -44,9 +52,42 @@ const PageHeader: React.FC = () => {
     ])
   )
 
+  const [
+    initProjects,
+    projectList,
+    currentProjectId,
+    selectProject,
+    createProject,
+  ] = useProjectStore(
+    useShallow((state) => [
+      state.init,
+      state.projectList,
+      state.currentProjectId,
+      state.selectProject,
+      state.createProject,
+    ])
+  )
+
+  useEffect(() => {
+    initProjects()
+  }, [initProjects])
+
   const handleLogout = () => {
     logout()
     navigate('/login')
+  }
+
+  const handleCreateProject = async () => {
+    const trimmedName = projectName.trim()
+    if (!trimmedName) return
+    await createProject({
+      name: trimmedName,
+      remark: projectRemark.trim(),
+    })
+    setProjectModalOpen(false)
+    setProjectName('')
+    setProjectRemark('')
+    navigate('/develop')
   }
 
   const userMenuItems = [
@@ -89,8 +130,30 @@ const PageHeader: React.FC = () => {
         <div className={styles.logo}>
           <span className={styles.logoText}>ParaNet</span>
           <Text type="secondary" className={styles.slogan}>
-            意图驱动网络管理平台
+            网络模态集成开发系统
           </Text>
+        </div>
+        <div className={styles.projectSwitcher}>
+          <Select
+            value={currentProjectId ?? undefined}
+            placeholder="选择当前项目"
+            className={styles.projectSelect}
+            options={projectList.map((project) => ({
+              value: project.id,
+              label: project.name,
+            }))}
+            onChange={async (value) => {
+              await selectProject(value)
+            }}
+          />
+          <Button
+            type="text"
+            icon={<PlusOutlined />}
+            onClick={() => setProjectModalOpen(true)}
+            className={styles.iconButton}
+          >
+            新建项目
+          </Button>
         </div>
       </div>
 
@@ -126,6 +189,27 @@ const PageHeader: React.FC = () => {
           </Dropdown>
         </Space>
       </div>
+      <Modal
+        title="新建项目"
+        open={projectModalOpen}
+        onCancel={() => setProjectModalOpen(false)}
+        onOk={handleCreateProject}
+        okText="创建"
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Input
+            value={projectName}
+            onChange={(event) => setProjectName(event.target.value)}
+            placeholder="请输入项目名称"
+          />
+          <Input.TextArea
+            value={projectRemark}
+            onChange={(event) => setProjectRemark(event.target.value)}
+            placeholder="请输入项目说明（可选）"
+            rows={4}
+          />
+        </Space>
+      </Modal>
     </Header>
   )
 }

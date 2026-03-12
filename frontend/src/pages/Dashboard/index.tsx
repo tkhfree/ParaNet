@@ -17,10 +17,10 @@ import styles from './index.module.less'
 const { Title, Text } = Typography
 
 const QUICK_ACTIONS = [
-  { path: '/topology', icon: DeploymentUnitOutlined, label: '创建拓扑' },
-  { path: '/intent', icon: CodeOutlined, label: '编写意图' },
-  { path: '/deploy', icon: CloudUploadOutlined, label: '部署配置' },
-  { path: '/monitor', icon: ClusterOutlined, label: '查看监控' },
+  { path: '/develop', icon: DeploymentUnitOutlined, label: '进入开发子系统' },
+  { path: '/compile', icon: CodeOutlined, label: '查看编译过程' },
+  { path: '/deploy', icon: CloudUploadOutlined, label: '执行项目部署' },
+  { path: '/monitor', icon: ClusterOutlined, label: '进入监控中心' },
 ] as const
 
 const Dashboard: React.FC = () => {

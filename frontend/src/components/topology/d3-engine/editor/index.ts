@@ -18,6 +18,7 @@ export type D3EditorEvents = {
   NODE_CLICK: { node: D3Node; x: number; y: number }
   NODE_CONTEXTMENU: { node: D3Node; x: number; y: number }
   LINK_CLICK: { link: D3Link; x: number; y: number }
+  LINK_CREATE_REQUESTED: { source?: string; target?: string } | undefined
   BLANK_CLICK: undefined
   GRAPH_CHANGED: undefined
   LINK_ADDED: { source: string; target: string }
@@ -124,7 +125,10 @@ export class D3Editor {
       ssd: device.ssd,
     }
 
-    this.graphData.nodes.push(node)
+    this.graphData = {
+      ...this.graphData,
+      nodes: [...this.graphData.nodes, node],
+    }
     this.emitGraphChanged()
     return node
   }
@@ -157,17 +161,28 @@ export class D3Editor {
       bandwidth: link.bandwidth,
     }
 
-    this.graphData.links.push(d3Link)
+    this.graphData = {
+      ...this.graphData,
+      links: [...this.graphData.links, d3Link],
+    }
     this.emitGraphChanged()
     return d3Link
   }
 
   /** 更新设备节点 */
   updateDevice(id: string, data: Partial<D3Node>): boolean {
-    const node = this.getNodeById(id)
-    if (!node) return false
+    const nodeIndex = this.graphData.nodes.findIndex((n) => n.id == id)
+    if (nodeIndex === -1) return false
 
-    Object.assign(node, data)
+    const nextNodes = [...this.graphData.nodes]
+    nextNodes[nodeIndex] = {
+      ...nextNodes[nodeIndex],
+      ...data,
+    }
+    this.graphData = {
+      ...this.graphData,
+      nodes: nextNodes,
+    }
 
     this.emitGraphChanged()
     return true
@@ -175,37 +190,50 @@ export class D3Editor {
 
   /** 删除节点 */
   removeNode(id: string): boolean {
-    const index = this.graphData.nodes.findIndex((n) => n.id === id)
-    if (index === -1) return false
+    const nextNodes = this.graphData.nodes.filter((n) => n.id !== id)
+    if (nextNodes.length === this.graphData.nodes.length) return false
 
-    // 删除相关连线
-    this.graphData.links = this.graphData.links.filter(
+    const nextLinks = this.graphData.links.filter(
       (l) =>
         (typeof l.source === 'string' ? l.source : l.source.id) !== id &&
         (typeof l.target === 'string' ? l.target : l.target.id) !== id
     )
-
-    this.graphData.nodes.splice(index, 1)
+    this.graphData = {
+      ...this.graphData,
+      nodes: nextNodes,
+      links: nextLinks,
+    }
     this.emitGraphChanged()
     return true
   }
 
   /** 删除连线 */
   removeLink(id: string): boolean {
-    const index = this.graphData.links.findIndex((l) => l.id === id)
-    if (index === -1) return false
+    const nextLinks = this.graphData.links.filter((l) => l.id !== id)
+    if (nextLinks.length === this.graphData.links.length) return false
 
-    this.graphData.links.splice(index, 1)
+    this.graphData = {
+      ...this.graphData,
+      links: nextLinks,
+    }
     this.emitGraphChanged()
     return true
   }
 
   /** 更新连线 */
   updateLink(id: string, data: Partial<D3Link>): boolean {
-    const link = this.getLinkById(id)
-    if (!link) return false
+    const linkIndex = this.graphData.links.findIndex((l) => l.id === id)
+    if (linkIndex === -1) return false
 
-    Object.assign(link, data)
+    const nextLinks = [...this.graphData.links]
+    nextLinks[linkIndex] = {
+      ...nextLinks[linkIndex],
+      ...data,
+    }
+    this.graphData = {
+      ...this.graphData,
+      links: nextLinks,
+    }
     this.emitGraphChanged()
     return true
   }

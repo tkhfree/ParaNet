@@ -2,10 +2,31 @@
  * D3 画布组件
  */
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 import * as d3 from 'd3'
 import type { D3Node, D3Link, CanvasSize } from '../types'
-import { DEVICE_COLORS, NODE_CONFIG, LINK_CONFIG, CANVAS_CONFIG } from '../config'
+import {
+  DEVICE_COLORS,
+  DEVICE_IMAGE_MAP,
+  DEVICE_NAMES,
+  NODE_CONFIG,
+  LINK_CONFIG,
+  CANVAS_CONFIG,
+} from '../config'
+import {
+  DEVICE_DRAG_FALLBACK_MIME_TYPE,
+  DEVICE_DRAG_MIME_TYPE,
+  getActiveDraggedDeviceType,
+  hasDeviceDragType,
+  subscribeCustomDeviceDrag,
+} from '../dragDrop'
 import {
   createForceSimulation,
   updateSimulationData,
@@ -13,6 +34,7 @@ import {
   createDragBehavior,
   createZoomBehavior,
   applyZoom,
+  resetZoom,
   zoomToFit,
 } from '../core'
 
@@ -24,11 +46,17 @@ interface D3CanvasProps {
   onLinkClick?: (link: D3Link, x: number, y: number) => void
   onBlankClick?: () => void
   onGraphChange?: () => void
+  onDeviceDrop?: (deviceType: string, x: number, y: number) => void
   selectedNodeId?: string | null
   className?: string
 }
 
-export const D3Canvas: React.FC<D3CanvasProps> = ({
+export interface D3CanvasHandle {
+  fitToContent: () => void
+  resetView: () => void
+}
+
+export const D3Canvas = forwardRef<D3CanvasHandle, D3CanvasProps>(({
   nodes: initialNodes,
   links: initialLinks,
   onNodeClick,
@@ -36,16 +64,99 @@ export const D3Canvas: React.FC<D3CanvasProps> = ({
   onLinkClick,
   onBlankClick,
   onGraphChange,
+  onDeviceDrop,
   className = '',
-}) => {
+}, ref) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const simulationRef = useRef<Simulation | null>(null)
+  const mainGroupRef = useRef<SVGGElement | null>(null)
   const [size, setSize] = useState<CanvasSize>({ width: 800, height: 600 })
+  const [draggingOver, setDraggingOver] = useState(false)
+  const [dragDeviceType, setDragDeviceType] = useState<string | null>(null)
 
   // 内部状态（用于响应式更新）
   const [nodes, setNodes] = useState<D3Node[]>(initialNodes)
   const [links, setLinks] = useState<D3Link[]>(initialLinks)
+
+  const clearDragState = useCallback(() => {
+    setDraggingOver(false)
+    setDragDeviceType(null)
+  }, [])
+
+  const resolveDraggedDeviceType = useCallback((dataTransfer?: DataTransfer | null) => {
+    if (!dataTransfer) {
+      return getActiveDraggedDeviceType()
+    }
+
+    return (
+      getActiveDraggedDeviceType() ||
+      dataTransfer.getData(DEVICE_DRAG_MIME_TYPE) ||
+      dataTransfer.getData(DEVICE_DRAG_FALLBACK_MIME_TYPE) ||
+      null
+    )
+  }, [])
+
+  const activateDropZone = useCallback(
+    (dataTransfer?: DataTransfer | null) => {
+      if (!onDeviceDrop) return false
+      if (!hasDeviceDragType(dataTransfer?.types ?? []) && !getActiveDraggedDeviceType()) {
+        return false
+      }
+
+      const deviceType = resolveDraggedDeviceType(dataTransfer)
+      setDraggingOver(true)
+      setDragDeviceType(deviceType)
+      return true
+    },
+    [onDeviceDrop, resolveDraggedDeviceType]
+  )
+
+  const handleDeviceDropEvent = useCallback(
+    (event: React.DragEvent<HTMLElement>) => {
+      if (!onDeviceDrop) return
+
+      const deviceType = resolveDraggedDeviceType(event.dataTransfer)
+      clearDragState()
+      if (!deviceType) return
+
+      event.preventDefault()
+      const svg = svgRef.current
+      if (!svg) return
+      const rect = svg.getBoundingClientRect()
+      const pointerX = event.clientX - rect.left
+      const pointerY = event.clientY - rect.top
+      const transform = d3.zoomTransform(svg)
+      const [x, y] = transform.invert([pointerX, pointerY])
+      onDeviceDrop(deviceType, x, y)
+    },
+    [clearDragState, onDeviceDrop, resolveDraggedDeviceType]
+  )
+
+  const fitViewportToContent = useCallback(() => {
+    if (!svgRef.current || !mainGroupRef.current) {
+      return
+    }
+
+    zoomToFit(svgRef.current, mainGroupRef.current, size.width, size.height)
+  }, [size.height, size.width])
+
+  const resetViewport = useCallback(() => {
+    if (!svgRef.current || !mainGroupRef.current) {
+      return
+    }
+
+    resetZoom(svgRef.current, mainGroupRef.current, size.width, size.height)
+  }, [size.height, size.width])
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      fitToContent: fitViewportToContent,
+      resetView: resetViewport,
+    }),
+    [fitViewportToContent, resetViewport]
+  )
 
   // 同步外部传入的数据
   useEffect(() => {
@@ -69,8 +180,63 @@ export const D3Canvas: React.FC<D3CanvasProps> = ({
     })
 
     resizeObserver.observe(container)
-    return () => resizeObserver.disconnect()
+    const preventPageScrollWhileHoveringCanvas = (event: WheelEvent) => {
+      event.preventDefault()
+    }
+
+    container.addEventListener('wheel', preventPageScrollWhileHoveringCanvas, { passive: false })
+
+    return () => {
+      resizeObserver.disconnect()
+      container.removeEventListener('wheel', preventPageScrollWhileHoveringCanvas)
+    }
   }, [])
+
+  useEffect(() => {
+    return subscribeCustomDeviceDrag((state) => {
+      const container = containerRef.current
+      const svg = svgRef.current
+
+      if (!container || !svg) {
+        clearDragState()
+        return
+      }
+
+      if (!state) {
+        clearDragState()
+        return
+      }
+
+      const rect = container.getBoundingClientRect()
+      const isInside =
+        state.clientX >= rect.left &&
+        state.clientX <= rect.right &&
+        state.clientY >= rect.top &&
+        state.clientY <= rect.bottom
+
+      if (state.phase === 'dragging') {
+        if (isInside) {
+          setDraggingOver(true)
+          setDragDeviceType(state.deviceType)
+        } else {
+          clearDragState()
+        }
+        return
+      }
+
+      clearDragState()
+      if (!isInside || !onDeviceDrop) {
+        return
+      }
+
+      const svgRect = svg.getBoundingClientRect()
+      const pointerX = state.clientX - svgRect.left
+      const pointerY = state.clientY - svgRect.top
+      const transform = d3.zoomTransform(svg)
+      const [x, y] = transform.invert([pointerX, pointerY])
+      onDeviceDrop(state.deviceType, x, y)
+    })
+  }, [clearDragState, onDeviceDrop])
 
   // 初始化 D3 渲染
   useEffect(() => {
@@ -104,6 +270,7 @@ export const D3Canvas: React.FC<D3CanvasProps> = ({
 
     // 主容器（用于缩放和平移）
     const mainGroup = svgSelection.append('g').attr('class', 'main-group')
+    mainGroupRef.current = mainGroup.node() as SVGGElement
 
     // 网格背景层
     mainGroup
@@ -189,6 +356,7 @@ export const D3Canvas: React.FC<D3CanvasProps> = ({
         .append('g')
         .attr('class', 'node')
         .attr('data-id', (d: D3Node) => d.id)
+        .style('cursor', 'grab')
         .call(drag)
         .on('click', (event: MouseEvent, d: D3Node) => {
           event.stopPropagation()
@@ -202,35 +370,42 @@ export const D3Canvas: React.FC<D3CanvasProps> = ({
           onNodeContextMenu?.(d, x, y)
         })
 
-      // 节点圆形
+      // 节点底板
       nodeEnter
-        .append('circle')
-        .attr('class', 'node-circle')
-        .attr('r', NODE_CONFIG.radius)
-        .attr('fill', (d: D3Node) => DEVICE_COLORS[d.type])
-        .attr('stroke', '#fff')
+        .append('rect')
+        .attr('class', 'node-card')
+        .attr('x', -NODE_CONFIG.width / 2)
+        .attr('y', -NODE_CONFIG.height / 2)
+        .attr('width', NODE_CONFIG.width)
+        .attr('height', NODE_CONFIG.height)
+        .attr('rx', 12)
+        .attr('ry', 12)
+        .attr('fill', '#1f2937')
+        .attr('stroke', (d: D3Node) => DEVICE_COLORS[d.type])
         .attr('stroke-width', NODE_CONFIG.strokeWidth)
 
-      // 节点图标（使用文字符号）
       nodeEnter
-        .append('text')
+        .append('rect')
+        .attr('class', 'node-icon-bg')
+        .attr('x', -NODE_CONFIG.width / 2 + 8)
+        .attr('y', -NODE_CONFIG.height / 2 + 8)
+        .attr('width', NODE_CONFIG.width - 16)
+        .attr('height', NODE_CONFIG.imageHeight + 8)
+        .attr('rx', 8)
+        .attr('ry', 8)
+        .attr('fill', (d: D3Node) => `${DEVICE_COLORS[d.type]}22`)
+
+      // 节点图标（使用 SVG 资源）
+      nodeEnter
+        .append('image')
         .attr('class', 'node-icon')
-        .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'central')
-        .attr('fill', '#fff')
-        .attr('font-size', '20px')
-        .attr('font-weight', 'bold')
-        .text((d: D3Node) => {
-          const icons: Record<string, string> = {
-            switch: 'S',
-            router: 'R',
-            host: 'H',
-            controller: 'C',
-            server: 'S',
-            p4_switch: 'P',
-          }
-          return icons[d.type] || 'N'
-        })
+        .attr('x', -NODE_CONFIG.imageWidth / 2)
+        .attr('y', -NODE_CONFIG.height / 2 + 10)
+        .attr('width', NODE_CONFIG.imageWidth)
+        .attr('height', NODE_CONFIG.imageHeight)
+        .attr('href', (d: D3Node) => DEVICE_IMAGE_MAP[d.type])
+        .attr('xlink:href', (d: D3Node) => DEVICE_IMAGE_MAP[d.type])
+        .attr('preserveAspectRatio', 'xMidYMid meet')
 
       // 节点标签
       nodeEnter
@@ -238,23 +413,29 @@ export const D3Canvas: React.FC<D3CanvasProps> = ({
         .attr('class', 'node-label')
         .attr('text-anchor', 'middle')
         .attr('dy', NODE_CONFIG.labelOffset)
-        .attr('fill', '#ffffffcc')
+        .attr('fill', '#ffffff')
         .attr('font-size', NODE_CONFIG.fontSize)
+        .attr('font-weight', 500)
         .text((d: D3Node) => d.name)
 
       // 悬停效果
       nodeEnter
         .on('mouseenter', function () {
           d3.select(this)
-            .select('.node-circle')
+            .select('.node-card')
             .attr('stroke-width', NODE_CONFIG.hoverStrokeWidth)
             .attr('stroke', '#94a3b8')
         })
+        .on('mousedown', function () {
+          d3.select(this).style('cursor', 'grabbing')
+        })
         .on('mouseleave', function () {
+          const nodeData = d3.select(this).datum() as D3Node
           d3.select(this)
-            .select('.node-circle')
+            .style('cursor', 'grab')
+            .select('.node-card')
             .attr('stroke-width', NODE_CONFIG.strokeWidth)
-            .attr('stroke', '#fff')
+            .attr('stroke', DEVICE_COLORS[nodeData.type])
         })
 
       // 合并 enter 和 update
@@ -303,10 +484,123 @@ export const D3Canvas: React.FC<D3CanvasProps> = ({
   }, [nodes, links, size, onNodeClick, onNodeContextMenu, onLinkClick, onBlankClick, onGraphChange])
 
   return (
-    <div ref={containerRef} className={className} style={{ width: '100%', height: '100%' }}>
-      <svg ref={svgRef} />
+    <div
+      ref={containerRef}
+      className={className}
+      style={{
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+        outline: draggingOver ? '2px dashed #1677ff' : 'none',
+        outlineOffset: draggingOver ? '-6px' : 0,
+      }}
+      onDragEnter={(event) => {
+        if (!activateDropZone(event.dataTransfer)) return
+        event.preventDefault()
+      }}
+      onDragOver={(event) => {
+        if (!activateDropZone(event.dataTransfer)) return
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'copy'
+      }}
+      onDragLeave={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          return
+        }
+        clearDragState()
+      }}
+      onDrop={handleDeviceDropEvent}
+    >
+      <svg ref={svgRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+      {!draggingOver && nodes.length === 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              padding: '14px 18px',
+              borderRadius: 16,
+              background: 'rgba(255, 255, 255, 0.92)',
+              border: '1px solid rgba(148, 163, 184, 0.25)',
+              color: '#475569',
+              boxShadow: '0 18px 50px rgba(15, 23, 42, 0.08)',
+              textAlign: 'center',
+            }}
+          >
+            <strong style={{ display: 'block', marginBottom: 6, color: '#0f172a', fontSize: 14 }}>
+              从图例拖入或使用 Add Device 开始构建
+            </strong>
+            <span style={{ fontSize: 12 }}>可在当前项目下维护多个拓扑示例，并持续编辑节点与链路</span>
+          </div>
+        </div>
+      )}
+      {draggingOver && dragDeviceType && (
+        <div
+          onDragOver={(event) => {
+            event.preventDefault()
+            event.dataTransfer.dropEffect = 'copy'
+          }}
+          onDragLeave={(event) => {
+            if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              return
+            }
+            clearDragState()
+          }}
+          onDrop={handleDeviceDropEvent}
+          style={{
+            position: 'absolute',
+            inset: 12,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'auto',
+            borderRadius: 12,
+            background:
+              'linear-gradient(135deg, rgba(22, 119, 255, 0.18) 0%, rgba(114, 46, 209, 0.14) 100%)',
+            boxShadow: 'inset 0 0 0 2px rgba(22, 119, 255, 0.6)',
+            backdropFilter: 'blur(2px)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              padding: '14px 18px',
+              borderRadius: 14,
+              background: 'rgba(15, 23, 42, 0.86)',
+              border: '1px solid rgba(148, 163, 184, 0.24)',
+              color: '#fff',
+              boxShadow: '0 10px 32px rgba(2, 6, 23, 0.35)',
+              pointerEvents: 'none',
+            }}
+          >
+            <img
+              src={DEVICE_IMAGE_MAP[dragDeviceType as keyof typeof DEVICE_IMAGE_MAP]}
+              alt={dragDeviceType}
+              style={{ width: 72, height: 34, objectFit: 'contain' }}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <strong style={{ fontSize: 14 }}>
+                放开即可创建
+                {DEVICE_NAMES[dragDeviceType as keyof typeof DEVICE_NAMES] ?? dragDeviceType}
+              </strong>
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)' }}>
+                将在当前落点自动生成节点
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
-}
+})
 
 export default D3Canvas

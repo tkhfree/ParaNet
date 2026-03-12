@@ -28,7 +28,8 @@
 .left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  min-width: 0;
 }
 
 .trigger {
@@ -57,6 +58,28 @@
   display: flex;
   align-items: baseline;
   gap: 12px;
+}
+
+.projectSwitcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 16px;
+}
+
+.projectSelect {
+  width: 240px;
+
+  :global(.ant-select-selector) {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #fff !important;
+  }
+
+  :global(.ant-select-selection-item),
+  :global(.ant-select-selection-placeholder) {
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
 }
 
 .logoText {
@@ -139,6 +162,12 @@
   font-weight: 500;
 
   @media (max-width: 576px) {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .projectSwitcher {
     display: none;
   }
 }

@@ -4,6 +4,10 @@ export { topologyApi } from './topology'
 export { intentApi } from './intent'
 export { deployApi } from './deploy'
 export { monitorApi } from './monitor'
+export { projectApi } from './project'
+export { fileApi } from './file'
+export { getTerminalWsUrl } from './terminal'
+export type { ProjectRecord } from './project'
 
 // 导出 axios 实例和类型
 export { default as axios } from './axios'

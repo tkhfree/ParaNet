@@ -12,7 +12,7 @@ import type {
 
 export const intentApi = {
   // 获取意图列表
-  getList: (params?: PaginationParams & { status?: string }) => {
+  getList: (params?: PaginationParams & { status?: string; projectId?: string }) => {
     return axios.get<typeof params, ApiResponse<PaginatedResponse<Intent>>>(
       '/intents',
       { params }

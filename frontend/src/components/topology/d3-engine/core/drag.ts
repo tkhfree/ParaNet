@@ -19,8 +19,9 @@ export function createDragBehavior(
 ) {
   function dragstarted(event: d3.D3DragEvent<SVGGElement, D3Node, D3Node>) {
     const node = event.subject
+    event.sourceEvent?.stopPropagation()
     if (!event.active) {
-      simulation.alphaTarget(0.3).restart()
+      simulation.alphaTarget(0.08).restart()
     }
     node.fx = node.x
     node.fy = node.y
@@ -29,6 +30,7 @@ export function createDragBehavior(
 
   function dragged(event: d3.D3DragEvent<SVGGElement, D3Node, D3Node>) {
     const node = event.subject
+    event.sourceEvent?.stopPropagation()
     node.fx = event.x
     node.fy = event.y
     callbacks?.onDrag?.(node, event.x, event.y)
@@ -36,6 +38,7 @@ export function createDragBehavior(
 
   function dragended(event: d3.D3DragEvent<SVGGElement, D3Node, D3Node>) {
     const node = event.subject
+    event.sourceEvent?.stopPropagation()
     if (!event.active) {
       simulation.alphaTarget(0)
     }
@@ -47,23 +50,6 @@ export function createDragBehavior(
 
   return d3
     .drag<SVGGElement, D3Node, D3Node>()
-    .subject((event) => {
-      const target = event.target as SVGElement
-      const nodeElement = target.closest('.node')
-      if (!nodeElement) {
-        return { id: '', name: '', type: 'switch' as const, x: 0, y: 0, properties: {} }
-      }
-
-      const nodeId = nodeElement.getAttribute('data-id')
-      const nodes = simulation.nodes()
-      const node = nodes.find((n) => n.id === nodeId)
-      return node || { id: '', name: '', type: 'switch' as const, x: 0, y: 0, properties: {} }
-    })
-    .filter((event) => {
-      const target = event.target as SVGElement
-      const nodeElement = target.closest('.node')
-      return !!nodeElement
-    })
     .on('start', dragstarted)
     .on('drag', dragged)
     .on('end', dragended)
@@ -73,7 +59,7 @@ export function createDragBehavior(
  * 创建固定位置拖拽（不使用力导向）
  */
 export function createFreeDragBehavior(
-  nodes: D3Node[],
+  _nodes: D3Node[],
   callbacks?: {
     onDragStart?: (node: D3Node) => void
     onDrag?: (node: D3Node, x: number, y: number) => void
@@ -82,11 +68,13 @@ export function createFreeDragBehavior(
 ) {
   function dragstarted(event: d3.D3DragEvent<SVGGElement, D3Node, D3Node>) {
     const node = event.subject
+    event.sourceEvent?.stopPropagation()
     callbacks?.onDragStart?.(node)
   }
 
   function dragged(event: d3.D3DragEvent<SVGGElement, D3Node, D3Node>) {
     const node = event.subject
+    event.sourceEvent?.stopPropagation()
     node.x = event.x
     node.y = event.y
     node.fx = event.x
@@ -96,27 +84,12 @@ export function createFreeDragBehavior(
 
   function dragended(event: d3.D3DragEvent<SVGGElement, D3Node, D3Node>) {
     const node = event.subject
+    event.sourceEvent?.stopPropagation()
     callbacks?.onDragEnd?.(node, event.x, event.y)
   }
 
   return d3
     .drag<SVGGElement, D3Node, D3Node>()
-    .subject((event) => {
-      const target = event.target as SVGElement
-      const nodeElement = target.closest('.node')
-      if (!nodeElement) {
-        return { id: '', name: '', type: 'switch' as const, x: 0, y: 0, properties: {} }
-      }
-
-      const nodeId = nodeElement.getAttribute('data-id')
-      const node = nodes.find((n) => n.id === nodeId)
-      return node || { id: '', name: '', type: 'switch' as const, x: 0, y: 0, properties: {} }
-    })
-    .filter((event) => {
-      const target = event.target as SVGElement
-      const nodeElement = target.closest('.node')
-      return !!nodeElement
-    })
     .on('start', dragstarted)
     .on('drag', dragged)
     .on('end', dragended)

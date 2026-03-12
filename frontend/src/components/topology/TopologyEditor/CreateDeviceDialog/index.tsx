@@ -3,34 +3,46 @@ import { Form, Input, Modal } from 'antd'
 import type { IDevice } from '@/model/topology'
 
 interface IProps {
+  title?: string
   deviceClass: string
   visible: boolean
   setVisible: (v: boolean) => void
   onConfirm: (device: IDevice) => void
+  initialValues?: Partial<IDevice>
 }
 
 export const CreateDeviceDialog: React.FC<IProps> = ({
+  title = '新建设备',
   deviceClass,
   visible,
   setVisible,
   onConfirm,
+  initialValues,
 }) => {
   const [form] = Form.useForm<IDevice>()
 
   useEffect(() => {
-    form.setFieldValue('deviceClass', deviceClass)
-  }, [deviceClass, form])
+    if (!visible) return
+    form.setFieldsValue({
+      deviceClass,
+      ...initialValues,
+    })
+  }, [deviceClass, form, initialValues, visible])
 
   const onOk = () => form.submit()
-  const onCancel = () => setVisible(false)
+  const onCancel = () => {
+    form.resetFields()
+    setVisible(false)
+  }
 
   const onFinish = (values: IDevice) => {
     onConfirm(values)
+    form.resetFields()
     setVisible(false)
   }
 
   return (
-    <Modal title="新建设备" open={visible} onOk={onOk} onCancel={onCancel}>
+    <Modal title={title} open={visible} onOk={onOk} onCancel={onCancel}>
       <Form labelCol={{ span: 4 }} wrapperCol={{ span: 20 }} form={form} onFinish={onFinish}>
         <Form.Item
           name="deviceName"

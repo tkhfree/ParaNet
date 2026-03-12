@@ -7,6 +7,7 @@ export interface Topology {
   id: string
   name: string
   description?: string
+  projectId?: string | null
   nodes: TopologyNode[]
   links: TopologyLink[]
   createdAt: string
@@ -51,6 +52,7 @@ export interface TopologyLink {
 export interface TopologyCreateRequest {
   name: string
   description?: string
+  projectId?: string | null
   nodes?: TopologyNode[]
   links?: TopologyLink[]
 }
@@ -58,6 +60,7 @@ export interface TopologyCreateRequest {
 export interface TopologyUpdateRequest {
   name?: string
   description?: string
+  projectId?: string | null
   nodes?: TopologyNode[]
   links?: TopologyLink[]
 }

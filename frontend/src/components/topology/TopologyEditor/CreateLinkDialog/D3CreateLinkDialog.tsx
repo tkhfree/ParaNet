@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react'
-import { Form, Input, Modal } from 'antd'
+import { App, Button, Form, Input, Modal, Select } from 'antd'
 import type { ILink } from '@/model/topology'
 import type { D3Editor, D3Link } from '../../d3-engine'
 
@@ -12,22 +12,49 @@ interface IProps {
 }
 
 export const D3CreateLinkDialog: React.FC<IProps> = ({ editor }) => {
+  const { message } = App.useApp()
   const [form] = Form.useForm<ILink>()
   const [visible, setVisible] = useState(false)
   const [edit, setEdit] = useState(false)
   const oldLinkId = useRef('')
+  const deviceOptions = editor.nodes.map((node) => ({
+    label: node.name,
+    value: node.name,
+  }))
+
+  const openCreateForm = (source?: string, target?: string) => {
+    const nodes = editor.nodes
+    const fallbackSource = source ?? nodes[0]?.name ?? ''
+    const fallbackTarget =
+      target ?? nodes.find((node) => node.name !== fallbackSource)?.name ?? nodes[0]?.name ?? ''
+
+    setVisible(true)
+    setEdit(false)
+    oldLinkId.current = ''
+    form.resetFields()
+    form.setFieldsValue({
+      link: `link_${Date.now()}`,
+      src: { device: fallbackSource, port: '' },
+      dst: { device: fallbackTarget, port: '' },
+      bandwidth: 1000,
+    })
+  }
 
   // 监听连线添加事件
   useEffect(() => {
     const onLinkAdded = (event: { source: string; target: string }) => {
-      setVisible(true)
-      setEdit(false)
-      form.resetFields()
-      form.setFieldValue('src', { device: event.source, port: '' })
-      form.setFieldValue('dst', { device: event.target, port: '' })
+      openCreateForm(event.source, event.target)
     }
     editor.bus.on('LINK_ADDED', onLinkAdded)
     return () => editor.bus.off('LINK_ADDED', onLinkAdded)
+  }, [editor, form])
+
+  useEffect(() => {
+    const onCreateRequested = (event?: { source?: string; target?: string }) => {
+      openCreateForm(event?.source, event?.target)
+    }
+    editor.bus.on('LINK_CREATE_REQUESTED', onCreateRequested)
+    return () => editor.bus.off('LINK_CREATE_REQUESTED', onCreateRequested)
   }, [editor, form])
 
   // 监听连线点击事件
@@ -58,10 +85,34 @@ export const D3CreateLinkDialog: React.FC<IProps> = ({ editor }) => {
   const onOk = () => form.submit()
   const onCancel = () => setVisible(false)
 
+  const handleDelete = () => {
+    Modal.confirm({
+      title: '确认删除连线',
+      content: '删除后将从当前拓扑中移除该链路，是否继续？',
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: () => {
+        const removed = editor.removeLink(oldLinkId.current)
+        if (removed) {
+          message.success('连线已删除')
+          setVisible(false)
+          return
+        }
+        message.warning('连线删除失败，请重试')
+      },
+    })
+  }
+
   const onFinish = (values: ILink & { bandwidth?: string | number }) => {
     const bandwidth = Number(values.bandwidth) || 0
     const payload: ILink = { ...values, bandwidth }
     const { src, dst } = payload
+
+    if (src.device === dst.device) {
+      form.setFields([{ name: ['dst', 'device'], errors: ['源设备和目标设备不能相同'] }])
+      return
+    }
 
     if (edit) {
       if (editor.checkPortExit(src.device, src.port, oldLinkId.current)) {
@@ -99,21 +150,36 @@ export const D3CreateLinkDialog: React.FC<IProps> = ({ editor }) => {
       open={visible}
       onOk={onOk}
       onCancel={onCancel}
+      footer={[
+        ...(edit
+          ? [
+              <Button key="delete" danger onClick={handleDelete}>
+                删除连线
+              </Button>,
+            ]
+          : []),
+        <Button key="cancel" onClick={onCancel}>
+          取消
+        </Button>,
+        <Button key="save" type="primary" onClick={onOk}>
+          {edit ? '保存' : '创建'}
+        </Button>,
+      ]}
     >
       <Form labelCol={{ span: 4 }} wrapperCol={{ span: 20 }} form={form} onFinish={onFinish}>
         <Form.Item name="link" label="Link" rules={[{ required: true, message: '请输入 Link' }]}>
           <Input />
         </Form.Item>
         <Form.Item label="SRC" />
-        <Form.Item name={['src', 'device']} label="device">
-          <Input readOnly />
+        <Form.Item name={['src', 'device']} label="device" rules={[{ required: true, message: '请选择源设备' }]}>
+          <Select options={deviceOptions} placeholder="选择源设备" />
         </Form.Item>
         <Form.Item name={['src', 'port']} label="port" rules={[{ required: true, message: '请输入 port' }]}>
           <Input />
         </Form.Item>
         <Form.Item label="DST" />
-        <Form.Item name={['dst', 'device']} label="device">
-          <Input readOnly />
+        <Form.Item name={['dst', 'device']} label="device" rules={[{ required: true, message: '请选择目标设备' }]}>
+          <Select options={deviceOptions} placeholder="选择目标设备" />
         </Form.Item>
         <Form.Item name={['dst', 'port']} label="port" rules={[{ required: true, message: '请输入 port' }]}>
           <Input />

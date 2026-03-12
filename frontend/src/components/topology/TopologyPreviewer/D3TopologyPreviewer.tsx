@@ -18,6 +18,7 @@ export const D3TopologyPreviewer: React.FC<IProps> = ({ topologyId, onPopup }) =
   const containerRef = useRef<HTMLDivElement>(null)
   const [previewer, setPreviewer] = useState<D3Previewer | null>(null)
   const [, setUpdateCounter] = useState(0)
+  const [loadingTopology, setLoadingTopology] = useState(false)
 
   // 初始化预览器
   useEffect(() => {
@@ -33,9 +34,15 @@ export const D3TopologyPreviewer: React.FC<IProps> = ({ topologyId, onPopup }) =
   // 加载拓扑数据
   useEffect(() => {
     if (previewer && topologyId) {
-      previewer.open(topologyId).then(() => {
-        setUpdateCounter((c) => c + 1)
-      })
+      setLoadingTopology(true)
+      void previewer
+        .open(topologyId)
+        .then(() => {
+          setUpdateCounter((c) => c + 1)
+        })
+        .finally(() => {
+          setLoadingTopology(false)
+        })
     }
   }, [previewer, topologyId])
 
@@ -76,24 +83,29 @@ export const D3TopologyPreviewer: React.FC<IProps> = ({ topologyId, onPopup }) =
     [previewer]
   )
 
-  if (!previewer) {
-    return <div className={styles.container}>Loading...</div>
-  }
-
   return (
-    <div className={styles.container} ref={containerRef}>
-      <div className={styles.content}>
-        <D3PreviewerCanvas
-          nodes={previewer.nodes}
-          links={previewer.links}
-          onNodeClick={handleNodeClick}
-          onNodeMouseEnter={handleNodeMouseEnter}
-          onNodeMouseLeave={handleNodeMouseLeave}
-          onLinkClick={handleLinkClick}
-        />
+    <div className={styles.container}>
+      <div className={styles.content} ref={containerRef}>
+        {previewer ? (
+          <D3PreviewerCanvas
+            nodes={previewer.nodes}
+            links={previewer.links}
+            onNodeClick={handleNodeClick}
+            onNodeMouseEnter={handleNodeMouseEnter}
+            onNodeMouseLeave={handleNodeMouseLeave}
+            onLinkClick={handleLinkClick}
+          />
+        ) : (
+          <div className={styles.loadingState}>Loading...</div>
+        )}
+        {loadingTopology && <div className={styles.loadingOverlay}>正在加载拓扑...</div>}
       </div>
-      <D3DeviceInfoPopup previewer={previewer} />
-      <D3LinkInfoPopup previewer={previewer} />
+      {previewer && (
+        <>
+          <D3DeviceInfoPopup previewer={previewer} />
+          <D3LinkInfoPopup previewer={previewer} />
+        </>
+      )}
       {onPopup && <ToolBar onPopup={() => onPopup(topologyId)} />}
     </div>
   )

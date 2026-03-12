@@ -3,6 +3,11 @@
  */
 
 import type { NodeType } from '@/model/topology'
+import device1 from '@/assets/svg/devices/device1.svg?url'
+import device2 from '@/assets/svg/devices/device2.svg?url'
+import device3 from '@/assets/svg/devices/device3.svg?url'
+import device4 from '@/assets/svg/devices/device4.svg?url'
+import device5 from '@/assets/svg/devices/device5.svg?url'
 
 /** 设备颜色方案 */
 export const DEVICE_COLORS: Record<NodeType, string> = {
@@ -18,7 +23,7 @@ export const DEVICE_COLORS: Record<NodeType, string> = {
 export const DEVICE_NAMES: Record<NodeType, string> = {
   switch: '交换机',
   router: '路由器',
-  host: '主机',
+  host: '终端',
   controller: '控制器',
   server: '服务器',
   p4_switch: 'P4交换机',
@@ -34,26 +39,44 @@ export const DEVICE_ICONS: Record<NodeType, string> = {
   p4_switch: 'icon-p4-switch',
 }
 
+/** 设备图片资源 */
+export const DEVICE_IMAGE_MAP: Record<NodeType, string> = {
+  switch: device1,
+  router: device2,
+  host: device3,
+  controller: device4,
+  server: device5,
+  p4_switch: device1,
+}
+
 /** 力导向模拟配置 */
 export const FORCE_CONFIG = {
   /** 连线距离 */
-  linkDistance: 180,
+  linkDistance: 120,
   /** 节点间斥力强度 */
-  chargeStrength: -600,
+  chargeStrength: -120,
   /** 碰撞半径 */
-  collisionRadius: 50,
+  collisionRadius: 42,
   /** 中心引力强度 */
-  centerStrength: 0.1,
+  centerStrength: 0.03,
   /** Alpha 衰减率 */
-  alphaDecay: 0.02,
+  alphaDecay: 0.08,
   /** Velocity decay */
-  velocityDecay: 0.4,
+  velocityDecay: 0.72,
 }
 
 /** 节点视觉配置 */
 export const NODE_CONFIG = {
   /** 节点半径 */
-  radius: 32,
+  radius: 34,
+  /** 节点卡片宽度 */
+  width: 104,
+  /** 节点卡片高度 */
+  height: 72,
+  /** 设备图示宽度 */
+  imageWidth: 72,
+  /** 设备图示高度 */
+  imageHeight: 34,
   /** 选中时边框宽度 */
   selectedStrokeWidth: 3,
   /** 默认边框宽度 */
@@ -61,7 +84,7 @@ export const NODE_CONFIG = {
   /** 悬停边框宽度 */
   hoverStrokeWidth: 3,
   /** 标签偏移 */
-  labelOffset: 44,
+  labelOffset: 52,
   /** 字体大小 */
   fontSize: 12,
 }

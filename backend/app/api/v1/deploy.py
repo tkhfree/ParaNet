@@ -7,8 +7,8 @@ router = APIRouter(prefix="/deployments", tags=["deploy"])
 
 
 @router.get("")
-def list_deployments(pageNo: int = 1, pageSize: int = 10):
-    result = deploy_service.list_deployments(page_no=pageNo, page_size=pageSize)
+def list_deployments(pageNo: int = 1, pageSize: int = 10, projectId: str | None = None):
+    result = deploy_service.list_deployments(page_no=pageNo, page_size=pageSize, project_id=projectId)
     return ok(result)
 
 
@@ -24,8 +24,9 @@ def get_deployment(id: str):
 def create_deployment(body: dict):
     intent_id = body.get("intentId", "")
     topology_id = body.get("topologyId", "")
+    project_id = body.get("projectId")
     dry_run = body.get("dryRun", False)
-    dep = deploy_service.execute_deployment(intent_id, topology_id, dry_run=dry_run)
+    dep = deploy_service.execute_deployment(intent_id, topology_id, project_id=project_id, dry_run=dry_run)
     return ok(dep)
 
 
@@ -53,7 +54,8 @@ def cancel(id: str):
 def validate(body: dict):
     intent_id = body.get("intentId", "")
     topology_id = body.get("topologyId", "")
-    result = deploy_service.validate(intent_id, topology_id)
+    project_id = body.get("projectId")
+    result = deploy_service.validate(intent_id, topology_id, project_id)
     return ok(result)
 
 
@@ -61,5 +63,6 @@ def validate(body: dict):
 def preview(body: dict):
     intent_id = body.get("intentId", "")
     topology_id = body.get("topologyId", "")
-    result = deploy_service.preview(intent_id, topology_id)
+    project_id = body.get("projectId")
+    result = deploy_service.preview(intent_id, topology_id, project_id)
     return ok(result)

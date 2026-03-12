@@ -13,8 +13,10 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def list_topologies(page_no: int = 1, page_size: int = 10) -> dict:
+def list_topologies(page_no: int = 1, page_size: int = 10, project_id: str | None = None) -> dict:
     records = list(_store.values())
+    if project_id:
+        records = [record for record in records if record.get("projectId") == project_id]
     total = len(records)
     start = (page_no - 1) * page_size
     end = start + page_size
@@ -26,7 +28,13 @@ def get_topology(id: str) -> dict | None:
     return _store.get(id)
 
 
-def create_topology(name: str, description: str | None = None, nodes: list | None = None, links: list | None = None) -> dict:
+def create_topology(
+    name: str,
+    description: str | None = None,
+    nodes: list | None = None,
+    links: list | None = None,
+    project_id: str | None = None,
+) -> dict:
     id = str(uuid.uuid4())
     now = _now()
     topo = {
@@ -35,6 +43,7 @@ def create_topology(name: str, description: str | None = None, nodes: list | Non
         "description": description or "",
         "nodes": nodes or [],
         "links": links or [],
+        "projectId": project_id,
         "createdAt": now,
         "updatedAt": now,
     }
@@ -42,7 +51,14 @@ def create_topology(name: str, description: str | None = None, nodes: list | Non
     return topo
 
 
-def update_topology(id: str, name: str | None = None, description: str | None = None, nodes: list | None = None, links: list | None = None) -> dict | None:
+def update_topology(
+    id: str,
+    name: str | None = None,
+    description: str | None = None,
+    nodes: list | None = None,
+    links: list | None = None,
+    project_id: str | None = None,
+) -> dict | None:
     if id not in _store:
         return None
     topo = _store[id]
@@ -54,6 +70,8 @@ def update_topology(id: str, name: str | None = None, description: str | None = 
         topo["nodes"] = nodes
     if links is not None:
         topo["links"] = links
+    if project_id is not None:
+        topo["projectId"] = project_id
     topo["updatedAt"] = _now()
     return topo
 
@@ -72,5 +90,11 @@ def export_topology(id: str) -> bytes | None:
     return json.dumps(topo, ensure_ascii=False, indent=2).encode("utf-8")
 
 
-def import_topology(name: str | None, description: str | None, nodes: list | None, links: list | None) -> dict:
-    return create_topology(name or "导入的拓扑", description, nodes, links)
+def import_topology(
+    name: str | None,
+    description: str | None,
+    nodes: list | None,
+    links: list | None,
+    project_id: str | None = None,
+) -> dict:
+    return create_topology(name or "导入的拓扑", description, nodes, links, project_id)

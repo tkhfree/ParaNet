@@ -21,6 +21,19 @@ export function createZoomBehavior(
   return d3
     .zoom<SVGSVGElement, unknown>()
     .scaleExtent([CANVAS_CONFIG.minZoom, CANVAS_CONFIG.maxZoom])
+    .filter((event) => {
+      const target = event.target
+      if (!(target instanceof Element)) {
+        return true
+      }
+
+      // 鼠标滚轮始终允许缩放；节点本身不触发画布平移，优先交给节点拖拽。
+      if (event.type === 'wheel') {
+        return true
+      }
+
+      return !target.closest('.node')
+    })
     .on('zoom', (event) => {
       callbacks?.onZoom?.(event.transform)
     })

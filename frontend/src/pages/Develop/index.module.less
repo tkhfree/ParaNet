@@ -1,0 +1,644 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+  position: relative;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  :global(.ant-typography) {
+    margin-bottom: 0;
+  }
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 320px;
+  gap: 16px;
+  min-height: calc(100vh - 220px);
+}
+
+.treeCard,
+.assistantCard,
+.workspaceCard {
+  height: 100%;
+}
+
+.treeCard :global(.ant-card-body),
+.assistantCard :global(.ant-card-body),
+.workspaceCard :global(.ant-card-body) {
+  height: calc(100% - 57px);
+}
+
+.treeActions {
+  margin-bottom: 12px;
+}
+
+.tree {
+  max-height: calc(100% - 40px);
+  overflow: auto;
+}
+
+.treeNode {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspaceColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.workspaceTabs {
+  height: 100%;
+}
+
+.workspaceTabs :global(.ant-tabs-content-holder) {
+  height: 100%;
+}
+
+.workspaceTabs :global(.ant-tabs-content) {
+  height: 100%;
+}
+
+.workspaceTabs :global(.ant-tabs-tabpane) {
+  height: 100%;
+}
+
+.topologyPanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.topologyWorkbench {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.topologyRail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 8px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.04);
+}
+
+.railButton {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(99, 102, 241, 0.1);
+    color: #4f46e5;
+  }
+}
+
+.railButtonActive {
+  background: linear-gradient(180deg, #6d5efc 0%, #5a47f5 100%);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.28);
+}
+
+.topologyStageColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.topologyStageCard {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 18px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.06);
+}
+
+.stageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  :global(.ant-typography) {
+    margin-bottom: 0;
+  }
+}
+
+.stageSurface {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  flex: 1;
+}
+
+.stageLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.stageLegendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.stageLegendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.9);
+}
+
+.orchestratorPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+  padding: 16px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.06);
+  overflow: auto;
+}
+
+.orchestratorPanel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.orchestratorPanel::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
+  border-radius: 999px;
+}
+
+.sideModeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  height: 100%;
+  padding: 20px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.06);
+  overflow: auto;
+}
+
+.topologyMainView {
+  min-width: 0;
+  min-height: 0;
+}
+
+.orchestratorHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.orchestratorHero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 180px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  text-align: center;
+}
+
+.orchestratorHeroIcon {
+  width: 64px;
+  height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #8b5cf6;
+  font-size: 22px;
+}
+
+.orchestratorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.orchestratorSectionTitle {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.orchestratorActions {
+  margin-top: 4px;
+}
+
+.nodeDetailCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.nodeDetailTitle {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.nodeDetailMeta,
+.helperText {
+  margin-bottom: 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.orchestratorComposer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.orchestratorComposerHint {
+  flex: 1;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.orchestratorComposerButton {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 100%);
+  color: #fff;
+}
+
+.topologyStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.statCard {
+  padding: 16px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.04);
+}
+
+.statLabel {
+  margin-bottom: 10px;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.statValue {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.topologyListCard,
+.topologyLegendCard {
+  border-radius: 18px;
+}
+
+.topologyListCard :global(.ant-card-body),
+.topologyLegendCard :global(.ant-card-body) {
+  padding: 12px;
+}
+
+.topologyListItem {
+  cursor: pointer;
+  border-radius: 14px;
+  padding: 10px 12px !important;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  border: 1px solid transparent;
+
+  &:hover {
+    background: var(--ant-color-fill-tertiary);
+    border-color: var(--ant-color-primary-border);
+  }
+}
+
+.activeTopologyItem {
+  background: var(--ant-color-primary-bg);
+  border-color: var(--ant-color-primary);
+}
+
+.topologyItemContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.topologyItemName {
+  font-weight: 600;
+}
+
+.topologyItemMeta {
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+}
+
+.legendGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.legendItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 96px;
+  padding: 12px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: rgba(99, 102, 241, 0.26);
+    box-shadow: 0 16px 30px rgba(99, 102, 241, 0.08);
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.sidebarLegendGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.legendImage {
+  width: 78px;
+  height: 36px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.legendLabel {
+  font-size: 12px;
+  text-align: center;
+  color: #475569;
+  pointer-events: none;
+}
+
+.topologyCanvas {
+  flex: 1;
+  min-height: 520px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.devicePickerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.devicePickerCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 12px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  background: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 16px 36px rgba(99, 102, 241, 0.08);
+  }
+}
+
+.devicePickerImage {
+  width: 72px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.assistantCard {
+  overflow: hidden;
+}
+
+.projectMeta {
+  margin-bottom: 12px;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.dragPreview {
+  position: fixed;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  pointer-events: none;
+  user-select: none;
+}
+
+.dragPreviewImage {
+  width: 64px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.floatingPreviewPanel {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 1400;
+  width: min(480px, calc(100vw - 48px));
+  height: min(340px, calc(100vh - 120px));
+  display: flex;
+  flex-direction: column;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.2);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.floatingPreviewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(255, 255, 255, 0.9) 100%);
+  cursor: grab;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.floatingPreviewTitleGroup {
+  min-width: 0;
+}
+
+.floatingPreviewEyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.floatingPreviewTitle {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.floatingPreviewBody {
+  flex: 1;
+  min-height: 0;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+@media (max-width: 1400px) {
+  .mainGrid {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+
+  .assistantCard {
+    grid-column: 1 / -1;
+  }
+
+  .topologyWorkbench {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 960px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .topologyWorkbench {
+    grid-template-columns: 1fr;
+  }
+
+  .topologyRail {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .topologyStatsGrid,
+  .devicePickerGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sidebarLegendGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .floatingPreviewPanel {
+    right: 16px;
+    left: 16px;
+    bottom: 16px;
+    width: auto;
+    height: min(300px, calc(100vh - 96px));
+  }
+}

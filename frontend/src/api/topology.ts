@@ -8,8 +8,8 @@ import type {
 
 export const topologyApi = {
   // 获取拓扑列表
-  getList: (params?: PaginationParams) => {
-    return axios.get<PaginationParams, ApiResponse<PaginatedResponse<Topology>>>(
+  getList: (params?: PaginationParams & { projectId?: string }) => {
+    return axios.get<typeof params, ApiResponse<PaginatedResponse<Topology>>>(
       '/topologies',
       { params }
     )
@@ -44,10 +44,11 @@ export const topologyApi = {
   },
 
   // 导入拓扑
-  import: (file: File) => {
+  import: (file: File, projectId?: string) => {
     const formData = new FormData()
     formData.append('file', file)
     return axios.post<FormData, ApiResponse<Topology>>('/topologies/import', formData, {
+      params: projectId ? { projectId } : undefined,
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },

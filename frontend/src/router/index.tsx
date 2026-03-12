@@ -8,8 +8,8 @@ import AuthRoute from '@/components/common/AuthRoute'
 // 懒加载页面组件
 const Login = lazy(() => import('@/pages/Login'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
-const Topology = lazy(() => import('@/pages/Topology'))
-const Intent = lazy(() => import('@/pages/Intent'))
+const Develop = lazy(() => import('@/pages/Develop'))
+const Compile = lazy(() => import('@/pages/Compile'))
 const Deploy = lazy(() => import('@/pages/Deploy'))
 const Monitor = lazy(() => import('@/pages/Monitor'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
@@ -36,18 +36,18 @@ export const menuRoutes: RouteMenuItem[] = [
     icon: 'DashboardOutlined',
   },
   {
-    path: '/topology',
-    title: '拓扑管理',
-    icon: 'DeploymentUnitOutlined',
-  },
-  {
-    path: '/intent',
-    title: '模态开发智能体',
+    path: '/develop',
+    title: '模态开发',
     icon: 'CodeOutlined',
   },
   {
+    path: '/compile',
+    title: '模态编译',
+    icon: 'CodeSandboxOutlined',
+  },
+  {
     path: '/deploy',
-    title: '部署管理',
+    title: '模态部署',
     icon: 'CloudUploadOutlined',
   },
   {
@@ -80,16 +80,24 @@ export const routes: RouteObject[] = [
         element: LazyLoad(Dashboard),
       },
       {
-        path: 'topology',
-        element: LazyLoad(Topology),
+        path: 'develop',
+        element: LazyLoad(Develop),
       },
       {
-        path: 'intent',
-        element: LazyLoad(Intent),
+        path: 'compile',
+        element: LazyLoad(Compile),
       },
       {
         path: 'deploy',
         element: LazyLoad(Deploy),
+      },
+      {
+        path: 'topology',
+        element: <Navigate to="/develop" replace />,
+      },
+      {
+        path: 'intent',
+        element: <Navigate to="/compile" replace />,
       },
       {
         path: 'monitor',

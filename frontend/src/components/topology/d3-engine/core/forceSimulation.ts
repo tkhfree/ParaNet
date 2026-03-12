@@ -41,7 +41,7 @@ export function updateSimulationData(
 ): void {
   simulation.nodes(nodes)
   simulation.force<d3.ForceLink<D3Node, D3Link>>('link')?.links(links)
-  simulation.alpha(1).restart()
+  simulation.alpha(0.18).restart()
 }
 
 /**
@@ -93,14 +93,14 @@ export function stopSimulation(simulation: Simulation): void {
  * 重启模拟
  */
 export function restartSimulation(simulation: Simulation): void {
-  simulation.alpha(1).restart()
+  simulation.alpha(0.2).restart()
 }
 
 /**
  * 轻微重启模拟（用于添加节点后）
  */
 export function warmRestart(simulation: Simulation): void {
-  simulation.alpha(0.5).restart()
+  simulation.alpha(0.12).restart()
 }
 
 /**
