@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState } from 'react'
 import type { D3Previewer, D3Node } from '../../d3-engine'
-import { DEVICE_NAMES } from '../../d3-engine'
+import { resolveDeviceName } from '../../d3-engine'
 import styles from './index.module.less'
 
 interface IProps {
@@ -25,7 +25,7 @@ export const D3DeviceInfoPopup: React.FC<IProps> = ({ previewer, isPopup }) => {
       setVisible(true)
       setData([
         { label: '设备名称', value: node.name },
-        { label: '设备型号', value: DEVICE_NAMES[node.type] || node.type },
+        { label: '设备型号', value: resolveDeviceName(node.type) },
         { label: '设备形态', value: (props.deviceForm as string) || '-' },
         { label: '端口形态', value: (props.portForm as string) || '-' },
         { label: '交换容量', value: (props.capacity as string) || '-' },

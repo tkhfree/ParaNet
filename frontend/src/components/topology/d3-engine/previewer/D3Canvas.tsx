@@ -5,7 +5,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
 import type { D3Node, D3Link, CanvasSize } from '../types'
-import { DEVICE_COLORS, DEVICE_IMAGE_MAP, NODE_CONFIG, LINK_CONFIG, CANVAS_CONFIG } from '../config'
+import { resolveDeviceColor, resolveDeviceImage, NODE_CONFIG, LINK_CONFIG, CANVAS_CONFIG } from '../config'
 import { createForceSimulation, updateSimulationData, Simulation, createZoomBehavior, applyZoom, zoomToFit } from '../core'
 
 interface D3PreviewerCanvasProps {
@@ -207,7 +207,7 @@ export const D3PreviewerCanvas: React.FC<D3PreviewerCanvasProps> = ({
         .attr('rx', 12)
         .attr('ry', 12)
         .attr('fill', '#1f2937')
-        .attr('stroke', (d: D3Node) => DEVICE_COLORS[d.type])
+        .attr('stroke', (d: D3Node) => resolveDeviceColor(d.type))
         .attr('stroke-width', NODE_CONFIG.strokeWidth)
 
       nodeEnter
@@ -219,7 +219,7 @@ export const D3PreviewerCanvas: React.FC<D3PreviewerCanvasProps> = ({
         .attr('height', NODE_CONFIG.imageHeight + 8)
         .attr('rx', 8)
         .attr('ry', 8)
-        .attr('fill', (d: D3Node) => `${DEVICE_COLORS[d.type]}22`)
+        .attr('fill', (d: D3Node) => `${resolveDeviceColor(d.type)}22`)
 
       // 节点图标
       nodeEnter
@@ -229,8 +229,8 @@ export const D3PreviewerCanvas: React.FC<D3PreviewerCanvasProps> = ({
         .attr('y', -NODE_CONFIG.height / 2 + 10)
         .attr('width', NODE_CONFIG.imageWidth)
         .attr('height', NODE_CONFIG.imageHeight)
-        .attr('href', (d: D3Node) => DEVICE_IMAGE_MAP[d.type])
-        .attr('xlink:href', (d: D3Node) => DEVICE_IMAGE_MAP[d.type])
+        .attr('href', (d: D3Node) => resolveDeviceImage(d.type))
+        .attr('xlink:href', (d: D3Node) => resolveDeviceImage(d.type))
         .attr('preserveAspectRatio', 'xMidYMid meet')
 
       // 节点标签

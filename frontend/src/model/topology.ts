@@ -23,13 +23,7 @@ export interface TopologyNode {
   config?: NodeConfig
 }
 
-export type NodeType =
-  | 'switch'
-  | 'router'
-  | 'host'
-  | 'controller'
-  | 'server'
-  | 'p4_switch'
+export type NodeType = string
 
 export interface NodeConfig {
   ip?: string
@@ -63,6 +57,33 @@ export interface TopologyUpdateRequest {
   projectId?: string | null
   nodes?: TopologyNode[]
   links?: TopologyLink[]
+}
+
+export interface DeviceLegend {
+  id: string
+  type: string
+  label: string
+  imageKey: string
+  color: string
+  sort: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DeviceLegendCreateRequest {
+  type: string
+  label: string
+  imageKey: string
+  color: string
+  sort?: number
+}
+
+export interface DeviceLegendUpdateRequest {
+  type?: string
+  label?: string
+  imageKey?: string
+  color?: string
+  sort?: number
 }
 
 // ---------- X6 拓扑引擎内部格式 ----------

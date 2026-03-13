@@ -19,6 +19,7 @@ import {
   SunOutlined,
   MoonOutlined,
   PlusOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons'
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -56,15 +57,19 @@ const PageHeader: React.FC = () => {
     initProjects,
     projectList,
     currentProjectId,
+    currentProject,
     selectProject,
     createProject,
+    removeProject,
   ] = useProjectStore(
     useShallow((state) => [
       state.init,
       state.projectList,
       state.currentProjectId,
+      state.currentProject,
       state.selectProject,
       state.createProject,
+      state.removeProject,
     ])
   )
 
@@ -88,6 +93,24 @@ const PageHeader: React.FC = () => {
     setProjectName('')
     setProjectRemark('')
     navigate('/develop')
+  }
+
+  const handleDeleteProject = () => {
+    if (!currentProjectId || !currentProject) {
+      return
+    }
+
+    Modal.confirm({
+      title: '确认删除当前项目',
+      content: `项目「${currentProject.name}」及其文件、拓扑等上下文将被一并删除，删除后不可恢复。`,
+      okText: '删除项目',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        await removeProject(currentProjectId)
+        navigate('/develop')
+      },
+    })
   }
 
   const userMenuItems = [
@@ -150,9 +173,18 @@ const PageHeader: React.FC = () => {
             type="text"
             icon={<PlusOutlined />}
             onClick={() => setProjectModalOpen(true)}
-            className={styles.iconButton}
+            className={styles.projectActionButton}
           >
             新建项目
+          </Button>
+          <Button
+            type="text"
+            icon={<DeleteOutlined />}
+            onClick={handleDeleteProject}
+            className={`${styles.projectActionButton} ${styles.dangerButton}`}
+            disabled={!currentProjectId}
+          >
+            删除项目
           </Button>
         </div>
       </div>

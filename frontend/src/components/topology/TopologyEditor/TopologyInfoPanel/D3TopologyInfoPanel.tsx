@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState } from 'react'
 import type { D3Editor } from '../../d3-engine'
-import { DEVICE_NAMES } from '../../d3-engine'
+import { resolveDeviceName } from '../../d3-engine'
 import styles from './index.module.less'
 
 interface IItem {
@@ -47,7 +47,7 @@ export const D3TopologyInfoPanel: React.FC<IProps> = ({ editor, title }) => {
       </div>
       {devices.map((item) => (
         <div className={styles.item} key={item.label}>
-          <span className={styles['item-label']}>{DEVICE_NAMES[item.label as keyof typeof DEVICE_NAMES] ?? item.label}数量:</span>
+          <span className={styles['item-label']}>{resolveDeviceName(item.label)}数量:</span>
           <span className={styles['item-value']}>{item.value}</span>
         </div>
       ))}

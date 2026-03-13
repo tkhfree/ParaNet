@@ -7,7 +7,7 @@ import { App } from 'antd'
 import { useShallow } from 'zustand/shallow'
 import { CreateDeviceDialog } from './CreateDeviceDialog'
 import { D3Editor, D3Canvas, type D3CanvasHandle, D3Node, D3Link } from '../d3-engine'
-import { DEVICE_NAMES } from '../d3-engine'
+import { resolveDeviceName } from '../d3-engine'
 import { D3CreateLinkDialog } from './CreateLinkDialog/D3CreateLinkDialog'
 import { D3EditDeviceDialog } from './EditDeviceDialog/D3EditDeviceDialog'
 import styles from './index.module.less'
@@ -72,6 +72,7 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
   const [createVisible, setCreateVisible] = useState(false)
   const [pendingDeviceType, setPendingDeviceType] = useState('')
   const [loadingTopology, setLoadingTopology] = useState(false)
+  const [topologyLoadFailed, setTopologyLoadFailed] = useState(false)
 
   const openCreateDialog = useCallback((deviceType: string) => {
     setPendingDeviceType(deviceType)
@@ -117,9 +118,11 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
   useEffect(() => {
     if (editor && topologyId) {
       setLoadingTopology(true)
+      setTopologyLoadFailed(false)
       void editor
         .open(topologyId)
         .then(() => {
+          setTopologyLoadFailed(false)
           setUpdateCounter((c) => c + 1)
           onGraphStatsChange?.(buildGraphStats(editor, title))
           requestAnimationFrame(() => {
@@ -127,12 +130,15 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
           })
         })
         .catch(() => {
+          setTopologyLoadFailed(true)
           message.error('拓扑加载失败，请稍后重试')
         })
         .finally(() => {
           setLoadingTopology(false)
         })
       onSelectionChange?.(null)
+    } else {
+      setTopologyLoadFailed(false)
     }
   }, [editor, message, onGraphStatsChange, onSelectionChange, title, topologyId])
 
@@ -236,7 +242,7 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
       if (!editor) {
         return
       }
-      const deviceLabel = DEVICE_NAMES[deviceType as keyof typeof DEVICE_NAMES] ?? deviceType
+      const deviceLabel = resolveDeviceName(deviceType)
       const existingCount = editor.nodes.filter((node) => node.type === deviceType).length
       const deviceName = `${deviceLabel}-${existingCount + 1}`
       const created = editor.addDevice(
@@ -296,6 +302,23 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
                 正在加载拓扑...
               </div>
             )}
+            {!loadingTopology && topologyLoadFailed && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(248, 250, 252, 0.72)',
+                  color: '#64748b',
+                  fontSize: 14,
+                  zIndex: 5,
+                }}
+              >
+                拓扑加载失败，请稍后重试
+              </div>
+            )}
           </>
         ) : (
           <div
@@ -325,7 +348,7 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
             initialValues={{
               deviceClass: pendingDeviceType,
               deviceName: pendingDeviceType
-                ? `${DEVICE_NAMES[pendingDeviceType as keyof typeof DEVICE_NAMES]}-${editor.nodes.length + 1}`
+                ? `${resolveDeviceName(pendingDeviceType)}-${editor.nodes.length + 1}`
                 : '',
             }}
             onConfirm={handleCreateDevice}

@@ -7,6 +7,7 @@ import {
   Input,
   List,
   Modal,
+  Select,
   Space,
   Tabs,
   Tree,
@@ -30,19 +31,25 @@ import {
   PlusOutlined,
   NodeIndexOutlined,
   FormOutlined,
-  MessageOutlined,
   AimOutlined,
 } from '@ant-design/icons'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ChatInput } from '@/components/editor'
+import { useResizeObserver } from '@/hooks/useResizeObserver'
 import InteractiveTerminal from '@/components/project/InteractiveTerminal'
 import { D3TopologyEditor, D3TopologyPreviewer, type D3Node } from '@/components/topology'
 import type {
   D3TopologyEditorHandle,
   D3TopologyEditorStats,
 } from '@/components/topology/TopologyEditor/D3TopologyEditor'
-import { DEVICE_IMAGE_MAP, DEVICE_NAMES } from '@/components/topology/d3-engine'
+import {
+  DEFAULT_DEVICE_LEGENDS,
+  DEVICE_IMAGE_OPTIONS,
+  resolveDeviceImage,
+  resolveDeviceName,
+  setDeviceLegendRegistry,
+} from '@/components/topology/d3-engine'
 import {
   cancelCustomDeviceDrag,
   releaseCustomDeviceDrag,
@@ -50,17 +57,17 @@ import {
   subscribeCustomDeviceDrag,
   updateCustomDeviceDrag,
 } from '@/components/topology/d3-engine/dragDrop'
-import { fileApi, topologyApi } from '@/api'
+import { deviceLegendApi, fileApi, topologyApi } from '@/api'
 import type { ProjectFileNode } from '@/api/file'
-import type { NodeType } from '@/model/topology'
-import type { Topology } from '@/model/topology'
+import type { DeviceLegend, NodeType, Topology } from '@/model/topology'
 import { detectLanguage, useProjectStore } from '@/stores'
 
 import styles from './index.module.less'
 
 type FileModalMode = 'file' | 'folder' | 'rename'
 type TopologyModalMode = 'create' | 'rename'
-type WorkbenchRailMode = 'topology' | 'orchestrator' | 'stats' | 'assets'
+type DeviceLegendModalMode = 'create' | 'edit'
+type WorkbenchRailMode = 'topology' | 'overview' | 'assets'
 type DragPreviewState = {
   deviceType: NodeType
   label: string
@@ -74,14 +81,28 @@ type FloatingPreviewPosition = {
   top: number
 }
 
-const TOPOLOGY_DEVICE_LEGEND: Array<{ type: NodeType; label: string }> = [
-  { type: 'switch', label: DEVICE_NAMES.switch },
-  { type: 'router', label: DEVICE_NAMES.router },
-  { type: 'host', label: DEVICE_NAMES.host },
-  { type: 'controller', label: DEVICE_NAMES.controller },
-  { type: 'server', label: DEVICE_NAMES.server },
-  { type: 'p4_switch', label: DEVICE_NAMES.p4_switch },
-]
+type DevelopLayoutWidths = {
+  left: number
+  right: number
+}
+
+type DevelopLayoutDragState = {
+  handle: 'left' | 'right'
+  startX: number
+  initialWidths: DevelopLayoutWidths
+  containerWidth: number
+} | null
+
+type WorkspaceVerticalDragState = {
+  startY: number
+  initialTopHeight: number
+  containerHeight: number
+} | null
+
+const DEVICE_LEGEND_IMAGE_OPTIONS = Object.keys(DEVICE_IMAGE_OPTIONS).map((key) => ({
+  label: key,
+  value: key,
+}))
 
 function buildTreeData(nodes: ProjectFileNode[]): DataNode[] {
   return nodes.map((node) => ({
@@ -105,8 +126,44 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url)
 }
 
+function getStoredDeviceLegends(): DeviceLegend[] {
+  if (typeof window === 'undefined') {
+    return DEFAULT_DEVICE_LEGENDS
+  }
+
+  try {
+    const raw = window.localStorage.getItem(DEVICE_LEGEND_STORAGE_KEY)
+    if (!raw) {
+      return DEFAULT_DEVICE_LEGENDS
+    }
+    const parsed = JSON.parse(raw) as DeviceLegend[]
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_DEVICE_LEGENDS
+  } catch {
+    return DEFAULT_DEVICE_LEGENDS
+  }
+}
+
+function persistDeviceLegends(legends: DeviceLegend[]) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(DEVICE_LEGEND_STORAGE_KEY, JSON.stringify(legends))
+}
+
 const DEFAULT_DSL_FILE_NAME = 'intent.pne'
 const FLOATING_PREVIEW_MARGIN = 16
+const DEVELOP_LAYOUT_STORAGE_KEY = 'paranet-develop-layout-widths'
+const DEVELOP_WORKSPACE_SPLIT_STORAGE_KEY = 'paranet-develop-workspace-split'
+const DEVICE_LEGEND_STORAGE_KEY = 'paranet-device-legends'
+const DEVELOP_LAYOUT_GAP = 16
+const DEVELOP_LEFT_MIN = 240
+const DEVELOP_LEFT_MAX = 420
+const DEVELOP_RIGHT_MIN = 300
+const DEVELOP_RIGHT_MAX = 520
+const DEVELOP_MIDDLE_MIN = 560
+const DEVELOP_WORKSPACE_GAP = 12
+const DEVELOP_WORKSPACE_TOP_MIN = 360
+const DEVELOP_WORKSPACE_BOTTOM_MIN = 140
 
 function calculateNetworkLoad(nodeCount: number, linkCount: number) {
   if (nodeCount === 0 && linkCount === 0) {
@@ -130,9 +187,51 @@ function clampFloatingPreviewPosition(
   }
 }
 
+function clampDevelopLayoutWidths(
+  widths: DevelopLayoutWidths,
+  containerWidth: number
+): DevelopLayoutWidths {
+  const available = containerWidth - DEVELOP_LAYOUT_GAP * 2
+  if (available <= 0) {
+    return widths
+  }
+
+  const leftUpperBound = Math.max(
+    DEVELOP_LEFT_MIN,
+    Math.min(DEVELOP_LEFT_MAX, available - DEVELOP_RIGHT_MIN - DEVELOP_MIDDLE_MIN)
+  )
+  const left = Math.min(Math.max(widths.left, DEVELOP_LEFT_MIN), leftUpperBound)
+
+  const rightUpperBound = Math.max(
+    DEVELOP_RIGHT_MIN,
+    Math.min(DEVELOP_RIGHT_MAX, available - left - DEVELOP_MIDDLE_MIN)
+  )
+  const right = Math.min(Math.max(widths.right, DEVELOP_RIGHT_MIN), rightUpperBound)
+
+  const adjustedLeftUpperBound = Math.max(
+    DEVELOP_LEFT_MIN,
+    Math.min(DEVELOP_LEFT_MAX, available - right - DEVELOP_MIDDLE_MIN)
+  )
+
+  return {
+    left: Math.min(left, adjustedLeftUpperBound),
+    right,
+  }
+}
+
+function clampWorkspaceTopHeight(topHeight: number, containerHeight: number): number {
+  const available = containerHeight - DEVELOP_WORKSPACE_GAP
+  const maxTop = Math.max(0, available - DEVELOP_WORKSPACE_BOTTOM_MIN)
+  const minTop = Math.max(0, Math.min(DEVELOP_WORKSPACE_TOP_MIN, maxTop))
+
+  return Math.min(Math.max(topHeight, minTop), maxTop)
+}
+
 const Develop: React.FC = () => {
   const { message } = App.useApp()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const mainGridRef = useRef<HTMLDivElement | null>(null)
+  const workspaceColumnRef = useRef<HTMLDivElement | null>(null)
   const topologyEditorRef = useRef<D3TopologyEditorHandle | null>(null)
   const floatingPreviewRef = useRef<HTMLDivElement | null>(null)
   const floatingPreviewDragRef = useRef<{
@@ -141,8 +240,13 @@ const Develop: React.FC = () => {
     width: number
     height: number
   } | null>(null)
+  const layoutDragRef = useRef<DevelopLayoutDragState>(null)
+  const workspaceVerticalDragRef = useRef<WorkspaceVerticalDragState>(null)
+  const mainGridSize = useResizeObserver(mainGridRef)
+  const workspaceColumnSize = useResizeObserver(workspaceColumnRef)
   const {
     init,
+    projectList,
     currentProject,
     currentProjectId,
     tabs,
@@ -160,6 +264,15 @@ const Develop: React.FC = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [topologyList, setTopologyList] = useState<Topology[]>([])
   const [topologyLoading, setTopologyLoading] = useState(false)
+  const [deviceLegendList, setDeviceLegendList] = useState<DeviceLegend[]>([])
+  const [deviceLegendLoading, setDeviceLegendLoading] = useState(false)
+  const [selectedLegendId, setSelectedLegendId] = useState<string | null>(null)
+  const [deviceLegendModalOpen, setDeviceLegendModalOpen] = useState(false)
+  const [deviceLegendModalMode, setDeviceLegendModalMode] = useState<DeviceLegendModalMode>('create')
+  const [deviceLegendType, setDeviceLegendType] = useState('')
+  const [deviceLegendLabel, setDeviceLegendLabel] = useState('')
+  const [deviceLegendImageKey, setDeviceLegendImageKey] = useState('device1')
+  const [deviceLegendColor, setDeviceLegendColor] = useState('#64748b')
   const [floatingPreviewOpen, setFloatingPreviewOpen] = useState(false)
   const [floatingPreviewPosition, setFloatingPreviewPosition] = useState<FloatingPreviewPosition | null>(null)
   const [topologyModalOpen, setTopologyModalOpen] = useState(false)
@@ -173,6 +286,41 @@ const Develop: React.FC = () => {
   const [devicePickerOpen, setDevicePickerOpen] = useState(false)
   const [selectedTopologyNode, setSelectedTopologyNode] = useState<D3Node | null>(null)
   const [topologyStats, setTopologyStats] = useState<D3TopologyEditorStats | null>(null)
+  const [workspaceTopHeight, setWorkspaceTopHeight] = useState<number>(() => {
+    if (typeof window === 'undefined') {
+      return 620
+    }
+
+    try {
+      const raw = window.localStorage.getItem(DEVELOP_WORKSPACE_SPLIT_STORAGE_KEY)
+      if (!raw) {
+        return 620
+      }
+      const parsed = JSON.parse(raw) as { topHeight?: number }
+      return typeof parsed.topHeight === 'number' ? parsed.topHeight : 620
+    } catch {
+      return 620
+    }
+  })
+  const [layoutWidths, setLayoutWidths] = useState<DevelopLayoutWidths>(() => {
+    if (typeof window === 'undefined') {
+      return { left: 280, right: 360 }
+    }
+
+    try {
+      const raw = window.localStorage.getItem(DEVELOP_LAYOUT_STORAGE_KEY)
+      if (!raw) {
+        return { left: 280, right: 360 }
+      }
+      const parsed = JSON.parse(raw) as Partial<DevelopLayoutWidths>
+      return {
+        left: typeof parsed.left === 'number' ? parsed.left : 280,
+        right: typeof parsed.right === 'number' ? parsed.right : 360,
+      }
+    } catch {
+      return { left: 280, right: 360 }
+    }
+  })
 
   const flatNodes = useMemo(() => flattenTree(treeNodes), [treeNodes])
   const selectedNode = useMemo(
@@ -188,6 +336,14 @@ const Develop: React.FC = () => {
     () => topologyList.find((topology) => topology.id === activeTopologyId) ?? null,
     [activeTopologyId, topologyList]
   )
+  const selectedLegend = useMemo(
+    () => deviceLegendList.find((item) => item.id === selectedLegendId) ?? null,
+    [deviceLegendList, selectedLegendId]
+  )
+  const deviceLegendPreviewLabel = deviceLegendLabel.trim() || '设备显示名称预览'
+  const deviceLegendPreviewType = deviceLegendType.trim() || 'device_type'
+  const deviceLegendPreviewColor = deviceLegendColor.trim() || '#64748b'
+  const deviceLegendPreviewImage = DEVICE_IMAGE_OPTIONS[deviceLegendImageKey] ?? DEVICE_IMAGE_OPTIONS.device1
   const topologyMetricCards = useMemo(() => {
     const nodeCount = topologyStats?.nodeCount ?? activeTopology?.nodes?.length ?? 0
     const linkCount = topologyStats?.linkCount ?? activeTopology?.links?.length ?? 0
@@ -211,12 +367,15 @@ const Develop: React.FC = () => {
   const workbenchRailItems = useMemo(
     () => [
       { key: 'topology' as WorkbenchRailMode, label: '拓扑舞台', icon: <NodeIndexOutlined /> },
-      { key: 'orchestrator' as WorkbenchRailMode, label: '编排面板', icon: <MessageOutlined /> },
-      { key: 'stats' as WorkbenchRailMode, label: '统计摘要', icon: <BarChartOutlined /> },
+      { key: 'overview' as WorkbenchRailMode, label: '上下文总览', icon: <BarChartOutlined /> },
       { key: 'assets' as WorkbenchRailMode, label: '设备资源', icon: <AppstoreOutlined /> },
     ],
     []
   )
+  const isResizableLayout = mainGridSize.width >= 1280
+  const isWorkspaceCompact = workspaceTopHeight < 620
+  const isWorkspaceTight = workspaceTopHeight < 500
+  const isWorkspaceUltraTight = workspaceTopHeight < 420
 
   const startCustomLegendDrag = useCallback(
     (event: React.MouseEvent<HTMLDivElement>, deviceType: NodeType, label: string) => {
@@ -231,7 +390,7 @@ const Develop: React.FC = () => {
 
       event.preventDefault()
 
-      const imageSrc = DEVICE_IMAGE_MAP[deviceType]
+      const imageSrc = resolveDeviceImage(deviceType)
       startCustomDeviceDrag({
         deviceType,
         label,
@@ -271,7 +430,7 @@ const Develop: React.FC = () => {
         setDragPreview({
           deviceType: state.deviceType as NodeType,
           label: state.label,
-          imageSrc: state.imageSrc ?? DEVICE_IMAGE_MAP[state.deviceType as NodeType],
+          imageSrc: state.imageSrc ?? resolveDeviceImage(state.deviceType as NodeType),
           clientX: state.clientX,
           clientY: state.clientY,
         })
@@ -314,9 +473,32 @@ const Develop: React.FC = () => {
     }
   }, [currentProject?.topologyId, currentProjectId, updateCurrentProject])
 
+  const loadDeviceLegends = useCallback(async () => {
+    setDeviceLegendLoading(true)
+    try {
+      const res = await deviceLegendApi.list()
+      const legends = (res.data?.length ? res.data : getStoredDeviceLegends()) ?? getStoredDeviceLegends()
+      persistDeviceLegends(legends)
+      setDeviceLegendList(legends)
+      setDeviceLegendRegistry(legends)
+      setSelectedLegendId((current) => legends.some((item) => item.id === current) ? current : legends[0]?.id ?? null)
+    } catch {
+      const legends = getStoredDeviceLegends()
+      setDeviceLegendList(legends)
+      setDeviceLegendRegistry(legends)
+      setSelectedLegendId((current) => legends.some((item) => item.id === current) ? current : legends[0]?.id ?? null)
+    } finally {
+      setDeviceLegendLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     init()
   }, [init])
+
+  useEffect(() => {
+    void loadDeviceLegends()
+  }, [loadDeviceLegends])
 
   useEffect(() => {
     loadProjectFiles()
@@ -333,6 +515,43 @@ const Develop: React.FC = () => {
       setFloatingPreviewOpen(false)
     }
   }, [activeTopologyId])
+
+  useEffect(() => {
+    if (!isResizableLayout || mainGridSize.width <= 0) {
+      return
+    }
+
+    setLayoutWidths((current) => clampDevelopLayoutWidths(current, mainGridSize.width))
+  }, [isResizableLayout, mainGridSize.width])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    window.localStorage.setItem(DEVELOP_LAYOUT_STORAGE_KEY, JSON.stringify(layoutWidths))
+  }, [layoutWidths])
+
+  useEffect(() => {
+    if (workspaceColumnSize.height <= 0) {
+      return
+    }
+
+    setWorkspaceTopHeight((current) =>
+      clampWorkspaceTopHeight(current, workspaceColumnSize.height)
+    )
+  }, [workspaceColumnSize.height])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    window.localStorage.setItem(
+      DEVELOP_WORKSPACE_SPLIT_STORAGE_KEY,
+      JSON.stringify({ topHeight: workspaceTopHeight })
+    )
+  }, [workspaceTopHeight])
 
   useEffect(() => {
     if (!floatingPreviewOpen) {
@@ -521,6 +740,103 @@ const Develop: React.FC = () => {
     })
   }
 
+  const openDeviceLegendModal = useCallback(
+    (mode: DeviceLegendModalMode) => {
+      setDeviceLegendModalMode(mode)
+      if (mode === 'edit' && selectedLegend) {
+        setDeviceLegendType(selectedLegend.type)
+        setDeviceLegendLabel(selectedLegend.label)
+        setDeviceLegendImageKey(selectedLegend.imageKey)
+        setDeviceLegendColor(selectedLegend.color)
+      } else {
+        setDeviceLegendType('')
+        setDeviceLegendLabel('')
+        setDeviceLegendImageKey('device1')
+        setDeviceLegendColor('#64748b')
+      }
+      setDeviceLegendModalOpen(true)
+    },
+    [selectedLegend]
+  )
+
+  const handleSubmitDeviceLegendModal = async () => {
+    const type = deviceLegendType.trim()
+    const label = deviceLegendLabel.trim()
+    if (!type || !label) {
+      message.warning('请填写设备类型标识和显示名称')
+      return
+    }
+
+    const payload = {
+      type,
+      label,
+      imageKey: deviceLegendImageKey,
+      color: deviceLegendColor.trim() || '#64748b',
+    }
+
+    if (deviceLegendModalMode === 'edit' && selectedLegend) {
+      try {
+        await deviceLegendApi.update(selectedLegend.id, payload)
+      } catch {
+        const nextLegends = deviceLegendList.map((item) =>
+          item.id === selectedLegend.id
+            ? {
+                ...item,
+                ...payload,
+                updatedAt: new Date().toISOString(),
+              }
+            : item
+        )
+        persistDeviceLegends(nextLegends)
+      }
+      message.success('设备图例已更新')
+    } else {
+      try {
+        await deviceLegendApi.create(payload)
+      } catch {
+        const now = new Date().toISOString()
+        const nextLegends = [
+          ...deviceLegendList,
+          {
+            id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}`,
+            ...payload,
+            sort: deviceLegendList.length * 10 + 10,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ]
+        persistDeviceLegends(nextLegends)
+      }
+      message.success('设备图例已创建')
+    }
+
+    setDeviceLegendModalOpen(false)
+    await loadDeviceLegends()
+  }
+
+  const handleDeleteDeviceLegend = () => {
+    if (!selectedLegend) {
+      message.warning('请先选择要删除的设备图例')
+      return
+    }
+
+    Modal.confirm({
+      title: '确认删除设备图例',
+      content: `图例「${selectedLegend.label}」删除后将不再出现在设备资源区，是否继续？`,
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deviceLegendApi.delete(selectedLegend.id)
+        } catch {
+          const nextLegends = deviceLegendList.filter((item) => item.id !== selectedLegend.id)
+          persistDeviceLegends(nextLegends.length > 0 ? nextLegends : DEFAULT_DEVICE_LEGENDS)
+        }
+        message.success('设备图例已删除')
+        await loadDeviceLegends()
+      },
+    })
+  }
+
   const handleOpenDevicePicker = useCallback(() => {
     if (!activeTopologyId) {
       message.warning('请先创建或选择一个拓扑示例')
@@ -562,6 +878,39 @@ const Develop: React.FC = () => {
     setFloatingPreviewPosition(null)
     setFloatingPreviewOpen(true)
   }, [activeTopologyId, floatingPreviewOpen, message])
+
+  const handleLayoutResizerMouseDown = useCallback(
+    (handle: 'left' | 'right', event: React.MouseEvent<HTMLDivElement>) => {
+      if (!isResizableLayout || !mainGridRef.current) {
+        return
+      }
+
+      layoutDragRef.current = {
+        handle,
+        startX: event.clientX,
+        initialWidths: layoutWidths,
+        containerWidth: mainGridRef.current.clientWidth,
+      }
+      event.preventDefault()
+    },
+    [isResizableLayout, layoutWidths]
+  )
+
+  const handleWorkspaceVerticalResizerMouseDown = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!workspaceColumnRef.current) {
+        return
+      }
+
+      workspaceVerticalDragRef.current = {
+        startY: event.clientY,
+        initialTopHeight: workspaceTopHeight,
+        containerHeight: workspaceColumnRef.current.clientHeight,
+      }
+      event.preventDefault()
+    },
+    [workspaceTopHeight]
+  )
 
   const handleFloatingPreviewMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest('button')) {
@@ -620,6 +969,68 @@ const Develop: React.FC = () => {
     }
   }, [])
 
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      const dragState = layoutDragRef.current
+      if (!dragState) {
+        return
+      }
+
+      const deltaX = event.clientX - dragState.startX
+      const nextWidths =
+        dragState.handle === 'left'
+          ? {
+              left: dragState.initialWidths.left + deltaX,
+              right: dragState.initialWidths.right,
+            }
+          : {
+              left: dragState.initialWidths.left,
+              right: dragState.initialWidths.right - deltaX,
+            }
+
+      setLayoutWidths(clampDevelopLayoutWidths(nextWidths, dragState.containerWidth))
+    }
+
+    const handleMouseUp = () => {
+      layoutDragRef.current = null
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      const dragState = workspaceVerticalDragRef.current
+      if (!dragState) {
+        return
+      }
+
+      const deltaY = event.clientY - dragState.startY
+      setWorkspaceTopHeight(
+        clampWorkspaceTopHeight(
+          dragState.initialTopHeight + deltaY,
+          dragState.containerHeight
+        )
+      )
+    }
+
+    const handleMouseUp = () => {
+      workspaceVerticalDragRef.current = null
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
+
   const handlePickDeviceType = useCallback((deviceType: NodeType) => {
     setDevicePickerOpen(false)
     topologyEditorRef.current?.openCreateDeviceDialog(deviceType)
@@ -659,7 +1070,13 @@ const Develop: React.FC = () => {
   if (!currentProject) {
     return (
       <div className={styles.emptyState}>
-        <Empty description="请先在顶部选择或创建项目，然后进入模态开发子系统" />
+        <Empty
+          description={
+            projectList.length === 0
+              ? '当前已经没有任何项目了。请在顶部点击“新建项目”创建第一个项目后，再进入模态开发子系统。'
+              : '请先在顶部选择或创建项目，然后进入模态开发子系统。'
+          }
+        />
       </div>
     )
   }
@@ -686,7 +1103,11 @@ const Develop: React.FC = () => {
         </Space>
       </div>
 
-      <div className={styles.mainGrid}>
+      <div ref={mainGridRef} className={styles.mainGrid}>
+        <div
+          className={styles.leftPane}
+          style={isResizableLayout ? { width: layoutWidths.left, flexBasis: layoutWidths.left } : undefined}
+        >
         <Card
           className={styles.treeCard}
           loading={treeLoading}
@@ -740,276 +1161,353 @@ const Develop: React.FC = () => {
             )}
           />
         </Card>
+        </div>
 
-        <div className={styles.workspaceColumn}>
-          <Card className={styles.workspaceCard} bodyStyle={{ height: '100%' }}>
-            <Tabs
-              className={styles.workspaceTabs}
-              items={[
-                {
-                  key: 'code',
-                  label: 'IDE 工作区',
-                  children: tabs.length > 0 ? (
-                    <Tabs
-                      type="editable-card"
-                      hideAdd
-                      activeKey={activeTabId ?? undefined}
-                      onChange={(key) => setActiveTabId(key)}
-                      onEdit={(targetKey, action) => {
-                        if (action === 'remove') {
-                          closeTab(String(targetKey))
-                        }
-                      }}
-                      items={tabs.map((tab) => ({
-                        key: tab.id,
-                        label: `${tab.name}${tab.dirty ? ' *' : ''}`,
-                        children: (
-                          <Editor
-                            height="58vh"
-                            language={tab.language}
-                            value={tab.content}
-                            onChange={(value) => updateTabContent(tab.id, value ?? '')}
-                            options={{
-                              minimap: { enabled: false },
-                              automaticLayout: true,
-                              fontSize: 13,
-                            }}
-                          />
-                        ),
-                      }))}
-                    />
-                  ) : (
-                    <Empty description="从左侧打开项目文件后，即可开始编辑" />
-                  ),
-                },
-                {
-                  key: 'topology',
-                  label: '拓扑工作区',
-                  children: (
-                    <div className={styles.topologyPanel}>
-                      <div className={styles.topologyWorkbench}>
-                        <div className={styles.topologyRail}>
-                          {workbenchRailItems.map((item) => (
-                            <button
-                              key={item.key}
-                              type="button"
-                              className={`${styles.railButton} ${topologyWorkbenchMode === item.key ? styles.railButtonActive : ''}`}
-                              title={item.label}
-                              onClick={() => setTopologyWorkbenchMode(item.key)}
-                            >
-                              {item.icon}
-                            </button>
-                          ))}
-                        </div>
-                        <div className={styles.topologyMainView}>
-                          {topologyWorkbenchMode === 'topology' && (
-                            <div className={styles.topologyStageColumn}>
-                              <div className={styles.topologyStageCard}>
-                                <div className={styles.stageHeader}>
-                                  <div>
-                                    <Typography.Title level={4}>NetProgrammable</Typography.Title>
-                                    <Typography.Text type="secondary">
-                                      {currentProject.name}
-                                      {' / '}
-                                      {activeTopology?.name ?? '未选择拓扑'}
-                                    </Typography.Text>
+        <div
+          className={styles.columnResizer}
+          onMouseDown={(event) => handleLayoutResizerMouseDown('left', event)}
+        />
+
+        <div
+          ref={workspaceColumnRef}
+          className={`${styles.workspaceColumn} ${styles.workspacePane} ${isWorkspaceCompact ? styles.workspaceColumnCompact : ''} ${isWorkspaceUltraTight ? styles.workspaceColumnUltraTight : ''}`}
+        >
+          <div
+            className={`${styles.workspaceMainPane} ${isWorkspaceCompact ? styles.workspaceMainPaneCompact : ''}`}
+            style={{ height: workspaceTopHeight, flexBasis: workspaceTopHeight }}
+          >
+            <Card className={styles.workspaceCard} bodyStyle={{ height: '100%' }}>
+              <Tabs
+                className={styles.workspaceTabs}
+                items={[
+                  {
+                    key: 'code',
+                    label: 'IDE 工作区',
+                    children: tabs.length > 0 ? (
+                      <Tabs
+                        className={isWorkspaceUltraTight ? styles.editorTabsCompact : undefined}
+                        type="editable-card"
+                        hideAdd
+                        activeKey={activeTabId ?? undefined}
+                        onChange={(key) => setActiveTabId(key)}
+                        onEdit={(targetKey, action) => {
+                          if (action === 'remove') {
+                            closeTab(String(targetKey))
+                          }
+                        }}
+                        items={tabs.map((tab) => ({
+                          key: tab.id,
+                          label: `${tab.name}${tab.dirty ? ' *' : ''}`,
+                          children: (
+                            <Editor
+                              height="100%"
+                              language={tab.language}
+                              value={tab.content}
+                              onChange={(value) => updateTabContent(tab.id, value ?? '')}
+                              options={{
+                                minimap: { enabled: false },
+                                automaticLayout: true,
+                                fontSize: 13,
+                              }}
+                            />
+                          ),
+                        }))}
+                      />
+                    ) : (
+                      <Empty description="从左侧打开项目文件后，即可开始编辑" />
+                    ),
+                  },
+                  {
+                    key: 'topology',
+                    label: '拓扑工作区',
+                    children: (
+                      <div className={`${styles.topologyPanel} ${isWorkspaceCompact ? styles.topologyPanelCompact : ''}`}>
+                        <div className={styles.topologyWorkbench}>
+                          <div className={styles.topologyRail}>
+                            {workbenchRailItems.map((item) => (
+                              <button
+                                key={item.key}
+                                type="button"
+                                className={`${styles.railButton} ${topologyWorkbenchMode === item.key ? styles.railButtonActive : ''}`}
+                                title={item.label}
+                                onClick={() => setTopologyWorkbenchMode(item.key)}
+                              >
+                                {item.icon}
+                              </button>
+                            ))}
+                          </div>
+                          <div className={styles.topologyMainView}>
+                            {topologyWorkbenchMode === 'topology' && (
+                              <div className={styles.topologyStageColumn}>
+                                <div className={styles.topologyStageCard}>
+                                  <div className={`${styles.stageHeader} ${isWorkspaceTight ? styles.stageHeaderCompact : ''}`}>
+                                    <div>
+                                      <Typography.Title level={4}>NetProgrammable</Typography.Title>
+                                      {!isWorkspaceUltraTight && (
+                                        <Typography.Text type="secondary">
+                                          {currentProject.name}
+                                          {' / '}
+                                          {activeTopology?.name ?? '未选择拓扑'}
+                                        </Typography.Text>
+                                      )}
+                                    </div>
+                                    <Space wrap>
+                                      <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenDevicePicker}>
+                                        Add Device
+                                      </Button>
+                                      <Button icon={<NodeIndexOutlined />} onClick={handleStartLinkMode}>
+                                        Add Link
+                                      </Button>
+                                      <Button icon={<AimOutlined />} onClick={handleResetTopologyView}>
+                                        Reset View
+                                      </Button>
+                                      <Button icon={<EyeOutlined />} onClick={() => void handleToggleFloatingPreview()}>
+                                        {floatingPreviewOpen ? '关闭预览' : '打开预览'}
+                                      </Button>
+                                    </Space>
                                   </div>
-                                  <Space wrap>
-                                    <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenDevicePicker}>
-                                      Add Device
-                                    </Button>
-                                    <Button icon={<NodeIndexOutlined />} onClick={handleStartLinkMode}>
-                                      Add Link
-                                    </Button>
-                                    <Button icon={<AimOutlined />} onClick={handleResetTopologyView}>
-                                      Reset View
-                                    </Button>
-                                    <Button icon={<EyeOutlined />} onClick={() => void handleToggleFloatingPreview()}>
-                                      {floatingPreviewOpen ? '关闭预览' : '打开预览'}
-                                    </Button>
-                                  </Space>
+                                  <div className={styles.stageSurface}>
+                                    {!isWorkspaceTight && (
+                                      <div className={styles.stageLegend}>
+                                        {stageLegendItems.map((item) => (
+                                          <div key={item.key} className={styles.stageLegendItem}>
+                                            <span className={styles.stageLegendDot} style={{ backgroundColor: item.color }} />
+                                            <span>{item.label}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    <div className={styles.topologyCanvas}>
+                                      {activeTopologyId ? (
+                                        <D3TopologyEditor
+                                          ref={topologyEditorRef}
+                                          topologyId={activeTopologyId}
+                                          title={activeTopology?.name ?? '项目拓扑'}
+                                          onGraphStatsChange={setTopologyStats}
+                                          onSelectionChange={setSelectedTopologyNode}
+                                        />
+                                      ) : (
+                                        <Empty description="拓扑加载失败，请稍后重试" />
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className={styles.stageSurface}>
-                                  <div className={styles.stageLegend}>
-                                    {stageLegendItems.map((item) => (
-                                      <div key={item.key} className={styles.stageLegendItem}>
-                                        <span className={styles.stageLegendDot} style={{ backgroundColor: item.color }} />
-                                        <span>{item.label}</span>
+                                {!isWorkspaceCompact && (
+                                  <div className={styles.topologyStatsGrid}>
+                                    {topologyMetricCards.map((item) => (
+                                      <div key={item.key} className={styles.statCard}>
+                                        <div className={styles.statLabel}>{item.label}</div>
+                                        <div className={styles.statValue}>{item.value}</div>
                                       </div>
                                     ))}
                                   </div>
-                                  <div className={styles.topologyCanvas}>
-                                    {activeTopologyId ? (
-                                      <D3TopologyEditor
-                                        ref={topologyEditorRef}
-                                        topologyId={activeTopologyId}
-                                        title={activeTopology?.name ?? '项目拓扑'}
-                                        onGraphStatsChange={setTopologyStats}
-                                        onSelectionChange={setSelectedTopologyNode}
-                                      />
-                                    ) : (
-                                      <Empty description="当前项目还没有关联拓扑，点击右上角按钮创建" />
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className={styles.topologyStatsGrid}>
-                                {topologyMetricCards.map((item) => (
-                                  <div key={item.key} className={styles.statCard}>
-                                    <div className={styles.statLabel}>{item.label}</div>
-                                    <div className={styles.statValue}>{item.value}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {topologyWorkbenchMode === 'orchestrator' && (
-                            <div className={styles.sideModeCard}>
-                              <div className={styles.orchestratorHeader}>
-                                <MessageOutlined />
-                                <span>Flow Orchestrator</span>
-                              </div>
-                              <div className={styles.orchestratorHero}>
-                                <div className={styles.orchestratorHeroIcon}>▶</div>
-                                <Typography.Paragraph type="secondary">
-                                  描述网络编排逻辑，将拓扑、链路与后续配置生成流程串联起来。
-                                </Typography.Paragraph>
-                              </div>
-                              <div className={styles.orchestratorComposer}>
-                                <div className={styles.orchestratorComposerHint}>
-                                  例如：将控制器连接到两台边缘路由器，并为接入终端预留链路带宽。
-                                </div>
-                                <div className={styles.orchestratorComposerButton}>
-                                  <MessageOutlined />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {topologyWorkbenchMode === 'assets' && (
-                            <div className={styles.sideModeCard}>
-                              <div className={styles.orchestratorSection}>
-                                <div className={styles.orchestratorSectionTitle}>项目拓扑</div>
-                                <List
-                                  loading={topologyLoading}
-                                  dataSource={topologyList}
-                                  locale={{ emptyText: '当前项目还没有拓扑示例' }}
-                                  renderItem={(item) => (
-                                    <List.Item
-                                      className={`${styles.topologyListItem} ${item.id === activeTopologyId ? styles.activeTopologyItem : ''}`}
-                                      onClick={async () => {
-                                        await updateCurrentProject({ topologyId: item.id })
-                                      }}
-                                    >
-                                      <div className={styles.topologyItemContent}>
-                                        <div className={styles.topologyItemName}>{item.name}</div>
-                                        <div className={styles.topologyItemMeta}>
-                                          更新时间：{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '-'}
-                                        </div>
-                                      </div>
-                                    </List.Item>
-                                  )}
-                                />
-                                <Space wrap className={styles.orchestratorActions}>
-                                  <Button icon={<PlusOutlined />} onClick={() => openTopologyModal('create')}>
-                                    新建
-                                  </Button>
-                                  <Button icon={<FormOutlined />} onClick={() => openTopologyModal('rename')} disabled={!activeTopology}>
-                                    重命名
-                                  </Button>
-                                  <Button
-                                    danger
-                                    icon={<DeleteOutlined />}
-                                    onClick={() => activeTopologyId && handleDeleteTopology(activeTopologyId)}
-                                    disabled={!activeTopologyId}
-                                  >
-                                    删除
-                                  </Button>
-                                </Space>
-                              </div>
-                              <div className={styles.orchestratorSection}>
-                                <div className={styles.orchestratorSectionTitle}>设备图例</div>
-                                <div className={styles.sidebarLegendGrid}>
-                                  {TOPOLOGY_DEVICE_LEGEND.map((item) => (
-                                    <div
-                                      key={item.type}
-                                      className={styles.legendItem}
-                                      onMouseDown={(event) => {
-                                        startCustomLegendDrag(event, item.type, item.label)
-                                      }}
-                                      onDoubleClick={() => {
-                                        handlePickDeviceType(item.type)
-                                      }}
-                                    >
-                                      <img
-                                        src={DEVICE_IMAGE_MAP[item.type]}
-                                        alt={item.label}
-                                        className={styles.legendImage}
-                                        draggable={false}
-                                      />
-                                      <span className={styles.legendLabel}>{item.label}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {topologyWorkbenchMode === 'stats' && (
-                            <div className={styles.sideModeCard}>
-                              <div className={styles.orchestratorSection}>
-                                <div className={styles.orchestratorSectionTitle}>拓扑统计</div>
-                                <div className={styles.topologyStatsGrid}>
-                                  {topologyMetricCards.map((item) => (
-                                    <div key={item.key} className={styles.statCard}>
-                                      <div className={styles.statLabel}>{item.label}</div>
-                                      <div className={styles.statValue}>{item.value}</div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className={styles.orchestratorSection}>
-                                <div className={styles.orchestratorSectionTitle}>当前节点</div>
-                                {selectedTopologyNode ? (
-                                  <div className={styles.nodeDetailCard}>
-                                    <div className={styles.nodeDetailTitle}>{selectedTopologyNode.name}</div>
-                                    <div className={styles.nodeDetailMeta}>
-                                      类型：{DEVICE_NAMES[selectedTopologyNode.type]}
-                                    </div>
-                                    <div className={styles.nodeDetailMeta}>
-                                      坐标：({Math.round(selectedTopologyNode.x)}, {Math.round(selectedTopologyNode.y)})
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <Typography.Paragraph type="secondary" className={styles.helperText}>
-                                    点击画布中的节点后，可在此查看当前设备摘要。未选择节点时，这里显示拓扑级上下文。
-                                  </Typography.Paragraph>
                                 )}
                               </div>
-                            </div>
-                          )}
+                            )}
+
+                            {topologyWorkbenchMode === 'overview' && (
+                              <div className={`${styles.sideModeCard} ${styles.overviewPanel}`}>
+                                <div className={styles.orchestratorHeader}>
+                                  <BarChartOutlined />
+                                  <span>上下文总览</span>
+                                </div>
+                                <div className={styles.orchestratorHero}>
+                                  <div className={styles.orchestratorHeroIcon}>▶</div>
+                                  <Typography.Paragraph type="secondary">
+                                    这里统一汇总当前项目、拓扑统计与节点上下文，供右侧多模态网络Agent生成协议与代码时参考。
+                                  </Typography.Paragraph>
+                                </div>
+                                <div className={styles.orchestratorSection}>
+                                  <div className={styles.orchestratorSectionTitle}>项目与拓扑</div>
+                                  <div className={`${styles.nodeDetailCard} ${styles.overviewSummaryCard}`}>
+                                    <div className={styles.nodeDetailTitle}>当前工作上下文</div>
+                                    <div className={styles.overviewMetaGrid}>
+                                      <div className={styles.overviewMetaItem}>
+                                        <div className={styles.overviewMetaLabel}>当前项目</div>
+                                        <div className={styles.overviewMetaValue}>{currentProject.name}</div>
+                                      </div>
+                                      <div className={styles.overviewMetaItem}>
+                                        <div className={styles.overviewMetaLabel}>当前拓扑</div>
+                                        <div className={styles.overviewMetaValue}>{activeTopology?.name ?? '未选择拓扑'}</div>
+                                      </div>
+                                      <div className={styles.overviewMetaItem}>
+                                        <div className={styles.overviewMetaLabel}>节点数量</div>
+                                        <div className={styles.overviewMetaValue}>
+                                          {topologyStats?.nodeCount ?? activeTopology?.nodes?.length ?? 0}
+                                        </div>
+                                      </div>
+                                      <div className={styles.overviewMetaItem}>
+                                        <div className={styles.overviewMetaLabel}>链路数量</div>
+                                        <div className={styles.overviewMetaValue}>
+                                          {topologyStats?.linkCount ?? activeTopology?.links?.length ?? 0}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className={styles.orchestratorSection}>
+                                  <div className={styles.orchestratorSectionTitle}>拓扑统计</div>
+                                  <div className={styles.topologyStatsGrid}>
+                                    {topologyMetricCards.map((item) => (
+                                      <div key={item.key} className={styles.statCard}>
+                                        <div className={styles.statLabel}>{item.label}</div>
+                                        <div className={styles.statValue}>{item.value}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className={styles.orchestratorSection}>
+                                  <div className={styles.orchestratorSectionTitle}>选中节点</div>
+                                  {selectedTopologyNode ? (
+                                    <div className={`${styles.nodeDetailCard} ${styles.overviewNodeCard}`}>
+                                      <div className={styles.nodeDetailTitle}>{selectedTopologyNode.name}</div>
+                                      <div className={styles.nodeDetailMeta}>
+                                        类型：{resolveDeviceName(selectedTopologyNode.type)}
+                                      </div>
+                                      <div className={styles.nodeDetailMeta}>
+                                        坐标：({Math.round(selectedTopologyNode.x)}, {Math.round(selectedTopologyNode.y)})
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className={`${styles.nodeDetailCard} ${styles.overviewNodePlaceholder}`}>
+                                      <div className={styles.nodeDetailTitle}>未选择节点</div>
+                                      <Typography.Paragraph type="secondary" className={styles.helperText}>
+                                        在拓扑画布中选中节点后，这里会显示设备级上下文，供右侧 Agent 生成协议与代码时参考。
+                                      </Typography.Paragraph>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {topologyWorkbenchMode === 'assets' && (
+                              <div className={`${styles.sideModeCard} ${styles.assetsPanel}`}>
+                                <div className={`${styles.orchestratorSection} ${styles.assetsSectionCard}`}>
+                                  <div className={styles.orchestratorSectionTitle}>项目拓扑</div>
+                                  <List
+                                    split={false}
+                                    className={styles.topologyAssetList}
+                                    loading={topologyLoading}
+                                    dataSource={topologyList}
+                                    locale={{ emptyText: '当前项目还没有拓扑示例' }}
+                                    renderItem={(item) => (
+                                      <List.Item
+                                        className={`${styles.topologyListItem} ${item.id === activeTopologyId ? styles.activeTopologyItem : ''}`}
+                                        onClick={async () => {
+                                          await updateCurrentProject({ topologyId: item.id })
+                                        }}
+                                      >
+                                        <div className={styles.topologyItemContent}>
+                                          <div className={styles.topologyItemName}>{item.name}</div>
+                                          <div className={styles.topologyItemMeta}>
+                                            更新时间：{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '-'}
+                                          </div>
+                                        </div>
+                                      </List.Item>
+                                    )}
+                                  />
+                                  <Space wrap className={styles.orchestratorActions}>
+                                    <Button icon={<PlusOutlined />} onClick={() => openTopologyModal('create')}>
+                                      新建
+                                    </Button>
+                                    <Button icon={<FormOutlined />} onClick={() => openTopologyModal('rename')} disabled={!activeTopology}>
+                                      重命名
+                                    </Button>
+                                    <Button
+                                      danger
+                                      icon={<DeleteOutlined />}
+                                      onClick={() => activeTopologyId && handleDeleteTopology(activeTopologyId)}
+                                      disabled={!activeTopologyId}
+                                    >
+                                      删除
+                                    </Button>
+                                  </Space>
+                                </div>
+                                <div className={`${styles.orchestratorSection} ${styles.assetsSectionCard}`}>
+                                  <div className={styles.orchestratorSectionTitle}>设备图例</div>
+                                  <div className={styles.legendToolbar}>
+                                    <Button size="small" icon={<PlusOutlined />} onClick={() => openDeviceLegendModal('create')}>
+                                      新建
+                                    </Button>
+                                    <Button
+                                      size="small"
+                                      icon={<FormOutlined />}
+                                      onClick={() => openDeviceLegendModal('edit')}
+                                      disabled={!selectedLegend}
+                                    >
+                                      编辑
+                                    </Button>
+                                    <Button
+                                      size="small"
+                                      danger
+                                      icon={<DeleteOutlined />}
+                                      onClick={handleDeleteDeviceLegend}
+                                      disabled={!selectedLegend}
+                                    >
+                                      删除
+                                    </Button>
+                                  </div>
+                                  <div className={styles.sidebarLegendGrid}>
+                                    {deviceLegendList.map((item) => (
+                                      <div
+                                        key={item.id}
+                                        className={`${styles.legendItem} ${selectedLegendId === item.id ? styles.legendItemSelected : ''}`}
+                                        onClick={() => setSelectedLegendId(item.id)}
+                                        onMouseDown={(event) => {
+                                          startCustomLegendDrag(event, item.type as NodeType, item.label)
+                                        }}
+                                        onDoubleClick={() => {
+                                          handlePickDeviceType(item.type as NodeType)
+                                        }}
+                                      >
+                                        <img
+                                          src={resolveDeviceImage(item.type)}
+                                          alt={item.label}
+                                          className={styles.legendImage}
+                                          draggable={false}
+                                        />
+                                        <span className={styles.legendTypeTag}>{item.type}</span>
+                                        <span className={styles.legendLabel}>{item.label}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ),
-                },
-              ]}
-            />
-          </Card>
+                    ),
+                  },
+                ]}
+              />
+            </Card>
+          </div>
 
-          <InteractiveTerminal projectId={currentProjectId} height={180} />
+          <div
+            className={styles.workspaceRowResizer}
+            onMouseDown={handleWorkspaceVerticalResizerMouseDown}
+          />
+
+          <div className={styles.terminalPane}>
+            <InteractiveTerminal projectId={currentProjectId} height="100%" />
+          </div>
         </div>
 
-        <Card className={styles.assistantCard} title="自然语言助手">
-          <div className={styles.projectMeta}>
-            <Typography.Text strong>项目备注</Typography.Text>
-            <Typography.Paragraph type="secondary">
-              {currentProject.remark || '暂无项目备注，可在后续迭代中补充项目信息说明。'}
-            </Typography.Paragraph>
-          </div>
-          <ChatInput topologyId={activeTopologyId ?? undefined} onApplyDSL={handleApplyDsl} />
-        </Card>
+        <div
+          className={styles.columnResizer}
+          onMouseDown={(event) => handleLayoutResizerMouseDown('right', event)}
+        />
+
+        <div
+          className={styles.rightPane}
+          style={isResizableLayout ? { width: layoutWidths.right, flexBasis: layoutWidths.right } : undefined}
+        >
+          <Card className={styles.assistantCard} title="多模态网络Agent">
+            <ChatInput topologyId={activeTopologyId ?? undefined} onApplyDSL={handleApplyDsl} />
+          </Card>
+        </div>
       </div>
 
       {floatingPreviewOpen && activeTopologyId && (
@@ -1087,18 +1585,65 @@ const Develop: React.FC = () => {
         onCancel={() => setDevicePickerOpen(false)}
       >
         <div className={styles.devicePickerGrid}>
-          {TOPOLOGY_DEVICE_LEGEND.map((item) => (
+          {deviceLegendList.map((item) => (
             <button
-              key={item.type}
+              key={item.id}
               type="button"
               className={styles.devicePickerCard}
-              onClick={() => handlePickDeviceType(item.type)}
+              onClick={() => handlePickDeviceType(item.type as NodeType)}
             >
-              <img src={DEVICE_IMAGE_MAP[item.type]} alt={item.label} className={styles.devicePickerImage} />
+              <img src={resolveDeviceImage(item.type)} alt={item.label} className={styles.devicePickerImage} />
               <span>{item.label}</span>
             </button>
           ))}
         </div>
+      </Modal>
+      <Modal
+        title={deviceLegendModalMode === 'edit' ? '编辑设备图例' : '新建设备图例'}
+        open={deviceLegendModalOpen}
+        onCancel={() => setDeviceLegendModalOpen(false)}
+        onOk={() => void handleSubmitDeviceLegendModal()}
+        confirmLoading={deviceLegendLoading}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size={12}>
+          <Input
+            value={deviceLegendType}
+            onChange={(event) => setDeviceLegendType(event.target.value)}
+            placeholder="设备类型标识，例如 firewall"
+          />
+          <Input
+            value={deviceLegendLabel}
+            onChange={(event) => setDeviceLegendLabel(event.target.value)}
+            placeholder="显示名称，例如 防火墙"
+          />
+          <Select
+            value={deviceLegendImageKey}
+            options={DEVICE_LEGEND_IMAGE_OPTIONS}
+            onChange={setDeviceLegendImageKey}
+            placeholder="选择图标模板"
+          />
+          <Input
+            value={deviceLegendColor}
+            onChange={(event) => setDeviceLegendColor(event.target.value)}
+            placeholder="强调色，例如 #3b82f6"
+          />
+          <div className={styles.legendTemplatePreview}>
+            <div className={styles.legendTemplatePreviewHeader}>图标模板预览</div>
+            <div className={styles.legendTemplatePreviewCard}>
+              <div
+                className={styles.legendTemplatePreviewAccent}
+                style={{ backgroundColor: deviceLegendPreviewColor }}
+              />
+              <img
+                src={deviceLegendPreviewImage}
+                alt={deviceLegendPreviewLabel}
+                className={styles.legendTemplatePreviewImage}
+              />
+              <span className={styles.legendTypeTag}>{deviceLegendPreviewType}</span>
+              <span className={styles.legendLabel}>{deviceLegendPreviewLabel}</span>
+            </div>
+          </div>
+        </Space>
       </Modal>
       {dragPreview && (
         <div

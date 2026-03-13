@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Space, Typography } from 'antd'
-import { ClearOutlined, DisconnectOutlined } from '@ant-design/icons'
+import { ClearOutlined, DisconnectOutlined, ReloadOutlined } from '@ant-design/icons'
 import { FitAddon } from '@xterm/addon-fit'
 import { Terminal as XtermTerminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
@@ -12,7 +12,7 @@ import styles from './index.module.less'
 
 export interface InteractiveTerminalProps {
   projectId?: string | null
-  height?: number
+  height?: number | string
 }
 
 const InteractiveTerminal: React.FC<InteractiveTerminalProps> = ({
@@ -23,7 +23,9 @@ const InteractiveTerminal: React.FC<InteractiveTerminalProps> = ({
   const terminalRef = useRef<XtermTerminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const socketRef = useRef<WebSocket | null>(null)
+  const receivedOutputRef = useRef(false)
   const [connected, setConnected] = useState(false)
+  const [reconnectSeed, setReconnectSeed] = useState(0)
   const size = useResizeObserver(containerRef)
   const wsUrl = useMemo(() => getTerminalWsUrl(projectId), [projectId])
 
@@ -47,6 +49,7 @@ const InteractiveTerminal: React.FC<InteractiveTerminalProps> = ({
     terminal.loadAddon(fitAddon)
     terminal.open(containerRef.current)
     fitAddon.fit()
+    terminal.focus()
 
     terminalRef.current = terminal
     fitAddonRef.current = fitAddon
@@ -73,13 +76,21 @@ const InteractiveTerminal: React.FC<InteractiveTerminalProps> = ({
 
     const socket = new WebSocket(wsUrl)
     socketRef.current = socket
+    receivedOutputRef.current = false
+    let bootstrapTimer: ReturnType<typeof setTimeout> | null = null
 
     socket.onopen = () => {
       setConnected(true)
-      terminalRef.current?.writeln(`\r\n[terminal] 已连接到项目工作目录 ${projectId ?? 'workspace-root'}`)
+      terminalRef.current?.focus()
+      bootstrapTimer = setTimeout(() => {
+        if (socket.readyState === WebSocket.OPEN && !receivedOutputRef.current) {
+          socket.send('\r')
+        }
+      }, 250)
     }
 
     socket.onmessage = (event) => {
+      receivedOutputRef.current = true
       try {
         const payload = JSON.parse(event.data as string) as { data?: string }
         terminalRef.current?.write(payload.data ?? '')
@@ -94,22 +105,46 @@ const InteractiveTerminal: React.FC<InteractiveTerminalProps> = ({
     }
 
     const disposable = terminalRef.current.onData((value) => {
-      socket.send(value)
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(value)
+      }
     })
 
     return () => {
       disposable.dispose()
+      if (bootstrapTimer) {
+        clearTimeout(bootstrapTimer)
+      }
       socket.close()
       socketRef.current = null
     }
-  }, [projectId, wsUrl])
+  }, [projectId, reconnectSeed, wsUrl])
 
   const handleClear = () => {
+    const socket = socketRef.current
+    if (socket?.readyState === WebSocket.OPEN) {
+      // Prefer asking the real shell to clear and redraw the prompt.
+      socket.send('\x0c')
+      terminalRef.current?.focus()
+      return
+    }
+
     terminalRef.current?.clear()
   }
 
   const handleDisconnect = () => {
     socketRef.current?.close()
+  }
+
+  const handleReconnect = () => {
+    setConnected(false)
+    terminalRef.current?.writeln('\r\n[terminal] 正在重新连接...')
+    socketRef.current?.close()
+    setReconnectSeed((current) => current + 1)
+  }
+
+  const handleFocus = () => {
+    terminalRef.current?.focus()
   }
 
   return (
@@ -127,6 +162,14 @@ const InteractiveTerminal: React.FC<InteractiveTerminalProps> = ({
           </Button>
           <Button
             size="small"
+            icon={<ReloadOutlined />}
+            onClick={handleReconnect}
+            disabled={!projectId}
+          >
+            重连
+          </Button>
+          <Button
+            size="small"
             danger
             icon={<DisconnectOutlined />}
             onClick={handleDisconnect}
@@ -136,7 +179,7 @@ const InteractiveTerminal: React.FC<InteractiveTerminalProps> = ({
           </Button>
         </Space>
       </div>
-      <div ref={containerRef} className={styles.terminal} />
+      <div ref={containerRef} className={styles.terminal} onClick={handleFocus} />
     </div>
   )
 }

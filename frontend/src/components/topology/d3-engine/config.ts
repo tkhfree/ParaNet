@@ -2,7 +2,7 @@
  * D3 拓扑引擎配置
  */
 
-import type { NodeType } from '@/model/topology'
+import type { DeviceLegend } from '@/model/topology'
 import device1 from '@/assets/svg/devices/device1.svg?url'
 import device2 from '@/assets/svg/devices/device2.svg?url'
 import device3 from '@/assets/svg/devices/device3.svg?url'
@@ -10,7 +10,7 @@ import device4 from '@/assets/svg/devices/device4.svg?url'
 import device5 from '@/assets/svg/devices/device5.svg?url'
 
 /** 设备颜色方案 */
-export const DEVICE_COLORS: Record<NodeType, string> = {
+export const DEVICE_COLORS: Record<string, string> = {
   switch: '#3b82f6', // 蓝
   router: '#8b5cf6', // 紫
   host: '#6b7280', // 灰
@@ -20,7 +20,7 @@ export const DEVICE_COLORS: Record<NodeType, string> = {
 }
 
 /** 设备中文名称 */
-export const DEVICE_NAMES: Record<NodeType, string> = {
+export const DEVICE_NAMES: Record<string, string> = {
   switch: '交换机',
   router: '路由器',
   host: '终端',
@@ -30,7 +30,7 @@ export const DEVICE_NAMES: Record<NodeType, string> = {
 }
 
 /** 设备图标（使用 SVG 符号） */
-export const DEVICE_ICONS: Record<NodeType, string> = {
+export const DEVICE_ICONS: Record<string, string> = {
   switch: 'icon-switch',
   router: 'icon-router',
   host: 'icon-host',
@@ -40,13 +40,114 @@ export const DEVICE_ICONS: Record<NodeType, string> = {
 }
 
 /** 设备图片资源 */
-export const DEVICE_IMAGE_MAP: Record<NodeType, string> = {
+export const DEVICE_IMAGE_MAP: Record<string, string> = {
   switch: device1,
   router: device2,
   host: device3,
   controller: device4,
   server: device5,
   p4_switch: device1,
+}
+
+export const DEVICE_IMAGE_OPTIONS: Record<string, string> = {
+  device1,
+  device2,
+  device3,
+  device4,
+  device5,
+}
+
+export const DEFAULT_DEVICE_LEGENDS: DeviceLegend[] = [
+  {
+    id: 'switch',
+    type: 'switch',
+    label: '交换机',
+    imageKey: 'device1',
+    color: '#3b82f6',
+    sort: 10,
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'router',
+    type: 'router',
+    label: '路由器',
+    imageKey: 'device2',
+    color: '#8b5cf6',
+    sort: 20,
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'host',
+    type: 'host',
+    label: '终端',
+    imageKey: 'device3',
+    color: '#6b7280',
+    sort: 30,
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'controller',
+    type: 'controller',
+    label: '控制器',
+    imageKey: 'device4',
+    color: '#10b981',
+    sort: 40,
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'server',
+    type: 'server',
+    label: '服务器',
+    imageKey: 'device5',
+    color: '#f59e0b',
+    sort: 50,
+    createdAt: '',
+    updatedAt: '',
+  },
+  {
+    id: 'p4_switch',
+    type: 'p4_switch',
+    label: 'P4交换机',
+    imageKey: 'device1',
+    color: '#06b6d4',
+    sort: 60,
+    createdAt: '',
+    updatedAt: '',
+  },
+]
+
+let deviceLegendRegistry: DeviceLegend[] = [...DEFAULT_DEVICE_LEGENDS]
+
+export function setDeviceLegendRegistry(legends: DeviceLegend[]) {
+  deviceLegendRegistry = legends.length > 0 ? [...legends] : [...DEFAULT_DEVICE_LEGENDS]
+}
+
+export function getDeviceLegendRegistry() {
+  return deviceLegendRegistry
+}
+
+function findDeviceLegend(type: string) {
+  return deviceLegendRegistry.find((item) => item.type === type)
+}
+
+export function resolveDeviceName(type: string): string {
+  return findDeviceLegend(type)?.label ?? DEVICE_NAMES[type] ?? type
+}
+
+export function resolveDeviceColor(type: string): string {
+  return findDeviceLegend(type)?.color ?? DEVICE_COLORS[type] ?? '#64748b'
+}
+
+export function resolveDeviceImage(type: string): string {
+  const imageKey = findDeviceLegend(type)?.imageKey
+  if (imageKey && DEVICE_IMAGE_OPTIONS[imageKey]) {
+    return DEVICE_IMAGE_OPTIONS[imageKey]
+  }
+  return DEVICE_IMAGE_MAP[type] ?? device1
 }
 
 /** 力导向模拟配置 */

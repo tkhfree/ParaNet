@@ -98,16 +98,7 @@ export class D3Editor {
 
   /** 添加设备节点 */
   addDevice(device: IDevice, position?: { x: number; y: number }): D3Node | null {
-    // 根据 deviceClass 映射到 NodeType
-    const typeMap: Record<string, string> = {
-      switch: 'switch',
-      router: 'router',
-      host: 'host',
-      controller: 'controller',
-      server: 'server',
-      p4_switch: 'p4_switch',
-    }
-    const type = (typeMap[device.deviceClass] || 'switch') as NodeType
+    const type = device.deviceClass as NodeType
     const node = createD3Node(device.deviceName, type, position)
 
     // 检查名称重复

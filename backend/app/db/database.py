@@ -24,9 +24,15 @@ def init_db():
                 description TEXT,
                 nodes TEXT,
                 links TEXT,
+                project_id TEXT,
                 created_at TEXT,
-                updated_at TEXT
+                updated_at TEXT,
+                FOREIGN KEY(project_id) REFERENCES project(id)
             )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_topology_project
+            ON topology(project_id)
         """)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS project (
@@ -61,6 +67,18 @@ def init_db():
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_editor_file_parent
             ON editor_file(parent_id)
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS device_legend (
+                id TEXT PRIMARY KEY,
+                type TEXT NOT NULL UNIQUE,
+                label TEXT NOT NULL,
+                image_key TEXT NOT NULL,
+                color TEXT NOT NULL,
+                sort INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT,
+                updated_at TEXT
+            )
         """)
         conn.commit()
     finally:

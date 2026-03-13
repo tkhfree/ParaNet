@@ -145,6 +145,39 @@
   }
 }
 
+.projectActionButton {
+  color: rgba(255, 255, 255, 0.85);
+  width: auto;
+  min-width: 0;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.08);
+    transform: scale(0.98);
+  }
+}
+
+.dangerButton {
+  color: rgba(255, 255, 255, 0.75);
+
+  &:hover {
+    color: #ffccc7;
+    background: rgba(255, 77, 79, 0.14);
+  }
+}
+
 .userInfo {
   cursor: pointer;
   padding: 4px 12px;

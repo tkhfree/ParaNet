@@ -13,9 +13,9 @@ import React, {
 import * as d3 from 'd3'
 import type { D3Node, D3Link, CanvasSize } from '../types'
 import {
-  DEVICE_COLORS,
-  DEVICE_IMAGE_MAP,
-  DEVICE_NAMES,
+  resolveDeviceColor,
+  resolveDeviceImage,
+  resolveDeviceName,
   NODE_CONFIG,
   LINK_CONFIG,
   CANVAS_CONFIG,
@@ -381,7 +381,7 @@ export const D3Canvas = forwardRef<D3CanvasHandle, D3CanvasProps>(({
         .attr('rx', 12)
         .attr('ry', 12)
         .attr('fill', '#1f2937')
-        .attr('stroke', (d: D3Node) => DEVICE_COLORS[d.type])
+        .attr('stroke', (d: D3Node) => resolveDeviceColor(d.type))
         .attr('stroke-width', NODE_CONFIG.strokeWidth)
 
       nodeEnter
@@ -393,7 +393,7 @@ export const D3Canvas = forwardRef<D3CanvasHandle, D3CanvasProps>(({
         .attr('height', NODE_CONFIG.imageHeight + 8)
         .attr('rx', 8)
         .attr('ry', 8)
-        .attr('fill', (d: D3Node) => `${DEVICE_COLORS[d.type]}22`)
+        .attr('fill', (d: D3Node) => `${resolveDeviceColor(d.type)}22`)
 
       // 节点图标（使用 SVG 资源）
       nodeEnter
@@ -403,8 +403,8 @@ export const D3Canvas = forwardRef<D3CanvasHandle, D3CanvasProps>(({
         .attr('y', -NODE_CONFIG.height / 2 + 10)
         .attr('width', NODE_CONFIG.imageWidth)
         .attr('height', NODE_CONFIG.imageHeight)
-        .attr('href', (d: D3Node) => DEVICE_IMAGE_MAP[d.type])
-        .attr('xlink:href', (d: D3Node) => DEVICE_IMAGE_MAP[d.type])
+        .attr('href', (d: D3Node) => resolveDeviceImage(d.type))
+        .attr('xlink:href', (d: D3Node) => resolveDeviceImage(d.type))
         .attr('preserveAspectRatio', 'xMidYMid meet')
 
       // 节点标签
@@ -435,7 +435,7 @@ export const D3Canvas = forwardRef<D3CanvasHandle, D3CanvasProps>(({
             .style('cursor', 'grab')
             .select('.node-card')
             .attr('stroke-width', NODE_CONFIG.strokeWidth)
-            .attr('stroke', DEVICE_COLORS[nodeData.type])
+            .attr('stroke', resolveDeviceColor(nodeData.type))
         })
 
       // 合并 enter 和 update
@@ -583,14 +583,14 @@ export const D3Canvas = forwardRef<D3CanvasHandle, D3CanvasProps>(({
             }}
           >
             <img
-              src={DEVICE_IMAGE_MAP[dragDeviceType as keyof typeof DEVICE_IMAGE_MAP]}
+              src={resolveDeviceImage(dragDeviceType)}
               alt={dragDeviceType}
               style={{ width: 72, height: 34, objectFit: 'contain' }}
             />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <strong style={{ fontSize: 14 }}>
                 放开即可创建
-                {DEVICE_NAMES[dragDeviceType as keyof typeof DEVICE_NAMES] ?? dragDeviceType}
+                {resolveDeviceName(dragDeviceType)}
               </strong>
               <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)' }}>
                 将在当前落点自动生成节点

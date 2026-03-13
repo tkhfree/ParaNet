@@ -141,9 +141,5 @@ export function createD3Link(
 
 /** 获取节点类型 */
 export function getNodeType(model: string): NodeType {
-  const validTypes: NodeType[] = ['switch', 'router', 'host', 'controller', 'server', 'p4_switch']
-  if (validTypes.includes(model as NodeType)) {
-    return model as NodeType
-  }
-  return 'switch' // 默认类型
+  return model as NodeType
 }
