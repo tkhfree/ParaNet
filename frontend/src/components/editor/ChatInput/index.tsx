@@ -79,10 +79,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
   return (
     <div className={`${styles.chatInput} ${className ?? ''}`}>
       <div className={styles.messages}>
+        {messages.length === 0 && !loading && (
+          <div className={styles.emptyHint}>
+            <div className={styles.emptyHintTitle}>多模态网络Agent已就绪</div>
+            <div className={styles.emptyHintText}>
+              直接输入网络协议目标、拓扑约束或代码生成需求，例如：为当前拓扑生成一个负责流量分类与转发控制的协议处理 Agent。
+            </div>
+          </div>
+        )}
         {messages.map((msg) => (
           <div key={msg.id} className={`${styles.message} ${msg.role}`}>
             <div className={styles.label}>
-              {msg.role === 'user' ? '自然语言' : '生成的 DSL'}
+              {msg.role === 'user' ? '多模态指令' : '生成结果'}
             </div>
             {msg.role === 'user' ? (
               <div className={styles.explanation}>{msg.content}</div>

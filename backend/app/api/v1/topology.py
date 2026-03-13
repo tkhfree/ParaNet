@@ -11,8 +11,8 @@ router = APIRouter(prefix="/topologies", tags=["topology"])
 
 
 @router.get("")
-def list_topologies(pageNo: int = 1, pageSize: int = 10):
-    result = topology_service.list_topologies(page_no=pageNo, page_size=pageSize)
+def list_topologies(pageNo: int = 1, pageSize: int = 10, projectId: str | None = None):
+    result = topology_service.list_topologies(page_no=pageNo, page_size=pageSize, project_id=projectId)
     return ok(result)
 
 
@@ -30,7 +30,8 @@ def create_topology(body: dict):
     description = body.get("description")
     nodes = body.get("nodes", [])
     links = body.get("links", [])
-    topo = topology_service.create_topology(name, description, nodes, links)
+    project_id = body.get("projectId")
+    topo = topology_service.create_topology(name, description, nodes, links, project_id)
     return ok(topo)
 
 
@@ -42,6 +43,7 @@ def update_topology(id: str, body: dict):
         description=body.get("description"),
         nodes=body.get("nodes"),
         links=body.get("links"),
+        project_id=body.get("projectId"),
     )
     if not topo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="拓扑不存在")
@@ -68,7 +70,7 @@ def export_topology(id: str, format: str = "json"):
 
 
 @router.post("/import")
-async def import_topology(file: UploadFile = File(...)):
+async def import_topology(file: UploadFile = File(...), projectId: str | None = None):
     content = await file.read()
     try:
         text = content.decode("utf-8")
@@ -81,5 +83,5 @@ async def import_topology(file: UploadFile = File(...)):
     description = data.get("description")
     nodes = data.get("nodes", [])
     links = data.get("links", [])
-    topo = topology_service.import_topology(name, description, nodes, links)
+    topo = topology_service.import_topology(name, description, nodes, links, projectId)
     return ok(topo)

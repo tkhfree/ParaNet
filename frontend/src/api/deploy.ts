@@ -5,9 +5,11 @@ export interface Deployment {
   id: string
   intentId: string
   topologyId: string
+  projectId?: string | null
   status: DeploymentStatus
   progress: number
   logs: DeploymentLog[]
+  previewConfig?: import('@/model/deploy').DeploymentPreviewConfig
   createdAt: string
   completedAt?: string
 }
@@ -19,6 +21,7 @@ export type DeploymentStatus =
   | 'completed' 
   | 'failed' 
   | 'rolled_back'
+  | 'cancelled'
 
 export interface DeploymentLog {
   timestamp: string
@@ -30,13 +33,14 @@ export interface DeploymentLog {
 export interface DeployRequest {
   intentId: string
   topologyId: string
+  projectId?: string | null
   dryRun?: boolean
 }
 
 export const deployApi = {
   // 获取部署列表
-  getList: (params?: PaginationParams) => {
-    return axios.get<PaginationParams, ApiResponse<PaginatedResponse<Deployment>>>(
+  getList: (params?: PaginationParams & { projectId?: string }) => {
+    return axios.get<typeof params, ApiResponse<PaginatedResponse<Deployment>>>(
       '/deployments',
       { params }
     )

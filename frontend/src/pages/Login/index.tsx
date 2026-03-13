@@ -59,7 +59,7 @@ const Login: React.FC = () => {
           <div className={styles.header}>
             <span className={styles.title}>ParaNet</span>
           </div>
-          <div className={styles.desc}>意图驱动网络管理平台</div>
+          <div className={styles.desc}>网络模态集成开发系统</div>
         </div>
 
         <Card className={styles.card}>

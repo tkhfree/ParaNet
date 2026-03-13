@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Card, Row, Col, Tabs, Space, Typography, Statistic, Spin, Empty } from 'antd'
 import {
   MonitorOutlined,
@@ -9,13 +9,16 @@ import {
   WarningOutlined,
 } from '@ant-design/icons'
 import { MetricsChart, AlertList, TerminalLog } from '@/components/monitoring'
+import { D3TopologyPreviewer } from '@/components/topology'
 import { monitorApi } from '@/api/monitor'
 import type { NodeMetrics, LinkMetrics, SystemHealth } from '@/model/monitor'
+import useProjectStore from '@/stores/project'
 import styles from './index.module.less'
 
 const { Title } = Typography
 
 const Monitor: React.FC = () => {
+  const currentProject = useProjectStore((state) => state.currentProject)
   const [health, setHealth] = useState<SystemHealth | null>(null)
   const [nodeMetrics, setNodeMetrics] = useState<NodeMetrics[]>([])
   const [linkMetrics, setLinkMetrics] = useState<LinkMetrics[]>([])
@@ -54,6 +57,16 @@ const Monitor: React.FC = () => {
   const hasMetrics = nodeMetrics.length > 0 || linkMetrics.length > 0
   const firstNode = nodeMetrics[0]
   const firstLink = linkMetrics[0]
+  const topologyId = currentProject?.topologyId ?? null
+
+  const projectSummary = useMemo(
+    () => [
+      { label: '当前项目', value: currentProject?.name ?? '未选择项目' },
+      { label: '关联拓扑', value: topologyId ?? '未绑定' },
+      { label: '最近意图', value: currentProject?.lastIntentId ?? '未生成' },
+    ],
+    [currentProject?.lastIntentId, currentProject?.name, topologyId]
+  )
 
   const tabItems = [
     {
@@ -171,6 +184,32 @@ const Monitor: React.FC = () => {
         <div>
           <Title level={2}>监控中心</Title>
         </div>
+
+        <Row gutter={[16, 16]}>
+          <Col xs={24} xl={14}>
+            <Card title="项目拓扑态势">
+              {topologyId ? (
+                <div style={{ height: 420 }}>
+                  <D3TopologyPreviewer topologyId={topologyId} />
+                </div>
+              ) : (
+                <Empty description="当前项目尚未建立或关联拓扑" />
+              )}
+            </Card>
+          </Col>
+          <Col xs={24} xl={10}>
+            <Card title="项目上下文">
+              <Space direction="vertical" style={{ width: '100%' }}>
+                {projectSummary.map((item) => (
+                  <div key={item.label} className={styles.projectMetaItem}>
+                    <span className={styles.projectMetaLabel}>{item.label}</span>
+                    <span className={styles.projectMetaValue}>{item.value}</span>
+                  </div>
+                ))}
+              </Space>
+            </Card>
+          </Col>
+        </Row>
 
         {health && (
           <Row gutter={[16, 16]} className={styles.statsRow}>
