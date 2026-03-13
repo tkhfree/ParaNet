@@ -10,7 +10,7 @@ import {
   Tabs,
   Typography,
 } from 'antd'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { CompilePreview, DSLEditor } from '@/components/editor'
 import { fileApi, intentApi, topologyApi } from '@/api'
@@ -35,6 +35,7 @@ const Compile: React.FC = () => {
   const [compileResult, setCompileResult] = useState<IntentCompileResponse | null>(null)
   const [compiling, setCompiling] = useState(false)
   const [savingIntent, setSavingIntent] = useState(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const activeTab = useMemo(
     () => tabs.find((tab) => tab.id === activeTabId) ?? null,
@@ -93,23 +94,40 @@ const Compile: React.FC = () => {
       message.warning('请选择包含 DSL 的文件或输入内容')
       return
     }
+    abortControllerRef.current = new AbortController()
     setCompiling(true)
     try {
-      const res = await intentApi.compilePreview({
-        content: sourceContent,
-        topologyId: currentProject?.topologyId ?? undefined,
-        projectId: currentProjectId,
-      })
+      const res = await intentApi.compilePreview(
+        {
+          content: sourceContent,
+          topologyId: currentProject?.topologyId ?? undefined,
+          projectId: currentProjectId,
+        },
+        abortControllerRef.current.signal
+      )
       setCompileResult(res.data)
       if (res.data.success) {
         message.success('编译完成')
       } else {
         message.error(res.data.errors?.[0] ?? '编译失败')
       }
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        message.info('编译已停止')
+      } else {
+        throw error
+      }
     } finally {
       setCompiling(false)
+      abortControllerRef.current = null
     }
   }, [currentProject?.topologyId, currentProjectId, message, sourceContent])
+
+  const handleStopCompile = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+  }, [])
 
   const handleSaveIntent = useCallback(async () => {
     if (!currentProjectId || !currentProject || !compileResult?.success) {
@@ -191,8 +209,11 @@ const Compile: React.FC = () => {
               await updateCurrentProject({ topologyId: value })
             }}
           />
-          <Button type="primary" onClick={handleCompile} loading={compiling}>
+          <Button type="primary" onClick={handleCompile} loading={compiling} disabled={compiling}>
             开始编译
+          </Button>
+          <Button danger onClick={handleStopCompile} disabled={!compiling}>
+            停止编译
           </Button>
           <Button onClick={handleSaveIntent} disabled={!compileResult?.success} loading={savingIntent}>
             保存为可部署产物

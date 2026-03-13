@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, status, UploadFile, File
 from fastapi.responses import Response
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/topologies", tags=["topology"])
 
 
 @router.get("")
-def list_topologies(pageNo: int = 1, pageSize: int = 10, projectId: str | None = None):
+def list_topologies(pageNo: int = 1, pageSize: int = 10, projectId: Optional[str] = None):
     result = topology_service.list_topologies(page_no=pageNo, page_size=pageSize, project_id=projectId)
     return ok(result)
 
@@ -70,7 +70,7 @@ def export_topology(id: str, format: str = "json"):
 
 
 @router.post("/import")
-async def import_topology(file: UploadFile = File(...), projectId: str | None = None):
+async def import_topology(file: UploadFile = File(...), projectId: Optional[str] = None):
     content = await file.read()
     try:
         text = content.decode("utf-8")

@@ -4,7 +4,7 @@ import asyncio
 import os
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, Union
 
 import config
 
@@ -28,7 +28,7 @@ class PtyTerminalProcess:
     process: PtyProcess
 
 
-TerminalProcess = PipeTerminalProcess | PtyTerminalProcess
+TerminalProcess = Union[PipeTerminalProcess, PtyTerminalProcess]
 
 
 def _shell_command() -> list[str]:
