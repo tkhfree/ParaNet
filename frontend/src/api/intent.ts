@@ -48,10 +48,11 @@ export const intentApi = {
   },
 
   // 编译预览（直接编译 DSL 内容，无需保存意图）
-  compilePreview: (data: CompilePreviewRequest) => {
+  compilePreview: (data: CompilePreviewRequest, signal?: AbortSignal) => {
     return axios.post<CompilePreviewRequest, ApiResponse<IntentCompileResponse>>(
       '/intents/compile-preview',
-      data
+      data,
+      { signal }
     )
   },
 
