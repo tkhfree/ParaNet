@@ -84,7 +84,7 @@ Issues = "https://github.com/YOUR_USERNAME/ParaNet/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["paranet*"]
+include = ["paranet*", "compiler*"]
 
 [tool.black]
 line-length = 88
