@@ -20,7 +20,6 @@ __all__ = [
     "ProgramIR",
     "compile_pne_to_program_ir",
     "compile_pne_text_to_program_ir",
-    "compile_intent_text_to_program_ir",
 ]
 
 
@@ -91,41 +90,3 @@ def compile_pne_text_to_program_ir(
     return semantic_result.program
 
 
-def compile_intent_text_to_program_ir(
-    intent_text: str,
-    *,
-    topology_snapshot: dict | None = None,
-    file_name: str = "<memory>",
-) -> "ProgramIR":
-    """Convenience helper: Intent DSL text -> ProgramIR."""
-    from compiler.frontend import IntentParser
-    from compiler.frontend.pne_ast import IntentOverlayNode, ProgramNode
-    from compiler.semantic.collector_pne_intent import PNEIntentCollector
-    from compiler.ir.common import DiagnosticSeverity
-
-    parser = IntentParser()
-    parse_result = parser.parse_text(intent_text, file_name=file_name)
-    if parse_result.ast is None:
-        raise ValueError("Failed to parse Intent DSL")
-
-    errors = [d for d in parse_result.diagnostics if d.severity == DiagnosticSeverity.ERROR]
-    if errors:
-        first = errors[0]
-        loc = (
-            f" at {first.span.file}:{first.span.line}:{first.span.column}"
-            if first.span
-            else ""
-        )
-        raise ValueError(f"Syntax error: {first.message}{loc}")
-
-    overlay = IntentOverlayNode(intent_program=parse_result.ast)
-    program_node = ProgramNode(includes=[], declarations=[overlay])
-
-    collector = PNEIntentCollector()
-    semantic_result = collector.collect(program_node, topology_snapshot=topology_snapshot)
-    if semantic_result.diagnostics:
-        first = semantic_result.diagnostics[0]
-        span = first.span
-        loc = f" at {span.file}:{span.line}:{span.column}" if span else ""
-        raise ValueError(f"Semantic error: {first.message}{loc}")
-    return semantic_result.program

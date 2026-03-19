@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
-from compiler.frontend.intent_ast import (
+from compiler.frontend.pne_ast import (
     AttrNode,
     EndpointSpecNode,
     ObjectValueNode,

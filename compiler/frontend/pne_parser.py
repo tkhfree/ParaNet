@@ -51,7 +51,7 @@ from compiler.frontend.pne_ast import (
     UnaryExpressionNode,
     VarDeclNode,
 )
-from compiler.frontend.intent_ast import (
+from compiler.frontend.pne_ast import (
     AttrNode,
     EndpointPairNode,
     EndpointSpecNode,

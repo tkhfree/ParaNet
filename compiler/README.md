@@ -4,14 +4,13 @@ This folder is the ParaNet unified compiler pipeline.
 
 ## Directory Structure
 
-- `frontend/`: PNE and Intent dual-DSL parsing (no lynette2 dependency)
+- `frontend/`: PNE parsing (supports optional `intent { ... }` overlay blocks)
   - `preprocessor.py`: include/.domain expansion
-  - `pne_ast.py`, `intent_ast.py`: AST node definitions
-  - `pne_parser.py`, `intent_parser.py`: Lark-based parsers
-  - `grammar_pne.lark`, `grammar_pne_intent.lark`, `grammar_intent.lark`: grammars
+  - `pne_ast.py`: AST node definitions (includes intent overlay types)
+  - `pne_parser.py`: Lark-based parser
+  - `grammar_pne.lark`, `grammar_pne_intent.lark`: grammars
 - `semantic/`: AST → ProgramIR / IntentIR collection
   - `collector_pne.py`: PNE AST → ProgramIR
-  - `collector_intent.py`: Intent AST → ProgramIR (placeholder)
   - `validator.py`, `symbols.py`: validation placeholders
 - `ir/`: IR definitions (common, program, instructions, fragment, node_plan, intent, resources, capabilities)
 - `lowering/`: ProgramIR → FragmentIR (placeholder)

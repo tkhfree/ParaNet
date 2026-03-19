@@ -67,20 +67,3 @@ class TestIntentIR:
         assert data["root"]["name"] == "test"
 
 
-class TestDSLParser:
-    """Tests for DSL parser (requires lark)."""
-    
-    @pytest.fixture
-    def parser(self):
-        """Create a parser instance."""
-        try:
-            from compiler.frontend.intent_parser import IntentParser
-            return IntentParser()
-        except ImportError:
-            pytest.skip("Lark not installed")
-        except FileNotFoundError:
-            pytest.skip("Grammar file not found")
-    
-    def test_parser_initialization(self, parser):
-        """Test parser can be initialized."""
-        assert parser is not None

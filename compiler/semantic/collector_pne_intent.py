@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from compiler.frontend.intent_ast import (
+from compiler.frontend.pne_ast import (
     AttrNode,
     IntentProgramNode,
     LinkDefNode,
