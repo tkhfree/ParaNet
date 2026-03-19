@@ -5,7 +5,7 @@ Tests for ParaNet compiler.
 import pytest
 from pathlib import Path
 
-from paranet.compiler.ir.intent_ir import IntentIR, IRNode, IRType
+from compiler.ir.intent_ir import IntentIR, IRNode, IRType
 
 
 class TestIntentIR:
@@ -74,8 +74,8 @@ class TestDSLParser:
     def parser(self):
         """Create a parser instance."""
         try:
-            from paranet.compiler.frontend.parser import DSLParser
-            return DSLParser()
+            from compiler.frontend.intent_parser import IntentParser
+            return IntentParser()
         except ImportError:
             pytest.skip("Lark not installed")
         except FileNotFoundError:

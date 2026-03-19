@@ -137,6 +137,83 @@ def _path_exists(project_id: str, relative_path: str, exclude_id: str | None = N
         conn.close()
 
 
+def _get_file_by_path(project_id: str, relative_path: str) -> dict | None:
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            """
+            SELECT id, project_id, parent_id, file_name, is_folder, file_type, file_path, created_at, updated_at
+            FROM editor_file
+            WHERE project_id = ? AND file_path = ?
+            """,
+            (project_id, relative_path),
+        ).fetchone()
+        return _row_to_file(row) if row else None
+    finally:
+        conn.close()
+
+
+def upsert_text_file(project_id: str, file_name: str, content: str) -> dict:
+    """
+    Upsert a project root text file without touching `project.currentFileId`.
+
+    This is used for auto-materialized artifacts (e.g. topology snapshots) that
+    should appear in the file tree but must not steal the "current editor file".
+    """
+    if not editor_project_service.get_project(project_id):
+        raise ValueError("项目不存在")
+
+    normalized_name = _sanitize_name(file_name)
+    relative_path = normalized_name
+    now = _now()
+
+    record = _get_file_by_path(project_id, relative_path)
+    absolute_path = _absolute_path(project_id, relative_path)
+    absolute_path.parent.mkdir(parents=True, exist_ok=True)
+    absolute_path.write_text(content or "", encoding="utf-8")
+
+    conn = get_connection()
+    try:
+        if record:
+            file_id = record["id"]
+            conn.execute(
+                "UPDATE editor_file SET updated_at = ?, file_name = ? WHERE id = ?",
+                (now, normalized_name, file_id),
+            )
+        else:
+            file_id = str(uuid.uuid4())
+            file_type = _guess_file_type(normalized_name)
+            conn.execute(
+                """
+                INSERT INTO editor_file(id, project_id, parent_id, file_name, is_folder, file_type, file_path, created_at, updated_at)
+                VALUES(?, ?, NULL, ?, 0, ?, ?, ?, ?)
+                """,
+                (
+                    file_id,
+                    project_id,
+                    normalized_name,
+                    file_type,
+                    relative_path,
+                    now,
+                    now,
+                ),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+    return _get_file_by_path(project_id, relative_path)  # type: ignore[return-value]
+
+
+def delete_file_by_path(project_id: str, file_name: str) -> None:
+    """Delete a project file by its root-relative path (file name)."""
+    relative_path = _sanitize_name(file_name)
+    record = _get_file_by_path(project_id, relative_path)
+    if not record:
+        return
+    delete_file(str(record["id"]))
+
+
 def create_file(
     project_id: str,
     file_name: str,

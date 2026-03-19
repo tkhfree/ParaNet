@@ -4,6 +4,10 @@ from datetime import datetime, timezone
 from typing import Any
 import uuid
 
+from compiler import compile_pne_text_to_program_ir
+
+from app.services import topology_service
+
 _store: dict[str, dict[str, Any]] = {}
 
 
@@ -108,77 +112,45 @@ def translate_natural_language(input_text: str, context: dict | None) -> dict:
 
 
 def _build_compile_payload(content: str, topology_id: str | None) -> dict:
-    stripped_lines = [line for line in (content or "").splitlines() if line.strip()]
-    statements = [
-        {
-            "line": index + 1,
-            "kind": "statement" if not line.strip().startswith("#") else "comment",
-            "text": line,
+    topo = topology_service.get_topology(topology_id) if topology_id else None
+    pne_text = (content or "").strip()
+    if not pne_text:
+        return {
+            "success": False,
+            "config": {"ip": {}, "ndn": {}, "geo": {}, "p4": {}},
+            "errors": ["DSL 内容为空，无法编译"],
+            "warnings": [],
+            "ast": None,
+            "globalIr": None,
+            "deviceIr": [],
+            "logs": [],
         }
-        for index, line in enumerate(stripped_lines)
+
+    logs: list[dict[str, Any]] = [
+        {"timestamp": _now(), "level": "info", "message": "开始编译（按扩展 PNE 解析，支持可选 intent 块）"},
     ]
-    device_names = ["core-1", "edge-1"]
-    config = {
-        "ip": {
-            "routes": [line.strip() for line in stripped_lines[:3]],
-            "topologyId": topology_id,
-        },
-        "ndn": {"policies": len(stripped_lines)},
-        "geo": {"regions": ["global"] if stripped_lines else []},
-        "p4": {"pipelines": ["ingress", "egress"] if stripped_lines else []},
-    }
+
+    try:
+        program = compile_pne_text_to_program_ir(pne_text, topology_snapshot=topo, file_name="<content>")
+    except ValueError as pne_err:
+        return {
+            "success": False,
+            "config": {"ip": {}, "ndn": {}, "geo": {}, "p4": {}},
+            "errors": [f"PNE: {pne_err}"],
+            "warnings": [],
+            "ast": None,
+            "globalIr": None,
+            "deviceIr": [],
+            "logs": logs,
+        }
+
     return {
-        "success": bool(stripped_lines),
-        "config": config,
-        "errors": [] if stripped_lines else ["DSL 内容为空，无法编译"],
-        "warnings": [] if stripped_lines else ["请输入 DSL 后再编译"],
-        "ast": {
-            "type": "Program",
-            "children": statements,
-        },
-        "globalIr": {
-            "summary": {
-                "statementCount": len(statements),
-                "topologyId": topology_id,
-            },
-            "instructions": [
-                {
-                    "id": f"ir-{index + 1}",
-                    "op": "apply_policy",
-                    "source": statement["text"],
-                }
-                for index, statement in enumerate(statements)
-            ],
-        },
-        "deviceIr": [
-            {
-                "deviceId": device_name,
-                "instructions": [
-                    {
-                        "id": f"{device_name}-{index + 1}",
-                        "action": "install_rule",
-                        "source": statement["text"],
-                    }
-                    for index, statement in enumerate(statements)
-                ],
-            }
-            for device_name in device_names
-        ],
-        "logs": [
-            {
-                "timestamp": _now(),
-                "level": "info",
-                "message": "开始解析 DSL",
-            },
-            {
-                "timestamp": _now(),
-                "level": "info",
-                "message": f"完成 AST 构建，生成 {len(statements)} 条语句",
-            },
-            {
-                "timestamp": _now(),
-                "level": "info",
-                "message": "已完成全局 IR 与设备级 IR 切分",
-            },
-        ],
+        "success": True,
+        "config": {"ip": {}, "ndn": {}, "geo": {}, "p4": {}},
+        "errors": [],
+        "warnings": [],
+        "ast": {"type": "ProgramIR", "value": program.to_dict()},
+        "globalIr": {"summary": {"moduleCount": len(program.modules), "topologyId": topology_id}},
+        "deviceIr": [],
+        "logs": logs + [{"timestamp": _now(), "level": "info", "message": "语义收集完成"}],
     }

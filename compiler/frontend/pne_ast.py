@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field, is_dataclass
 from typing import Any
 
+from compiler.frontend.intent_ast import IntentProgramNode
 from compiler.ir.common import SourceSpan
 
 
@@ -260,6 +261,11 @@ class ApplicationNode(TopLevelNode):
     name: str = ""
     parser_name: str | None = None
     body: list[StatementNode] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class IntentOverlayNode(TopLevelNode):
+    intent_program: IntentProgramNode | None = None
 
 
 @dataclass(slots=True)

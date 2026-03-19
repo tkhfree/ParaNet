@@ -182,11 +182,25 @@ class _TreeToIntentTransformer(Transformer[object, object]):
         return [cast(AttrNode, c) for c in children]
 
     def route_attr(self, meta: object, children: list[object]) -> AttrNode:
+        if len(children) == 1 and isinstance(children[0], AttrNode):
+            return children[0]
         return AttrNode(
             span=self._span(meta),
             key=str(children[0]),
             value=cast(IntentAstNode, children[1]),
         )
+
+    def from_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="from", value=cast(IntentAstNode, children[0]))
+
+    def to_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="to", value=cast(IntentAstNode, children[0]))
+
+    def via_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="via", value=cast(IntentAstNode, children[0]))
+
+    def protocol_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="protocol", value=cast(IntentAstNode, children[0]))
 
     def policy_def(self, meta: object, children: list[object]) -> PolicyDefNode:
         name = str(children[0])
@@ -206,11 +220,29 @@ class _TreeToIntentTransformer(Transformer[object, object]):
         return [cast(AttrNode, c) for c in children]
 
     def policy_attr(self, meta: object, children: list[object]) -> AttrNode:
+        if len(children) == 1 and isinstance(children[0], AttrNode):
+            return children[0]
         return AttrNode(
             span=self._span(meta),
             key=str(children[0]),
             value=cast(IntentAstNode, children[1]),
         )
+
+    def match_stmt(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="match", value=cast(IntentAstNode, children[0]))
+
+    def action_stmt(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="action", value=cast(IntentAstNode, children[0]))
+
+    def match_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(
+            span=self._span(meta),
+            key=str(children[0]),
+            value=cast(IntentAstNode, children[1]),
+        )
+
+    def match_key(self, meta: object, children: list[object]) -> str:
+        return str(children[0]).strip('"\'')
 
     def value(self, meta: object, children: list[object]) -> IntentAstNode:
         return cast(IntentAstNode, children[0])
@@ -250,7 +282,7 @@ class _TreeToIntentTransformer(Transformer[object, object]):
         c = children[0]
         if isinstance(c, str):
             return EndpointSpecNode(span=self._span(meta), kind="identifier", value=c)
-        if hasattr(c, "kind") and hasattr(c, "value"):
+        if isinstance(c, EndpointSpecNode):
             return EndpointSpecNode(span=self._span(meta), kind=c.kind, value=c.value)
         return EndpointSpecNode(span=self._span(meta), kind="identifier", value=str(c))
 
@@ -262,8 +294,8 @@ class _TreeToIntentTransformer(Transformer[object, object]):
         return str(children[0])
 
     def prefix_spec(self, meta: object, children: list[object]) -> EndpointSpecNode:
-        val = str(children[0]).strip('"\'')
-        return EndpointSpecNode(span=self._span(meta), kind="prefix", value=val)
+        payload = cast(ObjectValueNode, children[0])
+        return EndpointSpecNode(span=self._span(meta), kind="prefix", value=payload)
 
     def region_spec(self, meta: object, children: list[object]) -> EndpointSpecNode:
         val = str(children[0]).strip('"\'')

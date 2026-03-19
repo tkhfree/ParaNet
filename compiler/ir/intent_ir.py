@@ -53,11 +53,31 @@ class IntentIR(SerializableModel):
     version: str = "1.0"
     metadata: dict[str, Any] = field(default_factory=dict)
 
+    @classmethod
+    def from_ast(cls, ast: Any) -> "IntentIR":
+        """
+        Build an IntentIR from parsed Intent AST.
+
+        Note: transformation is still a placeholder; we only create a root node.
+        """
+        ir = cls()
+        ir.root = IRNode(
+            ir_type=IRType.NETWORK,
+            name="root",
+            metadata={"source": "ast"},
+        )
+        return ir
+
     def validate(self) -> list[str]:
         errors: list[str] = []
         if self.root is None:
             errors.append("IR has no root node")
         return errors
+
+    def optimize(self) -> "IntentIR":
+        """Apply optimization passes (placeholder)."""
+        # TODO: implement optimization passes
+        return self
 
     def to_dict(self) -> dict[str, Any]:
         def node_to_dict(node: IRNode) -> dict[str, Any]:

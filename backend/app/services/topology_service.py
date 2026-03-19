@@ -6,6 +6,7 @@ import json
 import uuid
 
 from app.db.database import get_connection
+from app.services import editor_file_service
 
 
 def _now() -> str:
@@ -64,6 +65,10 @@ def list_topologies(page_no: int = 1, page_size: int = 10, project_id: str | Non
         ).fetchall()
 
         records = [_row_to_topology(row) for row in rows]
+        # Lazy materialization: ensure topology snapshots appear in project file tree.
+        for topo in records:
+            if topo.get("projectId"):
+                _materialize_topology_file(str(topo["projectId"]), topo)
         return {"records": records, "total": total, "pageNo": page_no, "pageSize": page_size}
     finally:
         conn.close()
@@ -80,7 +85,10 @@ def get_topology(id: str) -> dict | None:
             """,
             (id,),
         ).fetchone()
-        return _row_to_topology(row) if row else None
+        topo = _row_to_topology(row) if row else None
+        if topo and topo.get("projectId"):
+            _materialize_topology_file(str(topo["projectId"]), topo)
+        return topo
     finally:
         conn.close()
 
@@ -124,6 +132,7 @@ def update_topology(
     current = get_topology(id)
     if not current:
         return None
+    effective_project_id = project_id if project_id is not None else current.get("projectId")
 
     conn = get_connection()
     try:
@@ -153,14 +162,30 @@ def update_topology(
     return get_topology(id)
 
 
+def _materialize_topology_file(project_id: str, topo: dict[str, Any]) -> None:
+    file_name = f"topology-{topo.get('id')}.json"
+    # Ensure the file content matches the topology snapshot currently stored in DB.
+    payload = json.dumps(topo, ensure_ascii=False, indent=2)
+    editor_file_service.upsert_text_file(project_id=project_id, file_name=file_name, content=payload)
+
+
 def delete_topology(id: str) -> bool:
     conn = get_connection()
     try:
-        row = conn.execute("SELECT id FROM topology WHERE id = ?", (id,)).fetchone()
+        row = conn.execute(
+            "SELECT id, project_id FROM topology WHERE id = ?",
+            (id,),
+        ).fetchone()
         if not row:
             return False
+
+        project_id = row["project_id"]
         conn.execute("DELETE FROM topology WHERE id = ?", (id,))
         conn.commit()
+
+        if project_id:
+            file_name = f"topology-{id}.json"
+            editor_file_service.delete_file_by_path(project_id=str(project_id), file_name=file_name)
         return True
     finally:
         conn.close()

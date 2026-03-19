@@ -45,7 +45,7 @@ class EndpointPairNode(IntentAstNode):
 @dataclass(slots=True)
 class EndpointSpecNode(IntentAstNode):
     kind: str = "identifier"  # "identifier" | "prefix" | "region"
-    value: str = ""
+    value: IntentAstNode | str | None = None
 
 
 @dataclass(slots=True)

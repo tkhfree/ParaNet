@@ -27,6 +27,7 @@ from compiler.frontend.pne_ast import (
     IfNode,
     IncludeNode,
     IndexExpressionNode,
+    IntentOverlayNode,
     IntegerLiteralNode,
     IpLiteralNode,
     MapDeclNode,
@@ -49,6 +50,24 @@ from compiler.frontend.pne_ast import (
     TypeNode,
     UnaryExpressionNode,
     VarDeclNode,
+)
+from compiler.frontend.intent_ast import (
+    AttrNode,
+    EndpointPairNode,
+    EndpointSpecNode,
+    ImportStmtNode,
+    IntentAstNode,
+    IntentProgramNode,
+    LinkDefNode,
+    ListValueNode,
+    NetworkDefNode,
+    NodeDefNode,
+    ObjectPairNode,
+    ObjectValueNode,
+    PolicyDefNode,
+    RouteDefNode,
+    ValueNode,
+    ViaSpecNode,
 )
 from compiler.frontend.preprocessor import IncludeDirective, Preprocessor, SourceUnit
 
@@ -101,6 +120,19 @@ class _TreeToAstTransformer(Transformer[object, object]):
 
     def item(self, meta: object, children: list[object]) -> TopLevelNode:
         return cast(TopLevelNode, children[0])
+
+    def intent_block(self, meta: object, children: list[object]) -> IntentOverlayNode:
+        declarations = cast(list[IntentAstNode], children[0]) if children else []
+        return IntentOverlayNode(
+            span=self._span(meta),
+            intent_program=IntentProgramNode(span=self._span(meta), declarations=declarations),
+        )
+
+    def intent_program_body(self, meta: object, children: list[object]) -> list[IntentAstNode]:
+        return [cast(IntentAstNode, child) for child in children]
+
+    def intent_statement(self, meta: object, children: list[object]) -> IntentAstNode:
+        return cast(IntentAstNode, children[0])
 
     def service_chain(self, meta: object, children: list[object]) -> list[str]:
         return [str(child) for child in children]
@@ -509,12 +541,231 @@ class _TreeToAstTransformer(Transformer[object, object]):
     def literal(self, meta: object, children: list[object]) -> ExpressionNode:
         return cast(ExpressionNode, children[0])
 
+    def intent_import_stmt(self, meta: object, children: list[object]) -> ImportStmtNode:
+        path = str(children[0]).strip('"\'')
+        return ImportStmtNode(span=self._span(meta), path=path)
+
+    def intent_network_def(self, meta: object, children: list[object]) -> NetworkDefNode:
+        name = str(children[0])
+        body = children[1] if len(children) > 1 else []
+        attrs: list[AttrNode] = []
+        nested: list[IntentAstNode] = []
+        for item in body:
+            if isinstance(item, AttrNode):
+                attrs.append(item)
+            elif isinstance(item, IntentAstNode):
+                nested.append(item)
+        return NetworkDefNode(span=self._span(meta), name=name, attrs=attrs, nested=nested)
+
+    def intent_network_body(self, meta: object, children: list[object]) -> list[object]:
+        return list(children)
+
+    def intent_network_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(
+            span=self._span(meta),
+            key=str(children[0]),
+            value=cast(IntentAstNode, children[1]),
+        )
+
+    def intent_node_def(self, meta: object, children: list[object]) -> NodeDefNode:
+        name = str(children[0])
+        node_type: str | None = None
+        attrs: list[AttrNode] = []
+        for child in children[1:]:
+            if isinstance(child, str):
+                node_type = child
+            elif isinstance(child, list):
+                attrs = [c for c in child if isinstance(c, AttrNode)]
+            elif isinstance(child, AttrNode):
+                attrs.append(child)
+        return NodeDefNode(span=self._span(meta), name=name, node_type=node_type, attrs=attrs)
+
+    def intent_node_type(self, meta: object, children: list[object]) -> str:
+        return str(children[0])
+
+    def intent_node_body(self, meta: object, children: list[object]) -> list[object]:
+        return list(children)
+
+    def intent_node_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(
+            span=self._span(meta),
+            key=str(children[0]),
+            value=cast(IntentAstNode, children[1]),
+        )
+
+    def intent_link_def(self, meta: object, children: list[object]) -> LinkDefNode:
+        name: str | None = None
+        attrs: list[AttrNode] = []
+        for child in children:
+            if isinstance(child, str):
+                name = child
+            elif isinstance(child, list):
+                attrs = [c for c in child if isinstance(c, AttrNode)]
+            elif isinstance(child, AttrNode):
+                attrs.append(child)
+        return LinkDefNode(span=self._span(meta), name=name, attrs=attrs)
+
+    def intent_link_body(self, meta: object, children: list[object]) -> list[object]:
+        return list(children)
+
+    def intent_link_attr(self, meta: object, children: list[object]) -> AttrNode:
+        if len(children) == 2:
+            return AttrNode(
+                span=self._span(meta),
+                key=str(children[0]),
+                value=cast(IntentAstNode, children[1]),
+            )
+        pair = cast(EndpointPairNode, children[0])
+        list_val = ListValueNode(span=self._span(meta), items=[pair])
+        return AttrNode(span=self._span(meta), key="endpoints", value=list_val)
+
+    def intent_endpoint_pair(self, meta: object, children: list[object]) -> EndpointPairNode:
+        return EndpointPairNode(
+            span=self._span(meta),
+            a=str(children[0]),
+            b=str(children[1]),
+        )
+
+    def intent_route_def(self, meta: object, children: list[object]) -> RouteDefNode:
+        name: str | None = None
+        attrs: list[AttrNode] = []
+        for child in children:
+            if isinstance(child, str):
+                name = child
+            elif isinstance(child, list):
+                attrs = [c for c in child if isinstance(c, AttrNode)]
+            elif isinstance(child, AttrNode):
+                attrs.append(child)
+        return RouteDefNode(span=self._span(meta), name=name, attrs=attrs)
+
+    def intent_route_body(self, meta: object, children: list[object]) -> list[AttrNode]:
+        return [cast(AttrNode, child) for child in children]
+
+    def intent_route_attr(self, meta: object, children: list[object]) -> AttrNode:
+        if len(children) == 1 and isinstance(children[0], AttrNode):
+            return children[0]
+        return AttrNode(
+            span=self._span(meta),
+            key=str(children[0]),
+            value=cast(IntentAstNode, children[1]),
+        )
+
+    def intent_from_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="from", value=cast(IntentAstNode, children[0]))
+
+    def intent_to_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="to", value=cast(IntentAstNode, children[0]))
+
+    def intent_via_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="via", value=cast(IntentAstNode, children[0]))
+
+    def intent_protocol_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="protocol", value=cast(IntentAstNode, children[0]))
+
+    def intent_policy_def(self, meta: object, children: list[object]) -> PolicyDefNode:
+        name = str(children[0])
+        attrs: list[AttrNode] = []
+        for child in children[1:]:
+            if isinstance(child, AttrNode):
+                attrs.append(child)
+            elif isinstance(child, list):
+                attrs.extend(c for c in child if isinstance(c, AttrNode))
+        return PolicyDefNode(span=self._span(meta), name=name, attrs=attrs)
+
+    def intent_policy_body(self, meta: object, children: list[object]) -> list[AttrNode]:
+        return [cast(AttrNode, child) for child in children]
+
+    def intent_policy_attr(self, meta: object, children: list[object]) -> AttrNode:
+        if len(children) == 1 and isinstance(children[0], AttrNode):
+            return children[0]
+        return AttrNode(
+            span=self._span(meta),
+            key=str(children[0]),
+            value=cast(IntentAstNode, children[1]),
+        )
+
+    def intent_match_stmt(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="match", value=cast(IntentAstNode, children[0]))
+
+    def intent_action_stmt(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="action", value=cast(IntentAstNode, children[0]))
+
+    def intent_match_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(
+            span=self._span(meta),
+            key=str(children[0]),
+            value=cast(IntentAstNode, children[1]),
+        )
+
+    def intent_match_key(self, meta: object, children: list[object]) -> str:
+        return str(children[0]).strip('"\'')
+
+    def intent_value(self, meta: object, children: list[object]) -> IntentAstNode:
+        return cast(IntentAstNode, children[0])
+
+    def STRING(self, token: Token) -> ValueNode:
+        raw = str(token).strip('"\'')
+        return ValueNode(span=_token_span(token, self.file_path), raw=raw, kind="string")
+
+    def INTENT_NUMBER(self, token: Token) -> ValueNode:
+        raw_text = str(token)
+        try:
+            raw = int(raw_text) if "." not in raw_text else float(raw_text)
+        except ValueError:
+            raw = 0
+        return ValueNode(span=_token_span(token, self.file_path), raw=raw, kind="number")
+
+    def INTENT_BOOLEAN(self, token: Token) -> ValueNode:
+        raw = str(token).lower() == "true"
+        return ValueNode(span=_token_span(token, self.file_path), raw=raw, kind="boolean")
+
+    def intent_list_value(self, meta: object, children: list[object]) -> ListValueNode:
+        return ListValueNode(
+            span=self._span(meta),
+            items=[cast(IntentAstNode, child) for child in children],
+        )
+
+    def intent_object_value(self, meta: object, children: list[object]) -> ObjectValueNode:
+        return ObjectValueNode(
+            span=self._span(meta),
+            pairs=[cast(ObjectPairNode, child) for child in children if isinstance(child, ObjectPairNode)],
+        )
+
+    def intent_object_pair(self, meta: object, children: list[object]) -> ObjectPairNode:
+        return ObjectPairNode(
+            span=self._span(meta),
+            key=str(children[0]),
+            value=cast(IntentAstNode, children[1]),
+        )
+
+    def intent_endpoint_spec(self, meta: object, children: list[object]) -> EndpointSpecNode:
+        child = children[0]
+        if isinstance(child, str):
+            return EndpointSpecNode(span=self._span(meta), kind="identifier", value=child)
+        if isinstance(child, EndpointSpecNode):
+            return EndpointSpecNode(span=self._span(meta), kind=child.kind, value=child.value)
+        return EndpointSpecNode(span=self._span(meta), kind="identifier", value=str(child))
+
+    def intent_via_spec(self, meta: object, children: list[object]) -> ViaSpecNode:
+        return ViaSpecNode(span=self._span(meta), nodes=[str(child) for child in children])
+
+    def intent_protocol_spec(self, meta: object, children: list[object]) -> str:
+        return str(children[0])
+
+    def intent_prefix_spec(self, meta: object, children: list[object]) -> EndpointSpecNode:
+        payload = cast(ObjectValueNode, children[0])
+        return EndpointSpecNode(span=self._span(meta), kind="prefix", value=payload)
+
+    def intent_region_spec(self, meta: object, children: list[object]) -> EndpointSpecNode:
+        value = str(children[0]).strip('"\'')
+        return EndpointSpecNode(span=self._span(meta), kind="region", value=value)
+
 
 class PneParser:
     """Parse PNE files into an explicit AST."""
 
     def __init__(self, include_paths: list[Path] | None = None):
-        grammar_path = Path(__file__).parent / "grammar_pne.lark"
+        grammar_path = Path(__file__).parent / "grammar_pne_intent.lark"
         self._grammar_path = grammar_path
         self._parser = Lark(
             grammar_path.read_text(encoding="utf-8"),

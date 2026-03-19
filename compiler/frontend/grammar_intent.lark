@@ -1,4 +1,4 @@
-// ParaNet intent DSL grammar (mirrors dsl/grammar/paranet.lark)
+// ParaNet intent DSL grammar
 
 program: statement*
 
@@ -29,31 +29,38 @@ endpoint_pair: IDENTIFIER "," IDENTIFIER
 route_def: "route" IDENTIFIER? "{" route_body "}"
 route_body: route_attr*
 route_attr: IDENTIFIER ":" value
-          | "from" ":" endpoint_spec
-          | "to" ":" endpoint_spec
-          | "via" ":" via_spec
-          | "protocol" ":" protocol_spec
+          | from_attr
+          | to_attr
+          | via_attr
+          | protocol_attr
+from_attr: "from" ":" endpoint_spec
+to_attr: "to" ":" endpoint_spec
+via_attr: "via" ":" via_spec
+protocol_attr: "protocol" ":" protocol_spec
 
 endpoint_spec: IDENTIFIER
              | prefix_spec
              | region_spec
 
-prefix_spec: "prefix" "(" STRING ")"
+prefix_spec: "prefix" "(" object_value ")"
 region_spec: "region" "(" STRING ")"
 
 via_spec: IDENTIFIER ("," IDENTIFIER)*
 
-protocol_spec: "ip" | "ndn" | "geo" | "any"
+protocol_spec: IDENTIFIER
 
 policy_def: "policy" IDENTIFIER "{" policy_body "}"
 policy_body: policy_attr*
 policy_attr: IDENTIFIER ":" value
-           | "match" ":" match_spec
-           | "action" ":" action_spec
+           | match_stmt
+           | action_stmt
+match_stmt: "match" ":" match_spec
+action_stmt: "action" ":" action_spec
 
 match_spec: "{" match_body "}"
 match_body: match_attr*
-match_attr: IDENTIFIER ":" value
+match_attr: match_key ":" value
+match_key: IDENTIFIER | STRING
 
 action_spec: "{" action_body "}"
 action_body: action_attr*
