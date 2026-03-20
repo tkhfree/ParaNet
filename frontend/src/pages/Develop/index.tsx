@@ -161,6 +161,11 @@ const DEVELOP_LEFT_MAX = 420
 const DEVELOP_RIGHT_MIN = 300
 const DEVELOP_RIGHT_MAX = 520
 const DEVELOP_MIDDLE_MIN = 560
+// 窄屏时适当降低最小宽度，避免左右栏被 clamp 直接钉死导致“看起来能拖、实际上不动”
+const DEVELOP_LEFT_MIN_NARROW = 200
+const DEVELOP_RIGHT_MIN_NARROW = 240
+const DEVELOP_MIDDLE_MIN_NARROW = 420
+const DEVELOP_NARROW_CONTAINER_THRESHOLD = 1280
 const DEVELOP_WORKSPACE_GAP = 12
 const DEVELOP_WORKSPACE_TOP_MIN = 360
 const DEVELOP_WORKSPACE_BOTTOM_MIN = 140
@@ -196,21 +201,26 @@ function clampDevelopLayoutWidths(
     return widths
   }
 
+  const isNarrow = containerWidth < DEVELOP_NARROW_CONTAINER_THRESHOLD
+  const leftMin = isNarrow ? DEVELOP_LEFT_MIN_NARROW : DEVELOP_LEFT_MIN
+  const rightMin = isNarrow ? DEVELOP_RIGHT_MIN_NARROW : DEVELOP_RIGHT_MIN
+  const middleMin = isNarrow ? DEVELOP_MIDDLE_MIN_NARROW : DEVELOP_MIDDLE_MIN
+
   const leftUpperBound = Math.max(
-    DEVELOP_LEFT_MIN,
-    Math.min(DEVELOP_LEFT_MAX, available - DEVELOP_RIGHT_MIN - DEVELOP_MIDDLE_MIN)
+    leftMin,
+    Math.min(DEVELOP_LEFT_MAX, available - rightMin - middleMin)
   )
-  const left = Math.min(Math.max(widths.left, DEVELOP_LEFT_MIN), leftUpperBound)
+  const left = Math.min(Math.max(widths.left, leftMin), leftUpperBound)
 
   const rightUpperBound = Math.max(
-    DEVELOP_RIGHT_MIN,
-    Math.min(DEVELOP_RIGHT_MAX, available - left - DEVELOP_MIDDLE_MIN)
+    rightMin,
+    Math.min(DEVELOP_RIGHT_MAX, available - left - middleMin)
   )
-  const right = Math.min(Math.max(widths.right, DEVELOP_RIGHT_MIN), rightUpperBound)
+  const right = Math.min(Math.max(widths.right, rightMin), rightUpperBound)
 
   const adjustedLeftUpperBound = Math.max(
-    DEVELOP_LEFT_MIN,
-    Math.min(DEVELOP_LEFT_MAX, available - right - DEVELOP_MIDDLE_MIN)
+    leftMin,
+    Math.min(DEVELOP_LEFT_MAX, available - right - middleMin)
   )
 
   return {
@@ -372,7 +382,6 @@ const Develop: React.FC = () => {
     ],
     []
   )
-  const isResizableLayout = mainGridSize.width >= 1280
   const isWorkspaceCompact = workspaceTopHeight < 620
   const isWorkspaceTight = workspaceTopHeight < 500
   const isWorkspaceUltraTight = workspaceTopHeight < 420
@@ -517,12 +526,12 @@ const Develop: React.FC = () => {
   }, [activeTopologyId])
 
   useEffect(() => {
-    if (!isResizableLayout || mainGridSize.width <= 0) {
+    if (mainGridSize.width <= 0) {
       return
     }
 
     setLayoutWidths((current) => clampDevelopLayoutWidths(current, mainGridSize.width))
-  }, [isResizableLayout, mainGridSize.width])
+  }, [mainGridSize.width])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -881,7 +890,7 @@ const Develop: React.FC = () => {
 
   const handleLayoutResizerMouseDown = useCallback(
     (handle: 'left' | 'right', event: React.MouseEvent<HTMLDivElement>) => {
-      if (!isResizableLayout || !mainGridRef.current) {
+      if (!mainGridRef.current) {
         return
       }
 
@@ -893,7 +902,7 @@ const Develop: React.FC = () => {
       }
       event.preventDefault()
     },
-    [isResizableLayout, layoutWidths]
+    [layoutWidths]
   )
 
   const handleWorkspaceVerticalResizerMouseDown = useCallback(
@@ -1106,7 +1115,7 @@ const Develop: React.FC = () => {
       <div ref={mainGridRef} className={styles.mainGrid}>
         <div
           className={styles.leftPane}
-          style={isResizableLayout ? { width: layoutWidths.left, flexBasis: layoutWidths.left } : undefined}
+          style={{ width: layoutWidths.left, flexBasis: layoutWidths.left }}
         >
         <Card
           className={styles.treeCard}
@@ -1502,7 +1511,7 @@ const Develop: React.FC = () => {
 
         <div
           className={styles.rightPane}
-          style={isResizableLayout ? { width: layoutWidths.right, flexBasis: layoutWidths.right } : undefined}
+          style={{ width: layoutWidths.right, flexBasis: layoutWidths.right }}
         >
           <Card className={styles.assistantCard} title="多模态网络Agent">
             <ChatInput topologyId={activeTopologyId ?? undefined} onApplyDSL={handleApplyDsl} />
