@@ -1,12 +1,16 @@
 import os
 from pathlib import Path
 
+# 与进程 cwd 无关，始终落在 backend/data，避免从仓库根目录启动 uvicorn 时写到另一份 SQLite
+_BACKEND_DIR = Path(__file__).resolve().parent
+_DEFAULT_DATA_DIR = _BACKEND_DIR / "data"
+
 # API
 API_HOST = os.getenv("PARANET_API_HOST", "0.0.0.0")
 API_PORT = int(os.getenv("PARANET_API_PORT", "8000"))
 
 # Database (SQLite for new backend only; does not touch editor-backend-dev)
-DATA_DIR = Path(os.getenv("PARANET_DATA_DIR", "./data"))
+DATA_DIR = Path(os.getenv("PARANET_DATA_DIR", str(_DEFAULT_DATA_DIR))).expanduser().resolve()
 DB_PATH = DATA_DIR / "paranet.db"
 
 # Auth
