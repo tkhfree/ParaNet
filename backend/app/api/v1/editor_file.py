@@ -4,13 +4,16 @@ from fastapi import APIRouter, File, HTTPException, UploadFile, status
 from fastapi.responses import Response
 
 from app.core.responses import ok
-from app.services import editor_file_service
+from app.services import editor_file_service, topology_service
 
 router = APIRouter(prefix="/file", tags=["editor-file"])
 
 
 @router.get("/tree/{project_id}")
 def get_project_file_tree(project_id: str):
+    # Ensure topology snapshots are materialized into editor_file before returning the tree.
+    # This avoids frontend timing/race conditions where topology-*.json files are not yet written.
+    topology_service.list_topologies(page_no=1, page_size=100, project_id=project_id)
     return ok(editor_file_service.get_project_file_tree(project_id))
 
 

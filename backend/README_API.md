@@ -44,7 +44,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 |------|------|------|
 | PARANET_API_HOST | 监听地址 | 0.0.0.0 |
 | PARANET_API_PORT | 端口 | 8000 |
-| PARANET_DATA_DIR | 数据目录（SQLite 等） | ./data |
+| PARANET_DATA_DIR | 数据目录（SQLite、`projects/`） | `backend/data`（相对本仓库，与进程 cwd 无关） |
 | PARANET_JWT_SECRET | JWT 密钥 | 见 config.py |
 | PARANET_EDITOR_BACKEND_URL | editor-backend-dev 地址（可选调用） | http://localhost:8080/api |
 | PARANET_USE_MOCK | 是否使用 Mock（deploy/compile） | true |

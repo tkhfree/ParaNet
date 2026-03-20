@@ -510,9 +510,16 @@ const Develop: React.FC = () => {
   }, [loadDeviceLegends])
 
   useEffect(() => {
-    loadProjectFiles()
-    loadTopologies()
-  }, [loadProjectFiles, loadTopologies])
+    void (async () => {
+      if (!currentProjectId) {
+        await Promise.all([loadProjectFiles(), loadTopologies()])
+        return
+      }
+      // 须先拉拓扑列表：后端在 list 时物化 topology-*.json，再拉文件树才能看到
+      await loadTopologies()
+      await loadProjectFiles()
+    })()
+  }, [currentProjectId, loadProjectFiles, loadTopologies])
 
   useEffect(() => {
     setSelectedTopologyNode(null)

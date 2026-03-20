@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 
-import { fileApi, projectApi, type ProjectRecord } from '@/api'
+import { fileApi, projectApi, topologyApi, type ProjectRecord } from '@/api'
 
 export interface ProjectFileTab {
   id: string
@@ -99,6 +99,12 @@ const useProjectStore = create<ProjectStore>()(
         tabs: [],
         activeTabId: null,
       })
+      // 预拉拓扑列表：触发后端 list 上的物化，使 topology-*.json 尽早出现在文件树中
+      void topologyApi
+        .getList({ pageNo: 1, pageSize: 100, projectId })
+        .catch(() => {
+          /* 静默失败，避免切换项目被网络错误打断 */
+        })
     },
 
     createProject: async (payload) => {

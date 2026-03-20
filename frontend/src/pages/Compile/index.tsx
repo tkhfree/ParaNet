@@ -50,10 +50,12 @@ const Compile: React.FC = () => {
       setSourceContent('')
       return
     }
-    const [fileRes, topologyRes] = await Promise.all([
-      fileApi.getTree(currentProjectId),
-      topologyApi.getList({ pageNo: 1, pageSize: 100, projectId: currentProjectId }),
-    ])
+    const topologyRes = await topologyApi.getList({
+      pageNo: 1,
+      pageSize: 100,
+      projectId: currentProjectId,
+    })
+    const fileRes = await fileApi.getTree(currentProjectId)
     const flattenedFiles = flattenFiles(fileRes.data ?? []).filter((file) => !file.isFolder)
     setFiles(flattenedFiles)
     setTopologies(topologyRes.data?.records ?? [])

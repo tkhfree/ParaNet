@@ -69,7 +69,7 @@ pip install -e "."
 
 ## Key Configuration
 
-- Backend uses SQLite in `./data` by default
+- Backend uses SQLite in `backend/data` by default (path is anchored to `backend/config.py`, not process cwd)
 - Frontend proxies `/api` → `http://localhost:8000` and `/ws` → `ws://localhost:8000`
 - Mock mode enabled by default (`PARANET_USE_MOCK=true`)
 
