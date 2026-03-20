@@ -30,6 +30,7 @@ from compiler.frontend.pne_ast import (
     ExpressionNode,
     ExpressionStatementNode,
     FieldAccessNode,
+    BinaryExpressionNode,
     FunctionDeclNode,
     HexLiteralNode,
     IdentifierNode,

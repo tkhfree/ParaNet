@@ -76,6 +76,84 @@ class Preprocessor:
         )
         return program, diagnostics
 
+    def preprocess_text(
+        self, text: str, virtual_path: Path
+    ) -> tuple[PreprocessedProgram, list[Diagnostic]]:
+        """
+        Preprocess PNE source text that may contain `#include` directives.
+
+        This is similar to `preprocess_file()`, but does not require `virtual_path`
+        to exist on disk. It is mainly used when compiling editor-provided text.
+        """
+        diagnostics: list[Diagnostic] = []
+        root_path = virtual_path if virtual_path.is_absolute() else virtual_path.absolute()
+
+        program = PreprocessedProgram(root_file=root_path)
+        seen: set[Path] = set()
+        stack: list[Path] = [root_path]
+
+        lines = text.splitlines()
+        body_lines: list[str] = []
+        unit_includes: list[IncludeDirective] = []
+
+        for line_no, line in enumerate(lines, start=1):
+            match = INCLUDE_RE.match(line)
+            if not match:
+                body_lines.append(line)
+                continue
+
+            include_path = match.group("path").strip()
+            is_system = match.group("open") == "<"
+            is_domain = include_path.endswith(".domain")
+            span = SourceSpan(
+                file=str(root_path),
+                line=line_no,
+                column=1,
+                end_line=line_no,
+                end_column=len(line) + 1,
+            )
+            resolved = self._resolve_include(root_path, include_path)
+            include = IncludeDirective(
+                path=include_path,
+                is_system=is_system,
+                is_domain=is_domain,
+                resolved_path=resolved,
+                span=span,
+                source_file=root_path,
+            )
+            unit_includes.append(include)
+            program.includes.append(include)
+            body_lines.append("")
+
+            if resolved is None:
+                diagnostics.append(
+                    Diagnostic(
+                        code="PRE003",
+                        message=f"Unable to resolve include '{include_path}' from {root_path}",
+                        severity=DiagnosticSeverity.ERROR,
+                        span=span,
+                    )
+                )
+                continue
+
+            self._collect_units(
+                current_path=resolved,
+                program=program,
+                seen=seen,
+                stack=stack,
+                diagnostics=diagnostics,
+            )
+
+        stack.pop()
+        program.units.append(
+            SourceUnit(
+                path=root_path,
+                body_text="\n".join(body_lines) + "\n",
+                includes=unit_includes,
+            )
+        )
+        return program, diagnostics
+
     def _collect_units(
         self,
         current_path: Path,

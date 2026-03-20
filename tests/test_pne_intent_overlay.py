@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from textwrap import dedent
+from pathlib import Path
 
 import pytest
 
@@ -114,4 +115,30 @@ def test_compile_pne_with_unsupported_protocol_reports_diagnostic(tmp_path) -> N
     program = compile_pne_to_program_ir(source)
     module = program.modules["Forwarder"]
     assert "custom-proto_route_table" in module.maps
+
+
+def test_parse_text_supports_builtin_include_directives() -> None:
+    _require_lark()
+
+    from compiler.frontend.pne_parser import PneParser
+
+    parser = PneParser()
+    result = parser.parse_text("#include <extended.domain>", file_name="<content>")
+
+    assert result.diagnostics == []
+    assert result.ast is not None
+    assert any(getattr(d, "name", None) == "SharedAudit" for d in result.ast.declarations)
+
+
+def test_compile_pne_text_supports_builtin_include_directives() -> None:
+    _require_lark()
+
+    from compiler import compile_pne_text_to_program_ir
+
+    examples_path = "examples/pne/extended_features_main.pne"
+    content = (Path(__file__).resolve().parents[1] / examples_path).read_text(encoding="utf-8")
+
+    program = compile_pne_text_to_program_ir(content, file_name="<content>")
+    # Basic sanity: modules from the example should exist.
+    assert "Edge" in program.modules
 

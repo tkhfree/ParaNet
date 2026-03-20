@@ -146,6 +146,10 @@ logs/
 data/
 *.pcap
 
+# Reference / experimental code (not part of the packaged system)
+src/
+co/
+
 # Mininet
 *.mn
 

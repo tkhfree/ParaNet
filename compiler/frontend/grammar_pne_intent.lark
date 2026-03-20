@@ -37,22 +37,22 @@ statement: map_decl
 
 var_decl: type_ref NAME ";"
 
-map_decl: STATIC? "map" "<" type_group "," type_group ">" array_size? NAME map_entries? ";"
-set_decl: STATIC? "set" "<" type_list ">" NAME ("," NAME)* map_entries? ";"
+map_decl: STATIC? MAP "<" type_group "," type_group ">" array_size NAME map_entries? ";"
+set_decl: STATIC? SET "<" endpoint_type_list ">" NAME ("," NAME)* map_entries? ";"
 register_decl: STATIC? type_ref NAME array_size ";"
-function_decl: "func" NAME "(" function_param_list? ")" block
+function_decl: FUNC NAME "(" function_param_list? ")" block
 function_param_list: function_param ("," function_param)*
 function_param: type_ref NAME
 
-if_stmt: "if" "(" expr ")" block ("else" if_stmt | "else" block)?
-switch_stmt: "switch" "(" expr_list ")" "{" switch_case* "}"
+if_stmt: IF "(" expr ")" block (ELSE if_stmt | ELSE block)?
+switch_stmt: SWITCH "(" expr_list ")" "{" switch_case* "}"
 switch_case: "default" ":" switch_body
     | expr ":" switch_body
 switch_body: assign_stmt
     | expr_stmt
     | null_stmt
 
-assert_stmt: "assert" "(" expr ")" ";"
+assert_stmt: ASSERT "(" expr ")" ";"
 assign_stmt: expr_list "=" expr ";"
 expr_stmt: expr ";"
 null_stmt: ";"
@@ -65,10 +65,14 @@ expr_list: expr ("," expr)*
 type_group: type_ref
     | "<" type_list ">"
 type_list: type_ref ("," type_ref)*
-type_ref: "bit" "<" INT ">"      -> bit_type
+endpoint_type_list: endpoint_type_ref ("," endpoint_type_ref)*
+
+type_ref: BIT "<" INTENT_NUMBER ">"      -> bit_type
     | NAME                         -> named_type
 
-array_size: "[" INT "]"
+endpoint_type_ref: NAME ("." NAME)* -> named_type
+
+array_size: "[" INTENT_NUMBER "]"
 
 ?expr: logical_or
 ?logical_or: logical_and
@@ -79,7 +83,7 @@ array_size: "[" INT "]"
     | additive COMP_OP additive      -> binary_expr
     | tuple_values IN_OP additive    -> in_expr
     | additive IN_OP additive        -> in_expr
-?tuple_values: additive ("," additive)+
+?tuple_values: "(" additive ("," additive)+ ")"
 ?additive: multiplicative
     | additive ADD_OP multiplicative -> binary_expr
 ?multiplicative: unary
@@ -87,10 +91,10 @@ array_size: "[" INT "]"
 ?unary: postfix
     | UNARY_OP unary                 -> unary_expr
 ?postfix: atom
+    | postfix "(" arg_list? ")"      -> call
     | postfix "." NAME               -> attribute
     | postfix "[" expr "]"           -> index
     | postfix "[" expr ":" expr "]"  -> slice
-    | postfix "(" arg_list? ")"      -> call
 ?atom: literal
     | NAME                           -> identifier
     | "(" expr ")"                   -> grouped
@@ -100,7 +104,7 @@ arg_list: expr ("," expr)*
 literal: HEX_LITERAL                 -> hex_literal
     | IPV4_LITERAL                   -> ip_literal
     | IPV6_LITERAL                   -> ip_literal
-    | INT                            -> int_literal
+    | INTENT_NUMBER                 -> int_literal
 
 // Intent overlay grammar
 intent_block: "intent" "{" intent_program_body "}"
@@ -178,8 +182,16 @@ intent_list_value: "[" (intent_value ("," intent_value)*)? "]"
 intent_object_value: "{" (intent_object_pair ("," intent_object_pair)*)? "}"
 intent_object_pair: INTENT_IDENTIFIER ":" intent_value
 
-STATIC: "static"
-DIRECTION: "in" | "out" | "inout"
+STATIC.3: "static"
+DIRECTION.3: "in" | "out" | "inout"
+MAP.3: "map"
+SET.3: "set"
+FUNC.3: "func"
+BIT.3: "bit"
+IF.3: "if"
+ELSE.3: "else"
+ASSERT.3: "assert"
+SWITCH.3: "switch"
 OR_OP: "||"
 AND_OP: "&&"
 IN_OP: "in"
@@ -188,13 +200,13 @@ MUL_OP: "*" | "/" | "%"
 UNARY_OP: "!" | "-" | "~"
 COMP_OP: "==" | "!=" | ">=" | "<=" | ">" | "<"
 
-HEX_LITERAL: /0x[0-9A-Fa-f]+/
+HEX_LITERAL.3: /0x[0-9A-Fa-f]+/
 IPV4_LITERAL: /(?:\d{1,3}\.){3}\d{1,3}/
 IPV6_LITERAL: /(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}/
-NAME: /[A-Za-z_][A-Za-z0-9_]*/
-INTENT_IDENTIFIER: /[A-Za-z_][A-Za-z0-9_-]*/
+NAME.2: /[A-Za-z_][A-Za-z0-9_]*/
+INTENT_IDENTIFIER.0: /[A-Za-z_][A-Za-z0-9_-]*/
 STRING: /"[^"]*"/ | /'[^']*'/
-INTENT_NUMBER: /[-+]?[0-9]*\.?[0-9]+/
+INTENT_NUMBER.0: /[-+]?[0-9]*\.?[0-9]+/
 INTENT_BOOLEAN: "true" | "false"
 
 %import common.INT

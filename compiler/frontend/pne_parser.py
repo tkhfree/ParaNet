@@ -233,8 +233,23 @@ class _TreeToAstTransformer(Transformer[object, object]):
             name=str(children[1]),
         )
 
+    def _int_from_number_value(self, value: object) -> int:
+        # `INTENT_NUMBER` token can be transformed into `ValueNode` (intent blocks)
+        # and also used by PNE rules (array sizes / bit widths / int literals).
+        if isinstance(value, bool):
+            return int(value)
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value)
+        if hasattr(value, "raw"):
+            raw = getattr(value, "raw")
+            if isinstance(raw, (int, float)):
+                return int(raw)
+        return int(str(value))
+
     def array_size(self, meta: object, children: list[object]) -> int:
-        return int(str(children[0]))
+        return self._int_from_number_value(children[0])
 
     def type_list(self, meta: object, children: list[object]) -> list[TypeNode]:
         return [cast(TypeNode, child) for child in children]
@@ -245,15 +260,18 @@ class _TreeToAstTransformer(Transformer[object, object]):
         return cast(list[TypeNode], children[0])
 
     def named_type(self, meta: object, children: list[object]) -> TypeNode:
-        token = cast(Token, children[0])
-        return TypeNode(span=_token_span(token, self.file_path), name=str(token))
+        first = cast(Token, children[0])
+        name_parts = [str(part) for part in children]
+        return TypeNode(span=_token_span(first, self.file_path), name=".".join(name_parts))
 
     def bit_type(self, meta: object, children: list[object]) -> TypeNode:
-        token = cast(Token, children[0])
+        # `bit_type` grammar may include `BIT` keyword token in children.
+        # Width is always the last token/value.
+        token = children[-1]
         return TypeNode(
             span=self._span(meta),
             name="bit",
-            width=int(str(token)),
+            width=self._int_from_number_value(token),
         )
 
     def map_entries(self, meta: object, children: list[object]) -> list[MapEntryNode]:
@@ -268,6 +286,10 @@ class _TreeToAstTransformer(Transformer[object, object]):
         is_static = False
         if children and isinstance(children[0], Token) and str(children[0]) == "static":
             is_static = True
+            index += 1
+
+        # Grammar uses an explicit `MAP` token for disambiguation.
+        if index < len(children) and isinstance(children[index], Token) and str(children[index]) == "map":
             index += 1
 
         key_types = cast(list[TypeNode], children[index])
@@ -302,7 +324,15 @@ class _TreeToAstTransformer(Transformer[object, object]):
             is_static = True
             index += 1
 
-        key_types = cast(list[TypeNode], children[index])
+        # Grammar uses an explicit `SET` token for disambiguation.
+        if index < len(children) and isinstance(children[index], Token) and str(children[index]) == "set":
+            index += 1
+
+        key_types_obj = children[index]
+        if isinstance(key_types_obj, Tree):
+            key_types = cast(list[TypeNode], key_types_obj.children)
+        else:
+            key_types = cast(list[TypeNode], key_types_obj)
         index += 1
 
         names: list[str] = []
@@ -351,6 +381,9 @@ class _TreeToAstTransformer(Transformer[object, object]):
         )
 
     def function_decl(self, meta: object, children: list[object]) -> FunctionDeclNode:
+        if children and isinstance(children[0], Token) and str(children[0]) == "func":
+            children = children[1:]
+
         name = str(children[0])
         params: list[ParamNode] = []
         body: list[StatementNode]
@@ -367,6 +400,12 @@ class _TreeToAstTransformer(Transformer[object, object]):
         )
 
     def if_stmt(self, meta: object, children: list[object]) -> IfNode:
+        # Grammar uses explicit IF/ELSE tokens.
+        children = [
+            c for c in children
+            if not (isinstance(c, Token) and str(c) in {"if", "else"})
+        ]
+
         condition = cast(ExpressionNode, children[0])
         then_body = cast(list[StatementNode], children[1])
         else_body: list[StatementNode] = []
@@ -401,6 +440,9 @@ class _TreeToAstTransformer(Transformer[object, object]):
         )
 
     def switch_stmt(self, meta: object, children: list[object]) -> SwitchNode:
+        if children and isinstance(children[0], Token) and str(children[0]) == "switch":
+            children = children[1:]
+
         return SwitchNode(
             span=self._span(meta),
             keys=cast(list[ExpressionNode], children[0]),
@@ -408,6 +450,8 @@ class _TreeToAstTransformer(Transformer[object, object]):
         )
 
     def assert_stmt(self, meta: object, children: list[object]) -> AssertNode:
+        if children and isinstance(children[0], Token) and str(children[0]) == "assert":
+            children = children[1:]
         return AssertNode(span=self._span(meta), condition=cast(ExpressionNode, children[0]))
 
     def expr_list(self, meta: object, children: list[object]) -> list[ExpressionNode]:
@@ -523,11 +567,13 @@ class _TreeToAstTransformer(Transformer[object, object]):
         return IdentifierNode(span=_token_span(token, self.file_path), name=str(token))
 
     def int_literal(self, meta: object, children: list[object]) -> IntegerLiteralNode:
-        token = cast(Token, children[0])
+        token = children[0]
+        raw_value = self._int_from_number_value(token)
+        raw_text = str(getattr(token, "raw", token))
         return IntegerLiteralNode(
-            span=_token_span(token, self.file_path),
-            value=int(str(token)),
-            raw=str(token),
+            span=self._span(meta),
+            value=raw_value,
+            raw=raw_text,
         )
 
     def hex_literal(self, meta: object, children: list[object]) -> HexLiteralNode:
@@ -770,10 +816,18 @@ class PneParser:
         self._parser = Lark(
             grammar_path.read_text(encoding="utf-8"),
             parser="lalr",
+            lexer="contextual",
             start="start",
             propagate_positions=True,
             maybe_placeholders=False,
         )
+        if include_paths is None:
+            # Built-in include root for `#include <...>` directives during
+            # text compilation (e.g. via the editor/API).
+            repo_root = Path(__file__).resolve().parents[2]
+            builtin_include_root = repo_root / "examples" / "pne"
+            include_paths = [builtin_include_root] if builtin_include_root.exists() else []
+
         self._preprocessor = Preprocessor(include_paths=include_paths)
 
     def parse_file(self, path: Path) -> ParseResult:
@@ -802,12 +856,27 @@ class PneParser:
 
     def parse_text(self, text: str, file_name: str = "<memory>") -> ParseResult:
         diagnostics: list[Diagnostic] = []
-        unit = SourceUnit(path=Path(file_name), body_text=text)
-        declarations = self._parse_unit(unit, diagnostics)
-        return ParseResult(
-            ast=ProgramNode(includes=[], declarations=declarations),
-            diagnostics=diagnostics,
+        program, pre_diag = self._preprocessor.preprocess_text(text, Path(file_name))
+        diagnostics.extend(pre_diag)
+
+        declarations: list[TopLevelNode] = []
+        for unit in program.units:
+            declarations.extend(self._parse_unit(unit, diagnostics))
+
+        ast = ProgramNode(
+            includes=[
+                IncludeNode(
+                    span=directive.span,
+                    path=directive.path,
+                    is_system=directive.is_system,
+                    is_domain=directive.is_domain,
+                    resolved_from=str(directive.source_file),
+                )
+                for directive in program.includes
+            ],
+            declarations=declarations,
         )
+        return ParseResult(ast=ast, diagnostics=diagnostics)
 
     def _parse_unit(
         self, unit: SourceUnit, diagnostics: list[Diagnostic]
