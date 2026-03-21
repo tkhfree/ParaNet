@@ -1,0 +1,103 @@
+// =============================================================================
+// PNE Standard Library Example: Simple Router
+// =============================================================================
+// 使用标准库构建一个简单的路由器
+// =============================================================================
+
+#include <std/std.pne>
+
+// 自定义模块： 路由表初始化
+module MyRouteTable() {
+    parser { hdr.ipv4; }
+
+    control {
+        // 路由表: 目标 IP -> 下一跳 IP
+ static map<bit<32>, bit<32>>[1024] route_table;
+
+        // 默认路由
+        route_table[0x0A000000] = 0x0A000001;
+        route_table[0x0B000000] = 0x0B000001;
+        route_table[0x0C000000] = 0x0C000001;
+    }
+}
+
+// 自定义模块: NAT 处理
+module MyNatProcessing() {
+    parser { hdr.ipv4; }
+
+    control {
+        // NAT 表: 内部 IP -> 外部 IP
+ static map<bit<32>, bit<32>>[256] nat_table
+        // NAT 端口映射
+        static map<bit<16>, bit<16>>[256] nat_port_map
+    }
+}
+
+// 应用: 我的路由器
+application MyRouter using StdCombinedParser {
+    // 局部变量
+    bit<32> nexthop = 0;
+    bit<16> egress_port = 0;
+    bit<1> should_drop = 0;
+    bit<8> acl_action = 0;
+
+    control {
+        // 1. IP 校验
+        if (!hdr.ipv4.isValid()) {
+            drop();
+            return;
+        }
+
+        // 2. ACL 检查
+        StdBasicAcl.apply(hdr.ipv4.src, hdr.ipv4.dst, hdr.ipv4.protocol,
+                         hdr.tcp.src_port, hdr.tcp.dst_port,
+                         acl_action, _);
+        if (acl_action == 1) {
+            drop();
+            return;
+        }
+
+        // 3. 路由查找
+        StdLpmLookup.apply(hdr.ipv4.dst, nexthop, egress_port, should_drop);
+        if (should_drop == 1) {
+            drop();
+            return;
+        }
+
+        // 4. 自定义路由表查找
+        bit<32> my_nexthop = MyRouteTable.route_table[hdr.ipv4.dst];
+        if (my_nexthop != 0) {
+            nexthop = my_nexthop;
+        }
+
+        // 5. NAT 处理
+        bit<32> nat_ip = MyNatProcessing.nat_table[hdr.ipv4.src];
+        if (nat_ip != 0) {
+            hdr.ipv4.src = nat_ip;
+            bit<16> nat_port = MyNatProcessing.nat_port_map[hdr.ipv4.src];
+            egress_port = nat_port;
+        }
+
+        // 6. TTL 递减
+        bit<8> ttl_expired = 0;
+        StdTtlDecrement.apply(hdr.ipv4.ttl, ttl_expired);
+        if (ttl_expired == 1) {
+            drop();
+            return;
+        }
+
+        // 7. ARP 查找
+        bit<48> dst_mac = 0;
+        bit<1> arp_hit = 0;
+        StdArpLookup.apply(nexthop, dst_mac, arp_hit);
+        if (arp_hit == 0) {
+            // 遍历 ARP 请求
+            drop();
+            return;
+        }
+        hdr.ethernet.dst = dst_mac;
+    }
+}
+
+// 服务定义
+service [MyRouterService] { MyRouter }

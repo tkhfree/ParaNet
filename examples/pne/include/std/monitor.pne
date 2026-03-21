@@ -1,0 +1,412 @@
+// =============================================================================
+// PNE Standard Library: Monitoring Modules
+// =============================================================================
+// 监控统计模块，提供计数器、镜像、采样等功能
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Counter - 通用计数器
+// -----------------------------------------------------------------------------
+module StdCounter(
+    in bit<32> counter_id,
+    in bit<1> increment,
+    in bit<16> increment_value,
+    out bit<64> current_value
+) {
+    parser { }
+
+    control {
+        // 计数器数组
+        register<bit<64>[65536] counters;
+
+        bit<64> value = counters[counter_id];
+
+        if (increment == 1) {
+            value = value + increment_value;
+            counters[counter_id] = value;
+        }
+
+        current_value = value;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Packet Counter - 数据包计数器
+// -----------------------------------------------------------------------------
+module StdPacketCounter(
+    in bit<16> port_id,
+    in bit<8> direction,  // 0=rx, 1=tx
+    out bit<64> packet_count,
+    out bit<64> byte_count
+) {
+    parser { }
+
+    control {
+        // 端口统计: (port_id, direction) -> (packets, bytes)
+        register<bit<64>[512] port_packet_count;
+        register<bit<64>[512] port_byte_count;
+
+        bit<9> index = (port_id << 1) | direction;
+
+        // 更新计数器
+        port_packet_count[index] = port_packet_count[index] + 1;
+        port_byte_count[index] = port_byte_count[index] + pkt.total_length;
+
+        packet_count = port_packet_count[index];
+        byte_count = port_byte_count[index];
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Flow Counter - 流计数器
+// -----------------------------------------------------------------------------
+module StdFlowCounter(
+    in bit<32> flow_id,         // 五元组哈希
+    in bit<16> packet_size,
+    out bit<64> packet_count,
+    out bit<64> byte_count,
+    out bit<64> first_seen,
+    out bit<64> last_seen
+) {
+    parser { }
+
+    control {
+        // 流统计表
+        register<bit<64>[1048576] flow_packets;
+        register<bit<64>[1048576] flow_bytes;
+        register<bit<64>[1048576] flow_first_seen;
+        register<bit<64>[1048576] flow_last_seen;
+
+        bit<64> now = get_current_time();
+
+        // 初始化或更新
+        if (flow_packets[flow_id] == 0) {
+            flow_first_seen[flow_id] = now;
+        }
+
+        flow_packets[flow_id] = flow_packets[flow_id] + 1;
+        flow_bytes[flow_id] = flow_bytes[flow_id] + packet_size;
+        flow_last_seen[flow_id] = now;
+
+        packet_count = flow_packets[flow_id];
+        byte_count = flow_bytes[flow_id];
+        first_seen = flow_first_seen[flow_id];
+        last_seen = flow_last_seen[flow_id];
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Mirror - 流量镜像
+// -----------------------------------------------------------------------------
+module StdMirror(
+    in bit<32> session_id,
+    in bit<16> mirror_port,
+    in bit<8> mirror_type,  // 0=full, 1=sample, 2=sliced
+    in bit<16> sample_rate,  // 采样率 (1/1000)
+    out bit<1> should_mirror,
+    out bit<16> output_port
+) {
+    parser { }
+
+    control {
+        // 镜像会话配置
+        map<bit<32>, (bit<16>, bit<8>, bit<16>)>[1024] mirror_sessions;
+
+        (bit<16> port, bit<8> mtype, bit<16> rate) = mirror_sessions[session_id];
+
+        should_mirror = 0;
+        output_port = 0;
+
+        if (port != 0) {
+            output_port = port;
+
+            if (mtype == 0) {
+                // 完整镜像
+                should_mirror = 1;
+            } else if (mtype == 1) {
+                // 采样镜像
+                bit<32> sample_counter = 0;
+                sample_counter = sample_counter + 1;
+                if (sample_counter % rate == 0) {
+                    should_mirror = 1;
+                }
+            } else if (mtype == 2) {
+                // 切片镜像（简化实现）
+                should_mirror = 1;
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Sampler - 流量采样
+// -----------------------------------------------------------------------------
+module StdSampler(
+    in bit<32> sampler_id,
+    in bit<16> sample_rate,
+    in bit<8> sample_type,  // 0=random, 1=systematic, 2=hash-based
+    out bit<1> should_sample
+) {
+    parser { }
+
+    control {
+        // 采样计数器
+        register<bit<32>[1024] sample_counters;
+        // 随机数种子
+        register<bit<32>[1024] random_seeds;
+
+        bit<32> counter = sample_counters[sampler_id];
+        counter = counter + 1;
+        sample_counters[sampler_id] = counter;
+
+        if (sample_type == 0) {
+            // 随机采样
+            bit<32> rand = random_seeds[sampler_id];
+            rand = (rand * 1103515245 + 12345) & 0x7FFFFFFF;
+            random_seeds[sampler_id] = rand;
+
+            if (rand % sample_rate == 0) {
+                should_sample = 1;
+            } else {
+                should_sample = 0;
+            }
+        } else if (sample_type == 1) {
+            // 系统采样
+            if (counter % sample_rate == 0) {
+                should_sample = 1;
+            } else {
+                should_sample = 0;
+            }
+        } else {
+            // 哈希采样
+            bit<32> hash = compute_hash(pkt, counter);
+            if (hash % sample_rate == 0) {
+                should_sample = 1;
+            } else {
+                should_sample = 0;
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Latency Monitor - 延迟监控
+// -----------------------------------------------------------------------------
+module StdLatencyMonitor(
+    in bit<32> flow_id,
+    in bit<64> ingress_timestamp,
+    out bit<64> latency_ns,
+    out bit<64> min_latency,
+    out bit<64> max_latency,
+    out bit<64> avg_latency
+) {
+    parser { }
+
+    control {
+        // 延迟统计
+        register<bit<64>[65536] latency_min;
+        register<bit<64>[65536] latency_max;
+        register<bit<64>[65536] latency_sum;
+        register<bit<64>[65536] latency_count;
+
+        bit<64> now = get_current_time();
+        bit<64> lat = now - ingress_timestamp;
+
+        // 更新统计
+        if (latency_min[flow_id] == 0 || lat < latency_min[flow_id]) {
+            latency_min[flow_id] = lat;
+        }
+        if (lat > latency_max[flow_id]) {
+            latency_max[flow_id] = lat;
+        }
+        latency_sum[flow_id] = latency_sum[flow_id] + lat;
+        latency_count[flow_id] = latency_count[flow_id] + 1;
+
+        // 输出结果
+        latency_ns = lat;
+        min_latency = latency_min[flow_id];
+        max_latency = latency_max[flow_id];
+        avg_latency = latency_sum[flow_id] / latency_count[flow_id];
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Drop Monitor - 丢包监控
+// -----------------------------------------------------------------------------
+module StdDropMonitor(
+    in bit<16> port_id,
+    in bit<8> drop_reason,  // 0=other, 1=acl, 2=ttl, 3=checksum, 4=buffer
+    in bit<16> queue_depth
+) {
+    parser { }
+
+    control {
+        // 丢包计数器: (port, reason) -> count
+        register<bit<64>[4096] drop_counters;
+        // 队列深度历史
+        register<bit<16>[256] port_queue_depth_max;
+
+        bit<12> index = (port_id << 4) | drop_reason;
+
+        // 更新丢包计数
+        drop_counters[index] = drop_counters[index] + 1;
+
+        // 更新队列深度记录
+        if (queue_depth > port_queue_depth_max[port_id]) {
+            port_queue_depth_max[port_id] = queue_depth;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Congestion Monitor - 拥塞监控
+// -----------------------------------------------------------------------------
+module StdCongestionMonitor(
+    in bit<16> port_id,
+    in bit<16> queue_depth,
+    in bit<32> queue_threshold,
+    out bit<1> is_congested,
+    out bit<8> congestion_level
+) {
+    parser { }
+
+    control {
+        // 拥塞历史
+        register<bit<64>[256] congestion_events;
+        register<bit<64>[256> congestion_duration;
+
+        bit<64> now = get_current_time();
+
+        // 判断拥塞
+        if (queue_depth > queue_threshold) {
+            is_congested = 1;
+            congestion_events[port_id] = congestion_events[port_id] + 1;
+
+            // 计算拥塞等级 (0-100)
+            congestion_level = (queue_depth * 100) / queue_threshold;
+            if (congestion_level > 100) {
+                congestion_level = 100;
+            }
+        } else {
+            is_congested = 0;
+            congestion_level = (queue_depth * 100) / queue_threshold;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Event Logger - 事件日志
+// -----------------------------------------------------------------------------
+module StdEventLogger(
+    in bit<8> event_type,
+    in bit<32> event_id,
+    in bit<64> timestamp,
+    in bit<16> port_id,
+    in bit<32> flow_id
+) {
+    parser { }
+
+    control {
+        // 事件环形缓冲区
+        register<(bit<8>, bit<32>, bit<64>, bit<16>, bit<32>)[8192] event_buffer;
+        register<bit<13> event_buffer_head;
+
+        bit<13> index = event_buffer_head;
+
+        // 记录事件
+        event_buffer[index] = (event_type, event_id, timestamp, port_id, flow_id);
+
+        // 更新头部指针
+        event_buffer_head = (event_buffer_head + 1) & 0x1FFF;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// InBand Telemetry (INT) - 带内遥测
+// -----------------------------------------------------------------------------
+module StdIntSink(
+    in bit<8> hop_count,
+    in bit<16>[8] hop_ids,
+    in bit<32>[8] hop_delays,
+    in bit<16>[8] queue_lengths,
+    out bit<8> total_hops,
+    out bit<32> total_delay,
+    out bit<16> max_queue
+) {
+    parser { }
+
+    control {
+        // 处理 INT 数据
+        total_hops = hop_count;
+        total_delay = 0;
+        max_queue = 0;
+
+        for (bit<8> i = 0; i < hop_count; i = i + 1) {
+            total_delay = total_delay + hop_delays[i];
+            if (queue_lengths[i] > max_queue) {
+                max_queue = queue_lengths[i];
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// INT Source - INT 源节点
+// -----------------------------------------------------------------------------
+module StdIntSource(
+    in bit<16> switch_id,
+    in bit<8> instruction,
+    out bit<1> should_insert
+) {
+    parser { }
+
+    control {
+        // INT 配置
+        map<bit<16>, bit<8>[256] int_config;
+
+        bit<8> config = int_config[switch_id];
+
+        // 检查是否需要插入 INT 头
+        if ((instruction & 0x01) != 0) {
+            should_insert = 1;
+
+            // 插入 INT 头
+            hdr.int_header.setValid();
+            hdr.int_header.version = 1;
+            hdr.int_header.hop_count = 0;
+            hdr.int_header.switch_id = switch_id;
+        } else {
+            should_insert = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// INT Transit - INT 中间节点
+// -----------------------------------------------------------------------------
+module StdIntTransit(
+    in bit<16> switch_id,
+    in bit<32> ingress_time,
+    out bit<1> should_update
+) {
+    parser { hdr.int_header; }
+
+    control {
+        bit<64> now = get_current_time();
+
+        if (hdr.int_header.isValid()) {
+            should_update = 1;
+
+            // 添加跳数
+            bit<8> current_hop = hdr.int_header.hop_count;
+            hdr.int_header.hop_count = current_hop + 1;
+
+            // 记录延迟
+            bit<32> delay = now - ingress_time;
+            hdr.int_hop_data[current_hop].switch_id = switch_id;
+            hdr.int_hop_data[current_hop].delay = delay;
+        } else {
+            should_update = 0;
+        }
+    }
+}

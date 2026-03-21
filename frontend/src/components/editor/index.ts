@@ -1,6 +1,8 @@
 export { default as DSLEditor } from './DSLEditor'
 export { default as ChatInput } from './ChatInput'
 export { default as CompilePreview } from './CompilePreview'
+export { default as StdLibModal } from './StdLibModal'
 export type { DSLEditorProps } from './DSLEditor'
 export type { ChatInputProps, ChatMessage } from './ChatInput'
 export type { CompilePreviewProps } from './CompilePreview'
+export type { StdLibModalProps } from './StdLibModal'

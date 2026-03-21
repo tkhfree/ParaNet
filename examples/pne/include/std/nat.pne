@@ -1,0 +1,382 @@
+// =============================================================================
+// PNE Standard Library: NAT (Network Address Translation) Modules
+// =============================================================================
+// NAT 模块，提供 SNAT、DNAT、NAT44、NAT64 等功能
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// SNAT (Source NAT) - 源地址转换
+// -----------------------------------------------------------------------------
+module StdSnat(
+    in bit<32> original_src_ip,
+    in bit<16> original_src_port,
+    out bit<32> translated_src_ip,
+    out bit<16> translated_src_port,
+    out bit<1> hit
+) {
+    parser { hdr.ipv4; hdr.tcp; hdr.udp; }
+
+    control {
+        // SNAT 表: original_ip -> (translated_ip, port_range_start, port_range_end)
+        map<bit<32>, (bit<32>, bit<16>, bit<16>)>[4096] snat_table;
+        // 端口分配表: (ip, port) -> original (ip, port)
+        map<(bit<32>, bit<16>), (bit<32>, bit<16>)>[65536> port_allocation;
+        // 端口分配计数器
+        register<bit<16>[4096] port_counter;
+
+        (bit<32> nat_ip, bit<16> port_start, bit<16> port_end) = snat_table[original_src_ip];
+
+        if (nat_ip != 0) {
+            // 分配端口
+            bit<16> counter = port_counter[original_src_ip];
+            bit<16> allocated_port = port_start + (counter % (port_end - port_start));
+
+            translated_src_ip = nat_ip;
+            translated_src_port = allocated_port;
+
+            // 记录映射
+            port_allocation[(nat_ip, allocated_port)] = (original_src_ip, original_src_port);
+
+            // 更新计数器
+            port_counter[original_src_ip] = counter + 1;
+
+            hit = 1;
+        } else {
+            hit = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// DNAT (Destination NAT) - 目的地址转换
+// -----------------------------------------------------------------------------
+module StdDnat(
+    in bit<32> virtual_ip,
+    in bit<16> virtual_port,
+    out bit<32> real_ip,
+    out bit<16> real_port,
+    out bit<1> hit
+) {
+    parser { hdr.ipv4; hdr.tcp; hdr.udp; }
+
+    control {
+        // DNAT 表: (virtual_ip, virtual_port) -> (real_ip, real_port)
+        map<(bit<32>, bit<16>), (bit<32>, bit<16>)>[4096] dnat_table;
+
+        (bit<32> rip, bit<16> rport) = dnat_table[(virtual_ip, virtual_port)];
+
+        if (rip != 0) {
+            real_ip = rip;
+            real_port = rport;
+            hit = 1;
+        } else {
+            hit = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Full NAT - 完整 NAT (SNAT + DNAT)
+// -----------------------------------------------------------------------------
+module StdFullNat(
+    in bit<32> original_src_ip,
+    in bit<16> original_src_port,
+    in bit<32> original_dst_ip,
+    in bit<16> original_dst_port,
+    out bit<32> translated_src_ip,
+    out bit<16> translated_src_port,
+    out bit<32> translated_dst_ip,
+    out bit<16> translated_dst_port,
+    out bit<1> hit
+) {
+    parser { hdr.ipv4; hdr.tcp; hdr.udp; }
+
+    control {
+        bit<1> snat_hit = 0;
+        bit<1> dnat_hit = 0;
+
+        // 执行 DNAT
+        StdDnat.apply(original_dst_ip, original_dst_port,
+                      translated_dst_ip, translated_dst_port, dnat_hit);
+
+        // 执行 SNAT
+        StdSnat.apply(original_src_ip, original_src_port,
+                      translated_src_ip, translated_src_port, snat_hit);
+
+        hit = snat_hit & dnat_hit;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// NAT Session Table - NAT 会话表
+// -----------------------------------------------------------------------------
+module StdNatSession(
+    in bit<32> src_ip,
+    in bit<16> src_port,
+    in bit<32> dst_ip,
+    in bit<16> dst_port,
+    in bit<8> protocol,
+    out bit<32> nat_src_ip,
+    out bit<16> nat_src_port,
+    out bit<32> nat_dst_ip,
+    out bit<16> nat_dst_port,
+    out bit<1> hit
+) {
+    parser { hdr.ipv4; hdr.tcp; hdr.udp; }
+
+    control {
+        // 会话表: (src, src_port, dst, dst_port, proto) -> (nat_src, nat_src_port, nat_dst, nat_dst_port)
+        map<(bit<32>, bit<16>, bit<32>, bit<16>, bit<8>), (bit<32>, bit<16>, bit<32>, bit<16>)>[65536] session_table;
+
+        (bit<32> nsip, bit<16> nsp, bit<32> ndip, bit<16> ndp) =
+            session_table[(src_ip, src_port, dst_ip, dst_port, protocol)];
+
+        if (nsip != 0) {
+            nat_src_ip = nsip;
+            nat_src_port = nsp;
+            nat_dst_ip = ndip;
+            nat_dst_port = ndp;
+            hit = 1;
+        } else {
+            hit = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// NAT44 - IPv4 to IPv4 NAT
+// -----------------------------------------------------------------------------
+module StdNat44(
+    in bit<8> direction,  // 0=egress (SNAT), 1=ingress (reverse)
+    inout bit<32> src_ip,
+    inout bit<16> src_port,
+    inout bit<32> dst_ip,
+    inout bit<16> dst_port,
+    in bit<8> protocol,
+    out bit<1> success
+) {
+    parser { hdr.ipv4; hdr.tcp; hdr.udp; }
+
+    control {
+        bit<1> session_hit = 0;
+        bit<32> nat_src = 0;
+        bit<16> nat_sport = 0;
+        bit<32> nat_dst = 0;
+        bit<16> nat_dport = 0;
+
+        // 查找会话表
+        StdNatSession.apply(src_ip, src_port, dst_ip, dst_port, protocol,
+                           nat_src, nat_sport, nat_dst, nat_dport, session_hit);
+
+        if (session_hit == 1) {
+            // 使用已有会话
+            src_ip = nat_src;
+            src_port = nat_sport;
+            dst_ip = nat_dst;
+            dst_port = nat_dport;
+            success = 1;
+        } else {
+            // 创建新会话
+            if (direction == 0) {
+                // Egress: 执行 SNAT
+                bit<1> snat_hit = 0;
+                StdSnat.apply(src_ip, src_port, nat_src, nat_sport, snat_hit);
+                if (snat_hit == 1) {
+                    src_ip = nat_src;
+                    src_port = nat_sport;
+                    success = 1;
+                } else {
+                    success = 0;
+                }
+            } else {
+                // Ingress: 执行 DNAT
+                bit<1> dnat_hit = 0;
+                StdDnat.apply(dst_ip, dst_port, nat_dst, nat_dport, dnat_hit);
+                if (dnat_hit == 1) {
+                    dst_ip = nat_dst;
+                    dst_port = nat_dport;
+                    success = 1;
+                } else {
+                    success = 0;
+                }
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// NAT64 - IPv6 to IPv4 NAT
+// -----------------------------------------------------------------------------
+module StdNat64(
+    in bit<8> direction,  // 0=egress (IPv6->IPv4), 1=ingress (IPv4->IPv6)
+    inout bit<128> ipv6_addr,
+    inout bit<32> ipv4_addr,
+    inout bit<16> port,
+    out bit<1> success
+) {
+    parser { hdr.ipv4; hdr.ipv6; }
+
+    control {
+        // NAT64 前缀 (RFC 6052)
+        bit<96> nat64_prefix = 0x0064ff9b000000000000;
+
+        // IPv6 -> IPv4
+        if (direction == 0) {
+            // 检查是否是 NAT64 前缀
+            if ((ipv6_addr >> 32) == nat64_prefix) {
+                // 提取嵌入的 IPv4 地址
+                ipv4_addr = ipv6_addr & 0xFFFFFFFF;
+                success = 1;
+            } else {
+                // 使用映射表
+                map<bit<128>, bit<32>>[4096] v6_to_v4_table;
+                bit<32> mapped = v6_to_v4_table[ipv6_addr];
+                if (mapped != 0) {
+                    ipv4_addr = mapped;
+                    success = 1;
+                } else {
+                    success = 0;
+                }
+            }
+        } else {
+            // IPv4 -> IPv6
+            // 使用 NAT64 前缀 + IPv4 地址
+            ipv6_addr = (nat64_prefix << 32) | ipv4_addr;
+            success = 1;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ALG (Application Level Gateway) - 应用层网关
+// -----------------------------------------------------------------------------
+module StdAlg(
+    in bit<8> protocol,
+    in bit<16> src_port,
+    in bit<16> dst_port,
+    in bit<32> payload_ip,
+    in bit<16> payload_port,
+    out bit<1> needs_translation,
+    out bit<32> translated_ip,
+    out bit<16> translated_port
+) {
+    parser { hdr.ipv4; hdr.tcp; }
+
+    control {
+        needs_translation = 0;
+        translated_ip = 0;
+        translated_port = 0;
+
+        // FTP ALG (端口 21)
+        if (protocol == 6 && (src_port == 21 || dst_port == 21)) {
+            // 解析 FTP PORT/EPRT 命令
+            // 提取 payload 中的 IP 和端口
+            needs_translation = 1;
+            // 返回 NAT 后的地址
+            translated_ip = 0xC0A80001;  // 示例
+            translated_port = 50000;
+        }
+
+        // SIP ALG (端口 5060)
+        if (protocol == 17 && (src_port == 5060 || dst_port == 5060)) {
+            // 解析 SIP SDP 中的 IP 和端口
+            needs_translation = 1;
+            translated_ip = 0xC0A80001;
+            translated_port = 50000;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Cone NAT - 锥形 NAT
+// -----------------------------------------------------------------------------
+module StdConeNat(
+    in bit<32> internal_ip,
+    in bit<16> internal_port,
+    out bit<32> external_ip,
+    out bit<16> external_port,
+    out bit<1> hit
+) {
+    parser { }
+
+    control {
+        // 锥形 NAT: 同一内部地址总是映射到同一外部地址
+        map<(bit<32>, bit<16>), (bit<32>, bit<16>)>[16384> cone_table;
+
+        (bit<32> eip, bit<16> eport) = cone_table[(internal_ip, internal_port)];
+
+        if (eip != 0) {
+            external_ip = eip;
+            external_port = eport;
+            hit = 1;
+        } else {
+            // 创建新映射
+            // 分配外部地址和端口
+            external_ip = 0xC0A80001;  // 示例外部 IP
+            external_port = 50000 + (internal_port % 10000);
+
+            cone_table[(internal_ip, internal_port)] = (external_ip, external_port);
+            hit = 1;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Symmetric NAT - 对称 NAT
+// -----------------------------------------------------------------------------
+module StdSymmetricNat(
+    in bit<32> internal_src_ip,
+    in bit<16> internal_src_port,
+    in bit<32> internal_dst_ip,
+    in bit<16> internal_dst_port,
+    in bit<8> protocol,
+    out bit<32> external_src_ip,
+    out bit<16> external_src_port,
+    out bit<1> hit
+) {
+    parser { }
+
+    control {
+        // 对称 NAT: 每个目标使用不同的映射
+        map<(bit<32>, bit<16>, bit<32>, bit<16>, bit<8>), (bit<32>, bit<16>)>[65536> sym_table;
+
+        (bit<32> eip, bit<16> eport) = sym_table[(internal_src_ip, internal_src_port,
+                                                   internal_dst_ip, internal_dst_port, protocol)];
+
+        if (eip != 0) {
+            external_src_ip = eip;
+            external_src_port = eport;
+            hit = 1;
+        } else {
+            // 创建新映射
+            external_src_ip = 0xC0A80001;
+            external_src_port = 50000;
+
+            sym_table[(internal_src_ip, internal_src_port,
+                      internal_dst_ip, internal_dst_port, protocol)] = (external_src_ip, external_src_port);
+            hit = 1;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Hairpin NAT - 回环 NAT
+// -----------------------------------------------------------------------------
+module StdHairpinNat(
+    in bit<32> src_ip,
+    in bit<32> dst_ip,
+    out bit<1> is_hairpin
+) {
+    parser { }
+
+    control {
+        // 检查目标 IP 是否是本地 NAT 地址
+        set<bit<32> nat_pool;
+
+        if (nat_pool.has(dst_ip) && nat_pool.has(src_ip)) {
+            is_hairpin = 1;
+        } else {
+            is_hairpin = 0;
+        }
+    }
+}

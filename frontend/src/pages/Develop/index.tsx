@@ -32,10 +32,11 @@ import {
   NodeIndexOutlined,
   FormOutlined,
   AimOutlined,
+  BookOutlined,
 } from '@ant-design/icons'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { ChatInput } from '@/components/editor'
+import { ChatInput, StdLibModal } from '@/components/editor'
 import { useResizeObserver } from '@/hooks/useResizeObserver'
 import InteractiveTerminal from '@/components/project/InteractiveTerminal'
 import { D3TopologyEditor, D3TopologyPreviewer, type D3Node } from '@/components/topology'
@@ -291,6 +292,7 @@ const Develop: React.FC = () => {
   const [fileModalOpen, setFileModalOpen] = useState(false)
   const [fileModalMode, setFileModalMode] = useState<FileModalMode>('file')
   const [fileName, setFileName] = useState('')
+  const [stdlibModalOpen, setStdlibModalOpen] = useState(false)
   const [dragPreview, setDragPreview] = useState<DragPreviewState>(null)
   const [topologyWorkbenchMode, setTopologyWorkbenchMode] = useState<WorkbenchRailMode>('topology')
   const [devicePickerOpen, setDevicePickerOpen] = useState(false)
@@ -1113,6 +1115,9 @@ const Develop: React.FC = () => {
           <Button icon={<PlusOutlined />} onClick={() => openTopologyModal('create')}>
             新建拓扑示例
           </Button>
+          <Button icon={<BookOutlined />} onClick={() => setStdlibModalOpen(true)}>
+            标准库
+          </Button>
           <Button icon={<EyeOutlined />} onClick={() => void handleToggleFloatingPreview()}>
             {floatingPreviewOpen ? '关闭预览' : '打开预览'}
           </Button>
@@ -1399,7 +1404,26 @@ const Develop: React.FC = () => {
                             {topologyWorkbenchMode === 'assets' && (
                               <div className={`${styles.sideModeCard} ${styles.assetsPanel}`}>
                                 <div className={`${styles.orchestratorSection} ${styles.assetsSectionCard}`}>
-                                  <div className={styles.orchestratorSectionTitle}>项目拓扑</div>
+                                  <div className={styles.orchestratorSectionHeader}>
+                                    <div className={styles.orchestratorSectionTitle}>项目拓扑</div>
+                                    <Space size={4}>
+                                      <Button size="small" icon={<PlusOutlined />} onClick={() => openTopologyModal('create')}>
+                                        新建
+                                      </Button>
+                                      <Button size="small" icon={<FormOutlined />} onClick={() => openTopologyModal('rename')} disabled={!activeTopology}>
+                                        重命名
+                                      </Button>
+                                      <Button
+                                        size="small"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        onClick={() => activeTopologyId && handleDeleteTopology(activeTopologyId)}
+                                        disabled={!activeTopologyId}
+                                      >
+                                        删除
+                                      </Button>
+                                    </Space>
+                                  </div>
                                   <List
                                     split={false}
                                     className={styles.topologyAssetList}
@@ -1414,54 +1438,54 @@ const Develop: React.FC = () => {
                                         }}
                                       >
                                         <div className={styles.topologyItemContent}>
-                                          <div className={styles.topologyItemName}>{item.name}</div>
+                                          <div className={styles.topologyItemHeader}>
+                                            <div className={styles.topologyItemName}>{item.name}</div>
+                                            <div className={styles.topologyItemStats}>
+                                              <span className={styles.topologyStatBadge}>
+                                                {(item.nodes as unknown as unknown[])?.length ?? 0} 节点
+                                              </span>
+                                              <span className={styles.topologyStatBadge}>
+                                                {(item.links as unknown as unknown[])?.length ?? 0} 链路
+                                              </span>
+                                            </div>
+                                          </div>
+                                          {item.description && (
+                                            <div className={styles.topologyItemDesc}>{item.description}</div>
+                                          )}
                                           <div className={styles.topologyItemMeta}>
-                                            更新时间：{item.updatedAt ? new Date(item.updatedAt).toLocaleString() : '-'}
+                                            <span>创建：{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-'}</span>
+                                            <span>更新：{item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : '-'}</span>
                                           </div>
                                         </div>
                                       </List.Item>
                                     )}
                                   />
-                                  <Space wrap className={styles.orchestratorActions}>
-                                    <Button icon={<PlusOutlined />} onClick={() => openTopologyModal('create')}>
-                                      新建
-                                    </Button>
-                                    <Button icon={<FormOutlined />} onClick={() => openTopologyModal('rename')} disabled={!activeTopology}>
-                                      重命名
-                                    </Button>
-                                    <Button
-                                      danger
-                                      icon={<DeleteOutlined />}
-                                      onClick={() => activeTopologyId && handleDeleteTopology(activeTopologyId)}
-                                      disabled={!activeTopologyId}
-                                    >
-                                      删除
-                                    </Button>
-                                  </Space>
                                 </div>
                                 <div className={`${styles.orchestratorSection} ${styles.assetsSectionCard}`}>
-                                  <div className={styles.orchestratorSectionTitle}>设备图例</div>
-                                  <div className={styles.legendToolbar}>
-                                    <Button size="small" icon={<PlusOutlined />} onClick={() => openDeviceLegendModal('create')}>
-                                      新建
-                                    </Button>
-                                    <Button
-                                      size="small"
-                                      icon={<FormOutlined />}
-                                      onClick={() => openDeviceLegendModal('edit')}
-                                      disabled={!selectedLegend}
-                                    >
-                                      编辑
-                                    </Button>
-                                    <Button
-                                      size="small"
-                                      danger
-                                      icon={<DeleteOutlined />}
-                                      onClick={handleDeleteDeviceLegend}
-                                      disabled={!selectedLegend}
-                                    >
-                                      删除
-                                    </Button>
+                                  <div className={styles.orchestratorSectionHeader}>
+                                    <div className={styles.orchestratorSectionTitle}>设备图例</div>
+                                    <Space size={4}>
+                                      <Button size="small" icon={<PlusOutlined />} onClick={() => openDeviceLegendModal('create')}>
+                                        新建
+                                      </Button>
+                                      <Button
+                                        size="small"
+                                        icon={<FormOutlined />}
+                                        onClick={() => openDeviceLegendModal('edit')}
+                                        disabled={!selectedLegend}
+                                      >
+                                        编辑
+                                      </Button>
+                                      <Button
+                                        size="small"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        onClick={handleDeleteDeviceLegend}
+                                        disabled={!selectedLegend}
+                                      >
+                                        删除
+                                      </Button>
+                                    </Space>
                                   </div>
                                   <div className={styles.sidebarLegendGrid}>
                                     {deviceLegendList.map((item) => (
@@ -1661,6 +1685,41 @@ const Develop: React.FC = () => {
           </div>
         </Space>
       </Modal>
+
+      {/* 标准库模态框 */}
+      <StdLibModal
+        open={stdlibModalOpen}
+        onClose={() => setStdlibModalOpen(false)}
+        currentContent={activeTab?.content || ''}
+        onInsert={(code, includeLine) => {
+          if (activeTab) {
+            let newContent = activeTab.content || ''
+
+            // 如果有 include 指令，插入到文件开头
+            if (includeLine) {
+              // 找到最后一个 #include 的位置
+              const includeRegex = /^#include\s*[<"][^>"]+[>"]\s*$/gm
+              const matches = [...newContent.matchAll(includeRegex)]
+              const lastIncludeIndex = matches.length > 0
+                ? (matches[matches.length - 1].index ?? 0) + (matches[matches.length - 1][0]?.length ?? 0)
+                : 0
+
+              if (lastIncludeIndex > 0) {
+                // 在最后一个 #include 之后插入
+                newContent = newContent.slice(0, lastIncludeIndex) + '\n' + includeLine.trim() + newContent.slice(lastIncludeIndex)
+              } else {
+                // 在文件开头插入
+                newContent = includeLine.trim() + '\n\n' + newContent
+              }
+            }
+
+            // 在当前编辑器位置插入代码
+            newContent = newContent + '\n' + code
+            updateTabContent(activeTab.id, newContent)
+          }
+        }}
+      />
+
       {dragPreview && (
         <div
           className={styles.dragPreview}

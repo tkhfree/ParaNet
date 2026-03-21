@@ -1,0 +1,149 @@
+// =============================================================================
+// PNE Standard Library - Main Entry
+// =============================================================================
+// 一站导入所有标准库模块
+// 用法: #include <std/std.pne>
+// =============================================================================
+
+// =============================================================================
+// Parser Modules - 解析器
+// =============================================================================
+#include <std/parser.pne>
+
+#include <std/l2_forward.pne>
+#include <std/l3_forward.pne>
+#include <std/acl.pne>
+#include <std/qos.pne>
+#include <std/tunnel.pne>
+#include <std/monitor.pne>
+#include <std/nat.pne>
+
+// =============================================================================
+// Standard Applications - 标准应用
+// =============================================================================
+
+application StdSimpleRouter {
+    parser { hdr.ethernet; hdr.ipv4; }
+    control {
+        bit<1> ip_valid = 0;
+        bit<32> nexthop = 0;
+        bit<16> egress_port = 0;
+        bit<1> should_drop = 0;
+
+        // IP 校验
+        StdIpValidation.apply(hdr.ipv4.ttl, hdr.ipv4.checksum, ip_valid);
+        if (ip_valid == 0) {
+            drop();
+            return;
+        }
+
+        // 路由查找
+        StdLpmLookup.apply(hdr.ipv4.dst, nexthop, egress_port, should_drop);
+        if (should_drop == 1) {
+            drop();
+            return;
+        }
+
+        // TTL 递减
+        StdTtlDecrement.apply(hdr.ipv4.ttl, should_drop);
+        if (should_drop == 1) {
+            // 发送 ICMP Time Exceeded
+            drop();
+            return;
+        }
+    }
+}
+
+application StdAclFirewall {
+    parser { hdr.ethernet; hdr.ipv4; hdr.tcp; hdr.udp; }
+    control {
+        bit<8> acl_action = 0;
+        bit<32> acl_id = 0;
+
+        // ACL 检查
+        StdBasicAcl.apply(hdr.ipv4.src, hdr.ipv4.dst, hdr.ipv4.protocol,
+                         hdr.tcp.src_port, hdr.tcp.dst_port,
+                         acl_action, acl_id);
+
+        if (acl_action == 1) {
+            // ACL 拒绝
+            drop();
+            return;
+        }
+    }
+}
+
+application StdL2Switch {
+    parser { hdr.ethernet; hdr.vlan; }
+    control {
+        bit<16> egress_port = 0;
+        bit<1> should_flood = 0;
+        bit<1> should_drop = 0;
+
+        // L2 交换
+        StdSimpleSwitch.apply(hdr.ethernet.src, hdr.ethernet.dst,
+                               gmeta.ingress_port, gmeta.vlan_id,
+                               egress_port, should_flood, should_drop);
+        if (should_drop == 1) {
+            drop();
+            return;
+        }
+    }
+}
+
+application StdSimpleLoadBalancer {
+    parser { hdr.ipv4; }
+    control {
+        bit<32> server_ip = 0;
+        bit<32> hash = 0;
+
+        // 计算 5 元组哈希
+        hash = hdr.ipv4.src ^ hdr.ipv4.dst ^ hdr.ipv4.protocol ^ hdr.tcp.src_port;
+
+        hash = hash % 4;  // 假设有 4 台服务器
+
+        // 虚拟服务器池映射
+        bit<1> hit = 0;
+        bit<32> pool_id = 0;
+        bit<3> server_index = 0;
+
+        StdPoolSelector.apply(hash, pool_id, server_index, hit);
+        if (hit == 1) {
+            // 修改目标 IP 到服务器 IP
+            // 实际实现需要更复杂
+        }
+    }
+}
+
+application StdVtepGateway {
+    parser { hdr.ethernet; hdr.ipv4; hdr.udp; hdr.vxlan; }
+    control {
+        bit<1> is_vxlan = 0;
+        bit<24> vni = 0;
+        bit<32> remote_ip = 0;
+        bit<48> remote_mac = 0;
+        bit<1> should_encap = 0;
+
+        // VXLAN 夣合
+        StdVtep.apply(vni, gmeta.ingress_port,
+                      is_vxlan, remote_ip, remote_mac,
+                      should_encap, should_decap);
+        if (is_vxlan == 1) {
+            // 解封装
+            // 移除外层头部
+        } else {
+            // 封装
+            // 添加外层头部
+        }
+    }
+}
+
+// =============================================================================
+// Standard Services - 标准服务
+// =============================================================================
+
+service [StdRouterService] { StdSimpleRouter }
+service [StdFirewallService] { StdAclFirewall }
+service [StdSwitchService] { StdL2Switch }
+service [StdLbService] { StdSimpleLoadBalancer }
+service [StdVtepService] { StdVtepGateway }

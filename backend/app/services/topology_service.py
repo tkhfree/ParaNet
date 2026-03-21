@@ -133,6 +133,8 @@ def update_topology(
     if not current:
         return None
     effective_project_id = project_id if project_id is not None else current.get("projectId")
+    old_name = current.get("name", "")
+    new_name = name if name is not None else old_name
 
     conn = get_connection()
     try:
@@ -146,7 +148,7 @@ def update_topology(
             WHERE id = ?
             """,
             (
-                name if name is not None else current["name"],
+                new_name,
                 description if description is not None else current["description"],
                 nodes_json,
                 links_json,
@@ -159,11 +161,32 @@ def update_topology(
     finally:
         conn.close()
 
+    # 处理文件名变化：如果名称改变，需要删除旧文件
+    if effective_project_id and old_name != new_name:
+        old_topo = {"id": id, "name": old_name}
+        old_file_name = _get_topology_file_name(old_topo)
+        editor_file_service.delete_file_by_path(project_id=str(effective_project_id), file_name=old_file_name)
+
     return get_topology(id)
 
 
+def _get_topology_file_name(topo: dict[str, Any]) -> str:
+    """生成拓扑文件名：topology-{name}-{short_id}.json
+
+    格式说明：
+    - name: 拓扑名称（过滤特殊字符）
+    - short_id: ID 前8位，保证唯一性
+    """
+    topo_id = str(topo.get("id", ""))
+    name = str(topo.get("name", "未命名"))
+    # 过滤文件名中的特殊字符
+    safe_name = "".join(c for c in name if c.isalnum() or c in ("-", "_", "中", "文"))[:20]
+    short_id = topo_id[:8] if len(topo_id) >= 8 else topo_id
+    return f"topology-{safe_name}-{short_id}.json"
+
+
 def _materialize_topology_file(project_id: str, topo: dict[str, Any]) -> None:
-    file_name = f"topology-{topo.get('id')}.json"
+    file_name = _get_topology_file_name(topo)
     # Ensure the file content matches the topology snapshot currently stored in DB.
     payload = json.dumps(topo, ensure_ascii=False, indent=2)
     editor_file_service.upsert_text_file(project_id=project_id, file_name=file_name, content=payload)
@@ -173,18 +196,21 @@ def delete_topology(id: str) -> bool:
     conn = get_connection()
     try:
         row = conn.execute(
-            "SELECT id, project_id FROM topology WHERE id = ?",
+            "SELECT id, name, project_id FROM topology WHERE id = ?",
             (id,),
         ).fetchone()
         if not row:
             return False
 
         project_id = row["project_id"]
+        topo_name = row["name"]
         conn.execute("DELETE FROM topology WHERE id = ?", (id,))
         conn.commit()
 
         if project_id:
-            file_name = f"topology-{id}.json"
+            # 使用与 _get_topology_file_name 相同的命名逻辑
+            topo = {"id": id, "name": topo_name}
+            file_name = _get_topology_file_name(topo)
             editor_file_service.delete_file_by_path(project_id=str(project_id), file_name=file_name)
         return True
     finally:

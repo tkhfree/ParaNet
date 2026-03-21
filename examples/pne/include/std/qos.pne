@@ -1,0 +1,387 @@
+// =============================================================================
+// PNE Standard Library: Quality of Service (QoS) Modules
+// =============================================================================
+// 服务质量模块，提供分类、标记、排队、调度、拥塞管理等功能
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// DSCP Classification - DSCP 分类
+// -----------------------------------------------------------------------------
+module StdDscpClassification(
+    in bit<8> dscp_in,
+    in bit<8> protocol,
+    in bit<16> src_port,
+    in bit<16> dst_port,
+    out bit<8> qos_class,
+    out bit<8> new_dscp
+) {
+    parser { hdr.ipv4; hdr.tcp; hdr.udp; }
+
+    control {
+        // DSCP 到 QoS 类的映射
+        map<bit<8>, bit<8>>[64] dscp_to_class;
+        // 端口到 QoS 类的映射
+        map<bit<16>, bit<8>>[65536] port_to_class;
+        // 协议到 QoS 类的映射
+        map<bit<8>, bit<8>>[256] protocol_to_class;
+
+        // 1. 首先检查端口（最高优先级）
+        bit<8> port_class = port_to_class[src_port];
+        if (port_class != 0) {
+            qos_class = port_class;
+        } else {
+            port_class = port_to_class[dst_port];
+            if (port_class != 0) {
+                qos_class = port_class;
+            } else {
+                // 2. 检查 DSCP
+                bit<8> dscp_class = dscp_to_class[dscp_in];
+                if (dscp_class != 0) {
+                    qos_class = dscp_class;
+                } else {
+                    // 3. 检查协议
+                    qos_class = protocol_to_class[protocol];
+                    if (qos_class == 0) {
+                        qos_class = 0;  // 默认类
+                    }
+                }
+            }
+        }
+
+        // 重标记 DSCP
+        new_dscp = qos_class << 2;  // 简化映射
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Meter (Token Bucket) - 令牌桶计量器
+// -----------------------------------------------------------------------------
+module StdTokenBucketMeter(
+    in bit<32> flow_id,
+    in bit<16> packet_bytes,
+    in bit<64> committed_rate,      // CIR (bps)
+    in bit<32> committed_burst,     // CBS (bytes)
+    in bit<64> excess_rate,         // EIR (bps)
+    in bit<32> excess_burst,        // EBS (bytes)
+    out bit<2> color                 // 0=green, 1=yellow, 2=red
+) {
+    parser { }
+
+    control {
+        // 双令牌桶状态
+        register<bit<64>[65536] committed_bucket;
+        register<bit<64>[65536] excess_bucket;
+        register<bit<64>[65536] last_time;
+
+        bit<64> c_tokens = committed_bucket[flow_id];
+        bit<64> e_tokens = excess_bucket[flow_id];
+        bit<64> prev_time = last_time[flow_id];
+        bit<64> now = get_current_time();
+
+        // 计算新增令牌
+        bit<64> elapsed = now - prev_time;
+        bit<64> c_new = (elapsed * committed_rate) / 8000000;  // 转换为 bytes
+        bit<64> e_new = (elapsed * excess_rate) / 8000000;
+
+        // 更新令牌桶
+        c_tokens = c_tokens + c_new;
+        e_tokens = e_tokens + e_new;
+
+        if (c_tokens > committed_burst) {
+            c_tokens = committed_burst;
+        }
+        if (e_tokens > excess_burst) {
+            e_tokens = excess_burst;
+        }
+
+        // 判断颜色
+        if (c_tokens >= packet_bytes) {
+            // Green: 从承诺桶消耗
+            c_tokens = c_tokens - packet_bytes;
+            color = 0;
+        } else if (e_tokens >= packet_bytes) {
+            // Yellow: 从超出桶消耗
+            e_tokens = e_tokens - packet_bytes;
+            color = 1;
+        } else {
+            // Red: 超过所有限制
+            color = 2;
+        }
+
+        committed_bucket[flow_id] = c_tokens;
+        excess_bucket[flow_id] = e_tokens;
+        last_time[flow_id] = now;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Queue Management - 队列管理
+// -----------------------------------------------------------------------------
+module StdQueueManager(
+    in bit<8> qos_class,
+    in bit<16> packet_bytes,
+    out bit<8> queue_id,
+    out bit<1> drop
+) {
+    parser { }
+
+    control {
+        // QoS 类到队列的映射
+        map<bit<8>, bit<8>>[256] class_to_queue;
+        // 队列深度限制
+        map<bit<8>, bit<32>>[256] queue_depth_limit;
+        // 当前队列深度
+        register<bit<32>[256] current_queue_depth;
+
+        queue_id = class_to_queue[qos_class];
+        if (queue_id == 0) {
+            queue_id = qos_class;  // 默认 1:1 映射
+        }
+
+        bit<32> limit = queue_depth_limit[queue_id];
+        bit<32> depth = current_queue_depth[queue_id];
+
+        if (limit > 0 && depth + packet_bytes > limit) {
+            drop = 1;
+        } else {
+            current_queue_depth[queue_id] = depth + packet_bytes;
+            drop = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// WRED (Weighted Random Early Detection) - 加权随机早期检测
+// -----------------------------------------------------------------------------
+module StdWred(
+    in bit<8> queue_id,
+    in bit<8> dscp,
+    in bit<32> current_depth,
+    out bit<1> drop
+) {
+    parser { }
+
+    control {
+        // WRED 配置: (queue_id, dscp) -> (min_th, max_th, max_prob)
+        map<(bit<8>, bit<8>), (bit<32>, bit<32>, bit<8>)>[256 * 64] wred_config;
+
+        (bit<32> min_th, bit<32> max_th, bit<8> max_prob) = wred_config[(queue_id, dscp)];
+
+        if (current_depth < min_th) {
+            drop = 0;
+        } else if (current_depth >= max_th) {
+            drop = 1;
+        } else {
+            // 线性概率
+            bit<32> range = max_th - min_th;
+            bit<32> above_min = current_depth - min_th;
+            bit<8> prob = (above_min * max_prob) / range;
+
+            // 随机决策（简化）
+            bit<8> rand = get_random();
+            drop = (rand < prob) ? 1 : 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Scheduler - 调度器 (WFQ + Priority)
+// -----------------------------------------------------------------------------
+module StdScheduler(
+    in bit<8> queue_count,
+    out bit<8> selected_queue,
+    out bit<1> has_packet
+) {
+    parser { }
+
+    control {
+        // 队列优先级
+        map<bit<8>, bit<8>>[256] queue_priority;
+        // 队列权重 (用于 WFQ)
+        map<bit<8>, bit<16>>[256] queue_weight;
+        // 队列状态
+        register<bit<1>[256] queue_non_empty;
+        // WFQ 虚拟时间
+        register<bit<64>[256] queue_virtual_time;
+
+        bit<64> min_vtime = 0xFFFFFFFFFFFFFFFF;
+        bit<8> best_queue = 0;
+        bit<1> found = 0;
+
+        // 严格优先级调度
+        for (bit<8> prio = 7; prio > 0; prio = prio - 1) {
+            for (bit<8> q = 0; q < queue_count; q = q + 1) {
+                if (queue_priority[q] == prio && queue_non_empty[q] == 1) {
+                    selected_queue = q;
+                    has_packet = 1;
+                    return;
+                }
+            }
+        }
+
+        // WFQ 调度（同一优先级内）
+        for (bit<8> q = 0; q < queue_count; q = q + 1) {
+            if (queue_non_empty[q] == 1) {
+                bit<64> vtime = queue_virtual_time[q];
+                bit<16> weight = queue_weight[q];
+                if (weight > 0) {
+                    vtime = vtime / weight;
+                }
+                if (vtime < min_vtime) {
+                    min_vtime = vtime;
+                    best_queue = q;
+                    found = 1;
+                }
+            }
+        }
+
+        if (found == 1) {
+            selected_queue = best_queue;
+            has_packet = 1;
+        } else {
+            has_packet = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Shaper - 流量整形
+// -----------------------------------------------------------------------------
+module StdShaper(
+    in bit<32> flow_id,
+    in bit<16> packet_bytes,
+    in bit<64> shaping_rate,    // bps
+    in bit<32> burst_size,      // bytes
+    out bit<1> conform,
+    out bit<32> delay_us
+) {
+    parser { }
+
+    control {
+        // 整形器状态
+        register<bit<64>[65536] shaper_bucket;
+        register<bit<64>[65536] shaper_last_time;
+        register<bit<64>[65536> shaper_deficit;
+
+        bit<64> bucket = shaper_bucket[flow_id];
+        bit<64> last_time = shaper_last_time[flow_id];
+        bit<64> now = get_current_time();
+
+        // 计算新增令牌
+        bit<64> elapsed = now - last_time;
+        bit<64> new_tokens = (elapsed * shaping_rate) / 8000000;
+
+        bucket = bucket + new_tokens;
+        if (bucket > burst_size) {
+            bucket = burst_size;
+        }
+
+        if (bucket >= packet_bytes) {
+            bucket = bucket - packet_bytes;
+            conform = 1;
+            delay_us = 0;
+        } else {
+            // 计算需要延迟的时间
+            bit<64> deficit = packet_bytes - bucket;
+            delay_us = (deficit * 8000000) / shaping_rate;
+            conform = 0;
+        }
+
+        shaper_bucket[flow_id] = bucket;
+        shaper_last_time[flow_id] = now;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Policer - 策略器（三色标记）
+// -----------------------------------------------------------------------------
+module StdPolicer(
+    in bit<32> flow_id,
+    in bit<16> packet_bytes,
+    in bit<64> cir,             // 承诺信息速率
+    in bit<32> cbs,             // 承诺突发大小
+    in bit<64> pir,             // 峰值信息速率
+    in bit<32> pbs,             // 峰值突发大小
+    out bit<2> color,           // 0=green, 1=yellow, 2=red
+    out bit<8> action
+) {
+    parser { }
+
+    control {
+        // 双速率三色标记器 (trTCM)
+        bit<2> meter_color = 0;
+        StdTokenBucketMeter.apply(flow_id, packet_bytes, cir, cbs, pir, pbs, meter_color);
+
+        // 根据颜色执行动作
+        switch (meter_color) {
+            0: {
+                // Green: 转发，保持 DSCP
+                color = 0;
+                action = 0;  // PERMIT
+            }
+            1: {
+                // Yellow: 转发，降级 DSCP
+                color = 1;
+                action = 0;  // PERMIT with remark
+            }
+            2: {
+                // Red: 丢弃或降级
+                color = 2;
+                action = 1;  // DENY
+            }
+            default: {
+                color = 2;
+                action = 1;
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// QoS Application - 完整 QoS 应用
+// -----------------------------------------------------------------------------
+module StdQos(
+    in bit<8> dscp_in,
+    in bit<8> protocol,
+    in bit<16> src_port,
+    in bit<16> dst_port,
+    in bit<32> flow_id,
+    in bit<16> packet_bytes,
+    out bit<8> dscp_out,
+    out bit<8> queue_id,
+    out bit<1> drop
+) {
+    parser { hdr.ipv4; hdr.tcp; hdr.udp; }
+
+    control {
+        bit<8> qos_class = 0;
+        bit<8> new_dscp = 0;
+        bit<2> color = 0;
+        bit<8> action = 0;
+
+        // 1. 分类
+        StdDscpClassification.apply(dscp_in, protocol, src_port, dst_port, qos_class, new_dscp);
+
+        // 2. 计量 (CIR=10Mbps, CBS=1MB, PIR=20Mbps, PBS=2MB)
+        StdPolicer.apply(flow_id, packet_bytes, 10000000, 1000000, 20000000, 2000000, color, action);
+
+        if (action == 1) {
+            drop = 1;
+            return;
+        }
+
+        // 3. 根据颜色调整 DSCP
+        if (color == 1) {
+            // Yellow: 降级 DSCP
+            dscp_out = new_dscp >> 1;
+        } else {
+            dscp_out = new_dscp;
+        }
+
+        // 4. 队列分配
+        bit<1> queue_drop = 0;
+        StdQueueManager.apply(qos_class, packet_bytes, queue_id, queue_drop);
+
+        drop = queue_drop;
+    }
+}

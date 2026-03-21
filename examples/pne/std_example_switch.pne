@@ -1,0 +1,80 @@
+// =============================================================================
+// PNE Standard Library Example: Simple Switch
+// =============================================================================
+// 使用标准库构建一个简单的二层交换机
+// =============================================================================
+
+#include <std/std.pne>
+
+// 自定义模块: 端口配置
+module MyPortConfig() {
+    parser { }
+
+    control {
+        // 端口 VLAN 配置
+        static map<bit<16>, bit<16>>[256] port_pvid
+        static map<bit<16>, bit<1>>[256] port_is_trunk  // 0=access, 1=trunk
+        // 端口隔离组
+        static map<bit<16>, bit<8>>[256] port_isolation_group
+    }
+}
+
+// 自定义模块: MAC 地址表
+module MyMacTable() {
+    parser { hdr.ethernet; }
+
+    control {
+        // MAC 地址表: MAC -> (VLAN, 端口)
+        static map<bit<48>, (bit<16>, bit<16>)>[8192] mac_table
+    }
+}
+
+// 应用: 我的交换机
+application MySwitch using StdEthernetParser {
+    // 局部变量
+    bit<16> egress_port = 0;
+    bit<1> should_flood = 0;
+    bit<1> should_drop = 0;
+    bit<16> vlan_id = 0;
+    bit<1> vlan_allowed = 0;
+
+    control {
+        // 1. VLAN 处理
+        StdVlanProcessing.apply(vlan_id, gmeta.ingress_port, vlan_allowed);
+        if (vlan_allowed == 0) {
+            drop();
+            return;
+        }
+
+        // 2. MAC 学习
+        StdMacLearning.apply(hdr.ethernet.src, gmeta.ingress_port, _);
+
+        // 3. MAC 查找
+        bit<1> lookup_hit = 0;
+        StdMacLookup.apply(hdr.ethernet.dst, vlan_id, egress_port, lookup_hit);
+
+        if (lookup_hit == 1) {
+            // 命中，单播
+            bit<1> stp_allowed = 0;
+            StdStp.apply(egress_port, 0, stp_allowed);
+            if (stp_allowed == 1) {
+                // 正常转发
+            } else {
+                // STP 阻塞
+                drop();
+            }
+        } else {
+            // 未命中，泛洪
+            bit<16>[8] flood_ports;
+            bit<4> port_count = 0;
+            StdL2Flood.apply(vlan_id, gmeta.ingress_port, flood_ports, port_count);
+            // 泛洪到所有端口
+        }
+
+        // 4. 端口统计
+        StdPacketCounter.apply(gmeta.ingress_port, 0, _, _);
+    }
+}
+
+// 服务定义
+service [MySwitchService] { MySwitch }

@@ -1,0 +1,355 @@
+// =============================================================================
+// PNE Standard Library: Tunneling Modules
+// =============================================================================
+// 隧道封装模块，提供 VXLAN、GRE、IPinIP、MPLS 等封装/解封装功能
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// VXLAN Encap - VXLAN 封装
+// -----------------------------------------------------------------------------
+module StdVxlanEncap(
+    in bit<32> vni,
+    in bit<48> outer_src_mac,
+    in bit<48> outer_dst_mac,
+    in bit<32> outer_src_ip,
+    in bit<32> outer_dst_ip,
+    in bit<16> outer_src_port
+) {
+    parser { }
+
+    control {
+        // 添加外层 Ethernet 头
+        hdr.outer_ethernet.setValid();
+        hdr.outer_ethernet.src = outer_src_mac;
+        hdr.outer_ethernet.dst = outer_dst_mac;
+        hdr.outer_ethernet.etherType = 0x0800;
+
+        // 添加外层 IPv4 头
+        hdr.outer_ipv4.setValid();
+        hdr.outer_ipv4.src = outer_src_ip;
+        hdr.outer_ipv4.dst = outer_dst_ip;
+        hdr.outer_ipv4.protocol = 17;  // UDP
+        hdr.outer_ipv4.ttl = 64;
+        hdr.outer_ipv4.tos = 0;
+
+        // 添加外层 UDP 头
+        hdr.outer_udp.setValid();
+        hdr.outer_udp.src_port = outer_src_port;
+        hdr.outer_udp.dst_port = 4789;  // VXLAN port
+
+        // 添加 VXLAN 头
+        hdr.vxlan.setValid();
+        hdr.vxlan.flags = 0x08;  // I flag
+        hdr.vxlan.vni = vni;
+        hdr.vxlan.reserved = 0;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// VXLAN Decap - VXLAN 解封装
+// -----------------------------------------------------------------------------
+module StdVxlanDecap(
+    out bit<32> vni,
+    out bit<1> valid
+) {
+    parser { hdr.outer_ethernet; hdr.outer_ipv4; hdr.outer_udp; hdr.vxlan; }
+
+    control {
+        if (hdr.vxlan.isValid() && hdr.outer_udp.dst_port == 4789) {
+            vni = hdr.vxlan.vni;
+
+            // 移除外层头部
+            hdr.outer_ethernet.setInvalid();
+            hdr.outer_ipv4.setInvalid();
+            hdr.outer_udp.setInvalid();
+            hdr.vxlan.setInvalid();
+
+            valid = 1;
+        } else {
+            valid = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// GRE Encap - GRE 封装
+// -----------------------------------------------------------------------------
+module StdGreEncap(
+    in bit<16> protocol_type,
+    in bit<48> outer_src_mac,
+    in bit<48> outer_dst_mac,
+    in bit<32> outer_src_ip,
+    in bit<32> outer_dst_ip
+) {
+    parser { }
+
+    control {
+        // 添加外层 Ethernet 头
+        hdr.outer_ethernet.setValid();
+        hdr.outer_ethernet.src = outer_src_mac;
+        hdr.outer_ethernet.dst = outer_dst_mac;
+        hdr.outer_ethernet.etherType = 0x0800;
+
+        // 添加外层 IPv4 头
+        hdr.outer_ipv4.setValid();
+        hdr.outer_ipv4.src = outer_src_ip;
+        hdr.outer_ipv4.dst = outer_dst_ip;
+        hdr.outer_ipv4.protocol = 47;  // GRE
+        hdr.outer_ipv4.ttl = 64;
+
+        // 添加 GRE 头
+        hdr.gre.setValid();
+        hdr.gre.flags = 0;
+        hdr.gre.protocol_type = protocol_type;  // 0x0800=IPv4, 0x86DD=IPv6
+    }
+}
+
+// -----------------------------------------------------------------------------
+// GRE Decap - GRE 解封装
+// -----------------------------------------------------------------------------
+module StdGreDecap(
+    out bit<16> protocol_type,
+    out bit<1> valid
+) {
+    parser { hdr.outer_ethernet; hdr.outer_ipv4; hdr.gre; }
+
+    control {
+        if (hdr.gre.isValid() && hdr.outer_ipv4.protocol == 47) {
+            protocol_type = hdr.gre.protocol_type;
+
+            // 移除外层头部
+            hdr.outer_ethernet.setInvalid();
+            hdr.outer_ipv4.setInvalid();
+            hdr.gre.setInvalid();
+
+            valid = 1;
+        } else {
+            valid = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// IPinIP Encap - IP-in-IP 封装
+// -----------------------------------------------------------------------------
+module StdIpInIpEncap(
+    in bit<48> outer_src_mac,
+    in bit<48> outer_dst_mac,
+    in bit<32> outer_src_ip,
+    in bit<32> outer_dst_ip
+) {
+    parser { }
+
+    control {
+        // 添加外层 Ethernet 头
+        hdr.outer_ethernet.setValid();
+        hdr.outer_ethernet.src = outer_src_mac;
+        hdr.outer_ethernet.dst = outer_dst_mac;
+        hdr.outer_ethernet.etherType = 0x0800;
+
+        // 添加外层 IPv4 头
+        hdr.outer_ipv4.setValid();
+        hdr.outer_ipv4.src = outer_src_ip;
+        hdr.outer_ipv4.dst = outer_dst_ip;
+        hdr.outer_ipv4.protocol = 4;  // IP-in-IP
+        hdr.outer_ipv4.ttl = 64;
+        hdr.outer_ipv4.tos = hdr.ipv4.tos;  // 继承内层 TOS
+    }
+}
+
+// -----------------------------------------------------------------------------
+// IPinIP Decap - IP-in-IP 解封装
+// -----------------------------------------------------------------------------
+module StdIpInIpDecap(
+    out bit<1> valid
+) {
+    parser { hdr.outer_ethernet; hdr.outer_ipv4; }
+
+    control {
+        if (hdr.outer_ipv4.isValid() && hdr.outer_ipv4.protocol == 4) {
+            // 移除外层头部
+            hdr.outer_ethernet.setInvalid();
+            hdr.outer_ipv4.setInvalid();
+
+            valid = 1;
+        } else {
+            valid = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// MPLS Push - MPLS 标签压入
+// -----------------------------------------------------------------------------
+module StdMplsPush(
+    in bit<20> label,
+    in bit<3> exp,
+    in bit<8> ttl
+) {
+    parser { }
+
+    control {
+        // 移动现有 MPLS 标签（如果有）
+        if (hdr.mpls.isValid()) {
+            hdr.mpls_inner.setValid();
+            hdr.mpls_inner = hdr.mpls;
+            hdr.mpls.bos = 0;  // 不再是栈底
+        } else {
+            // 更新 Ethernet EtherType
+            hdr.ethernet.etherType = 0x8847;  // MPLS
+        }
+
+        // 压入新标签
+        hdr.mpls.setValid();
+        hdr.mpls.label = label;
+        hdr.mpls.exp = exp;
+        hdr.mpls.ttl = ttl;
+        hdr.mpls.bos = 1;  // 栈底
+    }
+}
+
+// -----------------------------------------------------------------------------
+// MPLS Pop - MPLS 标签弹出
+// -----------------------------------------------------------------------------
+module StdMplsPop(
+    out bit<20> label,
+    out bit<3> exp,
+    out bit<1> is_last
+) {
+    parser { hdr.mpls; }
+
+    control {
+        if (hdr.mpls.isValid()) {
+            label = hdr.mpls.label;
+            exp = hdr.mpls.exp;
+
+            if (hdr.mpls_inner.isValid()) {
+                // 弹出顶层，露出内层标签
+                hdr.mpls = hdr.mpls_inner;
+                hdr.mpls_inner.setInvalid();
+                is_last = hdr.mpls.bos;
+            } else {
+                // 最后一个标签，露出 IP
+                hdr.mpls.setInvalid();
+                hdr.ethernet.etherType = 0x0800;  // 恢复 IPv4
+                is_last = 1;
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// MPLS Swap - MPLS 标签交换
+// -----------------------------------------------------------------------------
+module StdMplsSwap(
+    in bit<20> new_label,
+    in bit<3> new_exp
+) {
+    parser { hdr.mpls; }
+
+    control {
+        if (hdr.mpls.isValid()) {
+            hdr.mpls.label = new_label;
+            hdr.mpls.exp = new_exp;
+            // TTL 递减
+            hdr.mpls.ttl = hdr.mpls.ttl - 1;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// GENEVE Encap - GENEVE 封装
+// -----------------------------------------------------------------------------
+module StdGeneveEncap(
+    in bit<24> vni,
+    in bit<8> option_len,
+    in bit<48> outer_src_mac,
+    in bit<48> outer_dst_mac,
+    in bit<32> outer_src_ip,
+    in bit<32> outer_dst_ip
+) {
+    parser { }
+
+    control {
+        // 添加外层头部
+        hdr.outer_ethernet.setValid();
+        hdr.outer_ethernet.src = outer_src_mac;
+        hdr.outer_ethernet.dst = outer_dst_mac;
+        hdr.outer_ethernet.etherType = 0x0800;
+
+        hdr.outer_ipv4.setValid();
+        hdr.outer_ipv4.src = outer_src_ip;
+        hdr.outer_ipv4.dst = outer_dst_ip;
+        hdr.outer_ipv4.protocol = 17;  // UDP
+        hdr.outer_ipv4.ttl = 64;
+
+        hdr.outer_udp.setValid();
+        hdr.outer_udp.src_port = 12345;
+        hdr.outer_udp.dst_port = 6081;  // GENEVE port
+
+        // GENEVE 头
+        hdr.geneve.setValid();
+        hdr.geneve.version = 0;
+        hdr.geneve.option_len = option_len;
+        hdr.geneve.oam = 0;
+        hdr.geneve.crit = 0;
+        hdr.geneve.protocol = 0x6558;  // Ethernet
+        hdr.geneve.vni = vni;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Tunnel Selector - 隧道类型选择器
+// -----------------------------------------------------------------------------
+module StdTunnelSelector(
+    in bit<8> tunnel_type,
+    in bit<32> tunnel_id,
+    in bit<32> vni,
+    in bit<20> mpls_label,
+    in bit<48> outer_src_mac,
+    in bit<48> outer_dst_mac,
+    in bit<32> outer_src_ip,
+    in bit<32> outer_dst_ip,
+    out bit<1> success
+) {
+    parser { }
+
+    control {
+        success = 0;
+
+        switch (tunnel_type) {
+            1: {
+                // VXLAN
+                StdVxlanEncap.apply(vni, outer_src_mac, outer_dst_mac,
+                                    outer_src_ip, outer_dst_ip, 12345);
+                success = 1;
+            }
+            2: {
+                // GRE
+                StdGreEncap.apply(0x0800, outer_src_mac, outer_dst_mac,
+                                  outer_src_ip, outer_dst_ip);
+                success = 1;
+            }
+            3: {
+                // IPinIP
+                StdIpInIpEncap.apply(outer_src_mac, outer_dst_mac,
+                                     outer_src_ip, outer_dst_ip);
+                success = 1;
+            }
+            4: {
+                // MPLS
+                StdMplsPush.apply(mpls_label, 0, 64);
+                success = 1;
+            }
+            5: {
+                // GENEVE
+                StdGeneveEncap.apply(vni, 0, outer_src_mac, outer_dst_mac,
+                                     outer_src_ip, outer_dst_ip);
+                success = 1;
+            }
+            default: {
+                success = 0;
+            }
+        }
+    }
+}

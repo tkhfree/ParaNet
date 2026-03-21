@@ -1,0 +1,231 @@
+// =============================================================================
+// PNE Standard Library: Layer 2 Forwarding Modules
+// =============================================================================
+// 二层转发模块，提供 MAC 地址学习、VLAN 转发等功能
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// MAC Learning - MAC 地址学习
+// -----------------------------------------------------------------------------
+module StdMacLearning(
+    in bit<48> src_mac,
+    in bit<16> ingress_port,
+    out bit<1> learned
+) {
+    parser { }
+
+    control {
+        // MAC 地址表: mac -> port
+        map<bit<48>, bit<16>>[4096] mac_table;
+        // 端口老化时间戳
+        register<bit<32>[4096] port_age;
+
+        // 学习源 MAC 地址
+        bit<16> existing_port = mac_table[src_mac];
+
+        if (existing_port == 0 || existing_port != ingress_port) {
+            // 新 MAC 或端口变化，更新表项
+            mac_table[src_mac] = ingress_port;
+            // port_age[src_mac_hash] = current_time;
+            learned = 1;
+        } else {
+            learned = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// MAC Lookup - MAC 地址查找
+// -----------------------------------------------------------------------------
+module StdMacLookup(
+    in bit<48> dst_mac,
+    in bit<16> vlan_id,
+    out bit<16> egress_port,
+    out bit<1> hit
+) {
+    parser { }
+
+    control {
+        // VLAN + MAC -> Port 的转发表
+        map<bit<16>, bit<48>>, bit<16>>[8192] forwarding_table;
+        // 组播/广播 MAC 表
+        set<bit<48>> multicast_macs;
+
+        // 查找转发表
+        bit<16> port = forwarding_table[(vlan_id, dst_mac)];
+
+        if (port != 0) {
+            egress_port = port;
+            hit = 1;
+        } else {
+            // 未命中，需要泛洪
+            egress_port = 0;  // 特殊值表示泛洪
+            hit = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// VLAN Processing - VLAN 处理
+// -----------------------------------------------------------------------------
+module StdVlanProcessing(
+    inout bit<16> vlan_id,
+    in bit<16> ingress_port,
+    out bit<1> allowed
+) {
+    parser { }
+
+    control {
+        // 端口 VLAN 配置
+        map<bit<16>, bit<16>>[256] port_pvid;        // 端口默认 VLAN
+        map<bit<16>, bit<1>>[256] port_mode;         // 端口模式 (access/trunk)
+        // VLAN 成员表
+        set<bit<16>, bit<16>> vlan_members;          // (vlan_id, port)
+
+        bit<1> mode = port_mode[ingress_port];
+        bit<16> pvid = port_pvid[ingress_port];
+
+        if (mode == 0) {
+            // Access 端口
+            if (vlan_id == 0) {
+                // Untagged，添加 PVID
+                vlan_id = pvid;
+                allowed = 1;
+            } else if (vlan_id == pvid) {
+                // Tagged with PVID，允许
+                allowed = 1;
+            } else {
+                // 其他 VLAN，丢弃
+                allowed = 0;
+            }
+        } else {
+            // Trunk 端口
+            if (vlan_id == 0) {
+                // Untagged，使用 Native VLAN
+                vlan_id = pvid;
+            }
+            // 检查 VLAN 是否允许
+            if ((vlan_members.has((vlan_id, ingress_port)))) {
+                allowed = 1;
+            } else {
+                allowed = 0;
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// L2 Flood - 二层泛洪
+// -----------------------------------------------------------------------------
+module StdL2Flood(
+    in bit<16> vlan_id,
+    in bit<16> ingress_port,
+    out bit<16>[8] egress_ports,
+    out bit<4> port_count
+) {
+    parser { }
+
+    control {
+        // VLAN 广播域
+        map<bit<16>, bit<16>[8]>[256] vlan_flood_list;
+        // 端口隔离组
+        map<bit<16>, bit<8>>[256] port_isolation_group;
+
+        bit<16>[8] flood_ports = vlan_flood_list[vlan_id];
+        bit<4> count = 0;
+        bit<8> src_iso_group = port_isolation_group[ingress_port];
+
+        // 过滤掉入端口和隔离组内的端口
+        for (bit<4> i = 0; i < 8; i = i + 1) {
+            bit<16> port = flood_ports[i];
+            if (port != 0 && port != ingress_port) {
+                bit<8> dst_iso_group = port_isolation_group[port];
+                if (src_iso_group == 0 || dst_iso_group != src_iso_group) {
+                    egress_ports[count] = port;
+                    count = count + 1;
+                }
+            }
+        }
+        port_count = count;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// STP (Spanning Tree Protocol) - 生成树协议
+// -----------------------------------------------------------------------------
+module StdStp(
+    in bit<16> port,
+    in bit<8> stp_state,
+    out bit<1> forward_allowed
+) {
+    parser { }
+
+    control {
+        // STP 端口状态: 0=disabled, 1=blocking, 2=listening,
+        //              3=learning, 4=forwarding
+        map<bit<16>, bit<8>>[256] port_stp_state;
+
+        bit<8> state = port_stp_state[port];
+
+        if (state == 4) {
+            // Forwarding 状态，允许转发
+            forward_allowed = 1;
+        } else {
+            forward_allowed = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// L2 Switch - 完整二层交换
+// -----------------------------------------------------------------------------
+module StdL2Switch(
+    in bit<48> src_mac,
+    in bit<48> dst_mac,
+    in bit<16> ingress_port,
+    inout bit<16> vlan_id,
+    out bit<16> egress_port,
+    out bit<1> should_flood,
+    out bit<1> should_drop
+) {
+    parser { hdr.ethernet; hdr.vlan; }
+
+    control {
+        bit<1> learned = 0;
+        bit<1> lookup_hit = 0;
+        bit<1> vlan_allowed = 0;
+        bit<1> stp_allowed = 0;
+
+        // 1. STP 检查
+        StdStp.apply(ingress_port, 0, stp_allowed);
+        if (stp_allowed == 0) {
+            should_drop = 1;
+            should_flood = 0;
+            return;
+        }
+
+        // 2. VLAN 处理
+        StdVlanProcessing.apply(vlan_id, ingress_port, vlan_allowed);
+        if (vlan_allowed == 0) {
+            should_drop = 1;
+            should_flood = 0;
+            return;
+        }
+
+        // 3. MAC 学习
+        StdMacLearning.apply(src_mac, ingress_port, learned);
+
+        // 4. MAC 查找
+        StdMacLookup.apply(dst_mac, vlan_id, egress_port, lookup_hit);
+
+        if (lookup_hit == 1) {
+            // 命中，单播
+            should_flood = 0;
+            should_drop = 0;
+        } else {
+            // 未命中，泛洪
+            should_flood = 1;
+            should_drop = 0;
+        }
+    }
+}

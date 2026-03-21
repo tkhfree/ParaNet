@@ -451,6 +451,23 @@
   margin-bottom: clamp(6px, 1cqw, 10px);
 }
 
+.orchestratorSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: clamp(6px, 1cqw, 10px);
+
+  .orchestratorSectionTitle {
+    margin-bottom: 0;
+  }
+
+  :global(.ant-btn) {
+    font-size: 11px;
+    height: 22px;
+    padding: 0 6px;
+  }
+}
+
 .orchestratorActions {
   margin-top: clamp(8px, 1.5cqw, 12px);
   display: flex;
@@ -621,6 +638,39 @@
   font-size: clamp(10px, 1.3cqw, 11px);
   line-height: 1.35;
   color: var(--ant-color-text-secondary);
+  display: flex;
+  gap: 12px;
+}
+
+.topologyItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.topologyItemStats {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.topologyStatBadge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(22, 119, 255, 0.1);
+  color: #1677ff;
+  font-weight: 500;
+}
+
+.topologyItemDesc {
+  font-size: clamp(10px, 1.3cqw, 11px);
+  line-height: 1.4;
+  color: var(--ant-color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .legendGrid {

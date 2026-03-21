@@ -1,0 +1,211 @@
+// =============================================================================
+// PNE Standard Library: Parser Modules
+// =============================================================================
+// 标准解析器模块，提供常见的协议头解析能力
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Ethernet Parser - 以太网头部解析
+// -----------------------------------------------------------------------------
+module StdEthernetParser() {
+    parser {
+        hdr.ethernet;
+        hdr.eth_type;
+    }
+
+    control {
+        // 根据 EtherType 决定下一步解析
+        switch (hdr.ethernet.etherType) {
+            0x0800: hdr.ipv4.setValid();
+            0x86DD: hdr.ipv6.setValid();
+            0x8100: hdr.vlan.setValid();
+            0x8847: hdr.mpls.setValid();
+            0x0806: hdr.arp.setValid();
+            default: hdr.payload.setValid();
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// VLAN Parser - VLAN 标签解析
+// -----------------------------------------------------------------------------
+module StdVlanParser() {
+    parser {
+        hdr.vlan;
+    }
+
+    control {
+        // 支持 QinQ (双层 VLAN)
+        if (hdr.vlan.inner_type == 0x8100) {
+            hdr.vlan_inner.setValid();
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// IPv4 Parser - IPv4 头部解析
+// -----------------------------------------------------------------------------
+module StdIpv4Parser() {
+    parser {
+        hdr.ipv4;
+    }
+
+    control {
+        // 根据 Protocol 字段决定下一步解析
+        switch (hdr.ipv4.protocol) {
+            1: hdr.icmp.setValid();
+            6: hdr.tcp.setValid();
+            17: hdr.udp.setValid();
+            47: hdr.gre.setValid();
+            89: hdr.ospf.setValid();
+            132: hdr.sctp.setValid();
+            default: hdr.payload.setValid();
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// IPv6 Parser - IPv6 头部解析
+// -----------------------------------------------------------------------------
+module StdIpv6Parser() {
+    parser {
+        hdr.ipv6;
+    }
+
+    control {
+        // 根据 Next Header 字段决定下一步解析
+        switch (hdr.ipv6.next_header) {
+            1: hdr.icmpv6.setValid();
+            6: hdr.tcp.setValid();
+            17: hdr.udp.setValid();
+            58: hdr.icmpv6.setValid();
+            43: hdr.ipv6_routing.setValid();
+            44: hdr.ipv6_fragment.setValid();
+            default: hdr.payload.setValid();
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// TCP Parser - TCP 头部解析
+// -----------------------------------------------------------------------------
+module StdTcpParser() {
+    parser {
+        hdr.tcp;
+    }
+
+    control {
+        // 解析 TCP 选项
+        if (hdr.tcp.data_offset > 5) {
+            hdr.tcp_options.setValid();
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// UDP Parser - UDP 头部解析
+// -----------------------------------------------------------------------------
+module StdUdpParser() {
+    parser {
+        hdr.udp;
+    }
+
+    control {
+        // 根据 UDP 端口决定应用层协议
+        switch (hdr.udp.dst_port) {
+            53: hdr.dns.setValid();
+            67: hdr.dhcp.setValid();
+            68: hdr.dhcp.setValid();
+            123: hdr.ntp.setValid();
+            161: hdr.snmp.setValid();
+            514: hdr.syslog.setValid();
+            4789: hdr.vxlan.setValid();
+            6343: hdr.ipfix.setValid();
+            default: hdr.payload.setValid();
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// MPLS Parser - MPLS 标签解析
+// -----------------------------------------------------------------------------
+module StdMplsParser() {
+    parser {
+        hdr.mpls;
+    }
+
+    control {
+        // 支持多层 MPLS 标签
+        if (hdr.mpls.bos == 0) {
+            hdr.mpls_inner.setValid();
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// VXLAN Parser - VXLAN 封装解析
+// -----------------------------------------------------------------------------
+module StdVxlanParser() {
+    parser {
+        hdr.vxlan;
+    }
+
+    control {
+        // VXLAN 内部是新的以太网帧
+        hdr.inner_ethernet.setValid();
+    }
+}
+
+// -----------------------------------------------------------------------------
+// GRE Parser - GRE 隧道解析
+// -----------------------------------------------------------------------------
+module StdGreParser() {
+    parser {
+        hdr.gre;
+    }
+
+    control {
+        // 根据 Protocol Type 决定内部协议
+        switch (hdr.gre.protocol_type) {
+            0x0800: hdr.inner_ipv4.setValid();
+            0x86DD: hdr.inner_ipv6.setValid();
+            default: hdr.payload.setValid();
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Combined Parser - 组合解析器
+// -----------------------------------------------------------------------------
+module StdCombinedParser() {
+    parser {
+        hdr.ethernet;
+        hdr.eth_type;
+        hdr.vlan;
+        hdr.ipv4;
+        hdr.ipv6;
+        hdr.tcp;
+        hdr.udp;
+    }
+
+    control {
+        // Ethernet -> VLAN (optional) -> IPv4/IPv6 -> TCP/UDP
+        if (hdr.ethernet.isValid()) {
+            if (hdr.ethernet.etherType == 0x8100 && hdr.vlan.isValid()) {
+                // 有 VLAN 标签
+                if (hdr.vlan.etherType == 0x0800) {
+                    hdr.ipv4.setValid();
+                } else if (hdr.vlan.etherType == 0x86DD) {
+                    hdr.ipv6.setValid();
+                }
+            } else {
+                // 无 VLAN 标签
+                if (hdr.ethernet.etherType == 0x0800) {
+                    hdr.ipv4.setValid();
+                } else if (hdr.ethernet.etherType == 0x86DD) {
+                    hdr.ipv6.setValid();
+                }
+            }
+        }
+    }
+}

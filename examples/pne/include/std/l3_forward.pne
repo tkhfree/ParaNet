@@ -1,0 +1,280 @@
+// =============================================================================
+// PNE Standard Library: Layer 3 Forwarding Modules
+// =============================================================================
+// 三层转发模块，提供 IP 路由、ARP、ECMP 等功能
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// IP Validation - IP 头部校验
+// -----------------------------------------------------------------------------
+module StdIpValidation(
+    in bit<8> ttl,
+    in bit<16> checksum,
+    out bit<1> valid
+) {
+    parser { hdr.ipv4; }
+
+    control {
+        if (ttl == 0) {
+            valid = 0;
+        } else {
+            // 校验和验证 (简化)
+            valid = 1;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Longest Prefix Match (LPM) - 最长前缀匹配
+// -----------------------------------------------------------------------------
+module StdLpmLookup(
+    in bit<32> dst_ip,
+    out bit<32> nexthop,
+    out bit<8> out_interface,
+    out bit<1> hit
+) {
+    parser { hdr.ipv4; }
+
+    control {
+        // LPM 路由表: prefix/mask -> (nexthop, interface)
+        map<bit<32>, bit<8>>, (bit<32>, bit<8>)>[16384] route_table;
+
+        // 简化的 LPM 查找（实际实现需要 TCAM）
+        // 从最长掩码开始匹配
+        for (bit<8> mask_len = 32; mask_len > 0; mask_len = mask_len - 1) {
+            bit<32> prefix = dst_ip & get_mask(mask_len);
+            (bit<32> nh, bit<8> iface) = route_table[(prefix, mask_len)];
+            if (nh != 0) {
+                nexthop = nh;
+                out_interface = iface;
+                hit = 1;
+                return;
+            }
+        }
+
+        // 默认路由
+        (bit<32> nh, bit<8> iface) = route_table[(0, 0)];
+        if (nh != 0) {
+            nexthop = nh;
+            out_interface = iface;
+            hit = 1;
+        } else {
+            hit = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ARP Lookup - ARP 表查找
+// -----------------------------------------------------------------------------
+module StdArpLookup(
+    in bit<32> ip,
+    out bit<48> mac,
+    out bit<1> hit
+) {
+    parser { }
+
+    control {
+        // ARP 表: IP -> MAC
+        map<bit<32>, bit<48>>[4096] arp_table;
+        // ARP 超时表
+        register<bit<32>[4096] arp_age;
+
+        mac = arp_table[ip];
+        if (mac != 0) {
+            hit = 1;
+        } else {
+            hit = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// ECMP - 等价多路径
+// -----------------------------------------------------------------------------
+module StdEcmp(
+    in bit<32> nexthop_group,
+    in bit<32> hash,
+    out bit<32> nexthop,
+    out bit<1> hit
+) {
+    parser { }
+
+    control {
+        // ECMP 组: group_id -> [nexthop1, nexthop2, ...]
+        map<bit<32>, bit<32>[8]>[1024] ecmp_groups;
+        // ECMP 组大小
+        map<bit<32>, bit<4>[1024] ecmp_group_size;
+
+        bit<32>[8] nhops = ecmp_groups[nexthop_group];
+        bit<4> size = ecmp_group_size[nexthop_group];
+
+        if (size > 0) {
+            // 使用哈希选择路径
+            bit<4> index = hash % size;
+            nexthop = nhops[index];
+            hit = 1;
+        } else {
+            hit = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// TTL Decrement - TTL 递减
+// -----------------------------------------------------------------------------
+module StdTtlDecrement(
+    inout bit<8> ttl,
+    out bit<1> expired
+) {
+    parser { hdr.ipv4; }
+
+    control {
+        if (ttl <= 1) {
+            expired = 1;
+        } else {
+            ttl = ttl - 1;
+            expired = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Checksum Update - 校验和更新
+// -----------------------------------------------------------------------------
+module StdChecksumUpdate(
+    inout bit<16> checksum,
+    in bit<16> old_value,
+    in bit<16> new_value
+) {
+    parser { hdr.ipv4; }
+
+    control {
+        // 增量校验和更新
+        bit<32> sum = (~checksum & 0xFFFF) + (~old_value & 0xFFFF) + new_value;
+        while (sum >> 16 != 0) {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+        checksum = ~sum;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Neighbor Lookup - 邻居表查找（IPv6）
+// -----------------------------------------------------------------------------
+module StdNeighborLookup(
+    in bit<128> ipv6,
+    out bit<48> mac,
+    out bit<1> hit
+) {
+    parser { hdr.ipv6; }
+
+    control {
+        // 邻居表: IPv6 -> MAC
+        map<bit<128>, bit<48>>[4096] neighbor_table;
+
+        mac = neighbor_table[ipv6];
+        if (mac != 0) {
+            hit = 1;
+        } else {
+            hit = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// IPv6 LPM - IPv6 最长前缀匹配
+// -----------------------------------------------------------------------------
+module StdIpv6LpmLookup(
+    in bit<128> dst_ip,
+    out bit<128> nexthop,
+    out bit<8> out_interface,
+    out bit<1> hit
+) {
+    parser { hdr.ipv6; }
+
+    control {
+        // IPv6 LPM 路由表
+        map<bit<128>, bit<8>>, (bit<128>, bit<8>)>[8192] ipv6_route_table;
+
+        // 简化的 IPv6 LPM 查找
+        for (bit<8> mask_len = 128; mask_len > 0; mask_len = mask_len - 8) {
+            bit<128> prefix = dst_ip & get_ipv6_mask(mask_len);
+            (bit<128> nh, bit<8> iface) = ipv6_route_table[(prefix, mask_len)];
+            if (nh != 0) {
+                nexthop = nh;
+                out_interface = iface;
+                hit = 1;
+                return;
+            }
+        }
+
+        hit = 0;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// L3 Router - 完整三层路由
+// -----------------------------------------------------------------------------
+module StdL3Router(
+    in bit<32> src_ip,
+    in bit<32> dst_ip,
+    in bit<8> ttl_in,
+    in bit<16> flow_hash,
+    out bit<48> dst_mac,
+    out bit<16> egress_port,
+    out bit<1> should_drop
+) {
+    parser { hdr.ipv4; hdr.ethernet; }
+
+    control {
+        bit<1> ip_valid = 0;
+        bit<32> nexthop = 0;
+        bit<8> out_iface = 0;
+        bit<1> route_hit = 0;
+        bit<1> arp_hit = 0;
+        bit<1> ttl_expired = 0;
+
+        // 1. IP 校验
+        StdIpValidation.apply(ttl_in, 0, ip_valid);
+        if (ip_valid == 0) {
+            should_drop = 1;
+            return;
+        }
+
+        // 2. TTL 递减
+        bit<8> ttl = ttl_in;
+        StdTtlDecrement.apply(ttl, ttl_expired);
+        if (ttl_expired == 1) {
+            should_drop = 1;
+            return;
+        }
+
+        // 3. 路由查找
+        StdLpmLookup.apply(dst_ip, nexthop, out_iface, route_hit);
+        if (route_hit == 0) {
+            should_drop = 1;
+            return;
+        }
+
+        // 4. ECMP（如果配置）
+        if (nexthop >= 0x80000000) {
+            // 高位为1表示 ECMP 组
+            StdEcmp.apply(nexthop, flow_hash, nexthop, route_hit);
+            if (route_hit == 0) {
+                should_drop = 1;
+                return;
+            }
+        }
+
+        // 5. ARP 查找
+        StdArpLookup.apply(nexthop, dst_mac, arp_hit);
+        if (arp_hit == 0) {
+            should_drop = 1;
+            return;
+        }
+
+        egress_port = out_iface;
+        should_drop = 0;
+    }
+}

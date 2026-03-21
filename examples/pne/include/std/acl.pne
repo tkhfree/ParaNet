@@ -1,0 +1,294 @@
+// =============================================================================
+// PNE Standard Library: Access Control List (ACL) Modules
+// =============================================================================
+// 访问控制列表模块，提供包过滤、安全策略等功能
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// ACL Entry Types - ACL 条目类型定义
+// -----------------------------------------------------------------------------
+// 动作类型:
+//   0 = PERMIT (允许)
+//   1 = DENY (拒绝)
+//   2 = LOG (记录)
+//   3 = COUNT (计数)
+//   4 = REDIRECT (重定向)
+//   5 = POLICE (限速)
+
+// -----------------------------------------------------------------------------
+// Basic ACL - 基础 ACL (基于 IP 五元组)
+// -----------------------------------------------------------------------------
+module StdBasicAcl(
+    in bit<32> src_ip,
+    in bit<32> dst_ip,
+    in bit<8> protocol,
+    in bit<16> src_port,
+    in bit<16> dst_port,
+    out bit<8> action,
+    out bit<32> acl_id
+) {
+    parser { hdr.ipv4; hdr.tcp; hdr.udp; }
+
+    control {
+        // ACL 表: (src_ip, dst_ip, protocol, src_port, dst_port) -> (action, acl_id)
+        map<(bit<32>, bit<32>, bit<8>, bit<16>, bit<16>), (bit<8>, bit<32>)>[4096] acl_table;
+        // 默认动作
+        bit<8> default_action = 1;  // DENY
+
+        (bit<8> act, bit<32> id) = acl_table[(src_ip, dst_ip, protocol, src_port, dst_port)];
+
+        if (act != 0 || id != 0) {
+            action = act;
+            acl_id = id;
+        } else {
+            // 无匹配条目，使用默认动作
+            action = default_action;
+            acl_id = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Extended ACL - 扩展 ACL (支持掩码和范围)
+// -----------------------------------------------------------------------------
+module StdExtendedAcl(
+    in bit<32> src_ip,
+    in bit<32> dst_ip,
+    in bit<8> protocol,
+    in bit<16> src_port,
+    in bit<16> dst_port,
+    in bit<8> tcp_flags,
+    in bit<8> dscp,
+    out bit<8> action,
+    out bit<32> acl_id
+) {
+    parser { hdr.ipv4; hdr.tcp; hdr.udp; }
+
+    control {
+        // 扩展 ACL 表（使用 TCAM 匹配）
+        // (src_ip/mask, dst_ip/mask, protocol, port_range, flags, dscp) -> action
+        map<(bit<32>, bit<32>, bit<8>, bit<16>, bit<16>, bit<8>, bit<8>), (bit<8>, bit<32>)>[8192] ext_acl_table;
+
+        // 优先级排序的 ACL 列表
+        register<(bit<8>, bit<32>, bit<8>)>[1024] acl_priority_list;
+
+        // 按优先级顺序匹配（简化实现）
+        for (bit<10> i = 0; i < 1024; i = i + 1) {
+            (bit<8> prio, bit<32> rule_id, bit<8> act) = acl_priority_list[i];
+            if (prio == 0) {
+                break;  // 列表结束
+            }
+            // 匹配逻辑（简化）
+            // 实际实现需要 TCAM
+        }
+
+        action = 1;  // 默认 DENY
+        acl_id = 0;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Stateful ACL - 有状态 ACL (会话跟踪)
+// -----------------------------------------------------------------------------
+module StdStatefulAcl(
+    in bit<32> src_ip,
+    in bit<32> dst_ip,
+    in bit<8> protocol,
+    in bit<16> src_port,
+    in bit<16> dst_port,
+    in bit<8> tcp_flags,
+    out bit<8> action,
+    out bit<1> is_established
+) {
+    parser { hdr.ipv4; hdr.tcp; }
+
+    control {
+        // 会话表: (src_ip, dst_ip, protocol, src_port, dst_port) -> state
+        map<(bit<32>, bit<32>, bit<8>, bit<16>, bit<16>), bit<8>>[65536] session_table;
+        // 会话状态: 0=NONE, 1=SYN_SENT, 2=SYN_RECEIVED, 3=ESTABLISHED, 4=FIN_WAIT
+
+        // 检查是否是已建立的会话
+        (bit<8> state) = session_table[(src_ip, dst_ip, protocol, src_port, dst_port)];
+
+        if (state == 3) {
+            // 已建立会话，允许
+            is_established = 1;
+            action = 0;  // PERMIT
+        } else if (state == 0 && tcp_flags == 0x02) {
+            // SYN 包，新会话
+            session_table[(src_ip, dst_ip, protocol, src_port, dst_port)] = 1;
+            is_established = 0;
+            action = 0;  // PERMIT
+        } else if (state == 1 && tcp_flags == 0x12) {
+            // SYN-ACK 响应
+            session_table[(src_ip, dst_ip, protocol, src_port, dst_port)] = 3;
+            is_established = 0;
+            action = 0;  // PERMIT
+        } else {
+            // 未知会话
+            is_established = 0;
+            action = 1;  // DENY
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// MAC ACL - MAC 地址 ACL
+// -----------------------------------------------------------------------------
+module StdMacAcl(
+    in bit<48> src_mac,
+    in bit<48> dst_mac,
+    in bit<16> eth_type,
+    in bit<16> vlan_id,
+    out bit<8> action,
+    out bit<32> acl_id
+) {
+    parser { hdr.ethernet; hdr.vlan; }
+
+    control {
+        // MAC ACL 表
+        map<(bit<48>, bit<48>, bit<16>, bit<16>), (bit<8>, bit<32>)>[2048] mac_acl_table;
+
+        (bit<8> act, bit<32> id) = mac_acl_table[(src_mac, dst_mac, eth_type, vlan_id)];
+
+        if (act != 0 || id != 0) {
+            action = act;
+            acl_id = id;
+        } else {
+            action = 0;  // 默认 PERMIT
+            acl_id = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// IPv6 ACL - IPv6 ACL
+// -----------------------------------------------------------------------------
+module StdIpv6Acl(
+    in bit<128> src_ip,
+    in bit<128> dst_ip,
+    in bit<8> next_header,
+    in bit<16> src_port,
+    in bit<16> dst_port,
+    out bit<8> action,
+    out bit<32> acl_id
+) {
+    parser { hdr.ipv6; hdr.tcp; hdr.udp; }
+
+    control {
+        // IPv6 ACL 表
+        map<(bit<128>, bit<128>, bit<8>, bit<16>, bit<16>), (bit<8>, bit<32>)>[4096] ipv6_acl_table;
+
+        (bit<8> act, bit<32> id) = ipv6_acl_table[(src_ip, dst_ip, next_header, src_port, dst_port)];
+
+        if (act != 0 || id != 0) {
+            action = act;
+            acl_id = id;
+        } else {
+            action = 1;  // 默认 DENY
+            acl_id = 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Rate Limiter - 速率限制
+// -----------------------------------------------------------------------------
+module StdRateLimiter(
+    in bit<32> flow_id,
+    in bit<16> packet_size,
+    in bit<32> rate_limit_pps,
+    in bit<32> burst_size,
+    out bit<1> exceed
+) {
+    parser { }
+
+    control {
+        // 令牌桶状态
+        register<bit<32>[65536] token_bucket;
+        register<bit<64>[65536] last_update_time;
+
+        // 令牌桶算法（简化）
+        bit<32> tokens = token_bucket[flow_id];
+        bit<64> last_time = last_update_time[flow_id];
+        bit<64> current_time = get_current_time();
+
+        // 计算新增令牌
+        bit<64> elapsed = current_time - last_time;
+        bit<32> new_tokens = (elapsed * rate_limit_pps) / 1000000;
+
+        tokens = tokens + new_tokens;
+        if (tokens > burst_size) {
+            tokens = burst_size;
+        }
+
+        // 消耗令牌
+        if (tokens >= 1) {
+            tokens = tokens - 1;
+            token_bucket[flow_id] = tokens;
+            last_update_time[flow_id] = current_time;
+            exceed = 0;
+        } else {
+            exceed = 1;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Firewall Application - 完整防火墙应用
+// -----------------------------------------------------------------------------
+module StdFirewall(
+    in bit<32> src_ip,
+    in bit<32> dst_ip,
+    in bit<8> protocol,
+    in bit<16> src_port,
+    in bit<16> dst_port,
+    in bit<8> tcp_flags,
+    in bit<32> flow_id,
+    out bit<8> action,
+    out bit<32> matched_acl_id
+) {
+    parser { hdr.ipv4; hdr.tcp; hdr.udp; }
+
+    control {
+        bit<8> basic_action = 0;
+        bit<32> basic_acl_id = 0;
+        bit<8> stateful_action = 0;
+        bit<1> is_established = 0;
+        bit<1> rate_exceeded = 0;
+
+        // 1. 有状态 ACL 检查
+        StdStatefulAcl.apply(src_ip, dst_ip, protocol, src_port, dst_port, tcp_flags,
+                             stateful_action, is_established);
+
+        if (is_established == 1) {
+            // 已建立会话，直接允许
+            action = 0;
+            matched_acl_id = 0;
+            return;
+        }
+
+        // 2. 静态 ACL 检查
+        StdBasicAcl.apply(src_ip, dst_ip, protocol, src_port, dst_port,
+                          basic_action, basic_acl_id);
+
+        if (basic_action == 1) {
+            // 明确拒绝
+            action = 1;
+            matched_acl_id = basic_acl_id;
+            return;
+        }
+
+        // 3. 速率限制
+        StdRateLimiter.apply(flow_id, 1500, 10000, 100000, rate_exceeded);
+
+        if (rate_exceeded == 1) {
+            action = 1;  // 限速拒绝
+            matched_acl_id = 0xFFFFFFFF;
+            return;
+        }
+
+        action = 0;  // PERMIT
+        matched_acl_id = basic_acl_id;
+    }
+}
