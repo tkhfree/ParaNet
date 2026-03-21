@@ -1,3 +1,6 @@
 [submodule "EPON-NetworkAgent"]
 	path = EPON-NetworkAgent
 	url = git@github.com:tkhfree/EPON-NetworkAgent.git
+[submodule "co/example1/lynette-dev"]
+	path = co/example1/lynette-dev
+	url = https://github.com/tkhfree/lynette-dev.git
