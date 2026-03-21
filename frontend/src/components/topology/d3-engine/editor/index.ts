@@ -3,7 +3,7 @@
  */
 
 import mitt, { type Emitter } from 'mitt'
-import type { Topology, IDevice, ILink, DeviceElement } from '@/model/topology'
+import type { Topology, IDevice, ILink, DeviceElement, NodeConfig } from '@/model/topology'
 import type { NodeType } from '../types'
 import { topologyApi } from '@/api/topology'
 import type { D3Node, D3Link, D3Graph } from '../types'
@@ -114,7 +114,19 @@ export class D3Editor {
       rate: device.rate,
       system: device.system,
       ssd: device.ssd,
+      dataPlaneTarget: device.dataPlaneTarget ?? 'bmv2',
     }
+
+    const portRaw = String(device.sshPort ?? '').trim()
+    const sshPortNum = parseInt(portRaw, 10)
+    node.config = {
+      protocol: 'ssh',
+      sshHost: device.sshHost.trim(),
+      sshPort:
+        Number.isFinite(sshPortNum) && sshPortNum >= 1 && sshPortNum <= 65535 ? sshPortNum : 22,
+      sshUsername: device.sshUsername.trim(),
+      sshPassword: device.sshPassword,
+    } satisfies NodeConfig
 
     this.graphData = {
       ...this.graphData,
@@ -166,10 +178,20 @@ export class D3Editor {
     if (nodeIndex === -1) return false
 
     const nextNodes = [...this.graphData.nodes]
-    nextNodes[nodeIndex] = {
-      ...nextNodes[nodeIndex],
+    const prev = nextNodes[nodeIndex]
+    const merged: D3Node = {
+      ...prev,
       ...data,
+      properties:
+        data.properties !== undefined
+          ? { ...prev.properties, ...data.properties }
+          : prev.properties,
+      config:
+        data.config !== undefined
+          ? { ...(prev.config as NodeConfig | undefined), ...data.config }
+          : prev.config,
     }
+    nextNodes[nodeIndex] = merged
     this.graphData = {
       ...this.graphData,
       nodes: nextNodes,

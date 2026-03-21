@@ -1,0 +1,33 @@
+{
+  "id": "mvp-demo",
+  "name": "MVP two-node demo",
+  "nodes": [
+    {
+      "id": "core-1",
+      "name": "Core",
+      "type": "router",
+      "capabilities": {
+        "parserRoots": ["ipv4"],
+        "profiles": ["ipv4"],
+        "dataPlaneTarget": "bmv2"
+      }
+    },
+    {
+      "id": "edge-1",
+      "name": "Edge",
+      "type": "router",
+      "capabilities": {
+        "parserRoots": ["ipv4"],
+        "profiles": ["ipv4"],
+        "dataPlaneTarget": "bmv2"
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "l1",
+      "source": "core-1",
+      "target": "edge-1"
+    }
+  ]
+}

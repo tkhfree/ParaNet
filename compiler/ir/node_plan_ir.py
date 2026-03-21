@@ -23,7 +23,7 @@ class NodePlanIR(SerializableModel):
     """Per-node execution plan after placement."""
 
     node_id: str
-    backend: str = "v1model"
+    backend: str = "bmv2"
 
     fragments: list[FragmentPlacement] = field(default_factory=list)
     required_headers: list[str] = field(default_factory=list)

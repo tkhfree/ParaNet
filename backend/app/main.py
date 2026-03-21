@@ -103,6 +103,7 @@ from app.api import websocket, editor_terminal_ws
 app.include_router(auth.router, prefix="/api")
 app.include_router(topology.router, prefix="/api")
 app.include_router(intent.router, prefix="/api")
+app.include_router(intent.router_legacy, prefix="/api")
 app.include_router(deploy.router, prefix="/api")
 app.include_router(monitor.router, prefix="/api")
 app.include_router(editor_project.router, prefix="/api")

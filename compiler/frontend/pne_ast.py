@@ -114,6 +114,22 @@ class PolicyDefNode(IntentAstNode):
 
 
 @dataclass(slots=True)
+class DeterminismDefNode(IntentAstNode):
+    """Deterministic / cyclic domain intent (e.g. industrial real-time)."""
+
+    name: str | None = None
+    attrs: list[AttrNode] = field(default_factory=list)
+
+
+@dataclass(slots=True)
+class ScheduleDefNode(IntentAstNode):
+    """Node schedule / slot intent (e.g. Powerlink-style)."""
+
+    name: str | None = None
+    attrs: list[AttrNode] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class IntentProgramNode(IntentAstNode):
     declarations: list[IntentAstNode] = field(default_factory=list)
 

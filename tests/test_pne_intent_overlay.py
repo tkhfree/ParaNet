@@ -130,6 +130,222 @@ def test_parse_text_supports_builtin_include_directives() -> None:
     assert any(getattr(d, "name", None) == "SharedAudit" for d in result.ast.declarations)
 
 
+def test_reachability_equivalent_to_route(tmp_path) -> None:
+    _require_lark()
+
+    from compiler import compile_pne_to_program_ir
+
+    route_src = tmp_path / "route.pne"
+    route_src.write_text(
+        dedent(
+            """
+            module F() {
+              parser { ipv4; }
+              control { ; }
+            }
+            intent {
+              route R1 {
+                from: prefix({ kind: "cidr", value: "10.1.0.0/16" })
+                to: edge-1
+                via: core-1
+                protocol: ip
+              }
+            }
+            """
+        ),
+        encoding="utf-8",
+    )
+    reach_src = tmp_path / "reach.pne"
+    reach_src.write_text(
+        dedent(
+            """
+            module F() {
+              parser { ipv4; }
+              control { ; }
+            }
+            intent {
+              reachability R1 {
+                from: prefix({ kind: "cidr", value: "10.1.0.0/16" })
+                to: edge-1
+                via: core-1
+                protocol: ip
+              }
+            }
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    r1 = compile_pne_to_program_ir(route_src)
+    r2 = compile_pne_to_program_ir(reach_src)
+    assert r1.modules["F"].maps["ip_route_table"].entries == r2.modules["F"].maps["ip_route_table"].entries
+
+
+def test_route_constraints_and_profile_ipv6(tmp_path) -> None:
+    _require_lark()
+
+    from compiler import compile_pne_to_program_ir
+
+    source = tmp_path / "v6.pne"
+    source.write_text(
+        dedent(
+            """
+            module F() {
+              parser { ipv6; }
+              control { ; }
+            }
+            intent {
+              route R1 {
+                from: prefix({ kind: "cidr", value: "2001:db8::/32" })
+                to: edge-1
+                via: core-1
+                profile: ipv6
+                constraints { max_hops: 8 }
+              }
+            }
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    program = compile_pne_to_program_ir(source)
+    instr = next(i for i in program.modules["F"].body if i.kind == "intent_route_lookup")
+    assert instr.data.get("protocol") == "ipv6"
+    assert instr.data.get("constraints") == {"max_hops": 8}
+
+
+def test_srv6_path_lowering(tmp_path) -> None:
+    _require_lark()
+
+    from compiler import compile_pne_to_program_ir
+
+    source = tmp_path / "srv6.pne"
+    source.write_text(
+        dedent(
+            """
+            module F() {
+              parser { srv6; }
+              control { ; }
+            }
+            intent {
+              route R1 {
+                from: prefix({ kind: "cidr", value: "2001:db8:1::/64" })
+                to: pe-1
+                via: pe-1
+                protocol: srv6
+                path: [ "2001:db8:0:1::a", "2001:db8:0:2::b" ]
+              }
+            }
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    program = compile_pne_to_program_ir(source)
+    instr = next(i for i in program.modules["F"].body if i.kind == "intent_route_lookup")
+    assert instr.data.get("protocol") == "srv6"
+    assert instr.data.get("path") == ["2001:db8:0:1::a", "2001:db8:0:2::b"]
+
+
+def test_ndn_and_geo_custom_prefix(tmp_path) -> None:
+    _require_lark()
+
+    from compiler import compile_pne_to_program_ir
+
+    for proto, cidr in (
+        ("ndn", "/edu/paranet"),
+        ("geo", "EU-WEST"),
+    ):
+        source = tmp_path / f"{proto}.pne"
+        source.write_text(
+            dedent(
+                f"""
+                module F() {{
+                  parser {{ eth; }}
+                  control {{ ; }}
+                }}
+                intent {{
+                  route R1 {{
+                    from: prefix({{ kind: "name", value: "{cidr}" }})
+                    to: n1
+                    via: n1
+                    protocol: {proto}
+                  }}
+                }}
+                """
+            ),
+            encoding="utf-8",
+        )
+
+        program = compile_pne_to_program_ir(source)
+        assert f"{proto}_route_table" in program.modules["F"].maps
+
+
+def test_determinism_and_schedule_instructions(tmp_path) -> None:
+    _require_lark()
+
+    from compiler import compile_pne_to_program_ir
+
+    source = tmp_path / "pl.pne"
+    source.write_text(
+        dedent(
+            """
+            module F() {
+              parser { eth; }
+              control { ; }
+            }
+            intent {
+              determinism D1 {
+                cycle_us: 1000
+                master: "plc-1"
+              }
+              schedule S1 {
+                node: "drive-3"
+                slot: 7
+              }
+            }
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    program = compile_pne_to_program_ir(source)
+    kinds = [i.kind for i in program.modules["F"].body]
+    assert "intent_determinism" in kinds
+    assert "intent_schedule" in kinds
+
+
+def test_powerlink_route_reports_diagnostic() -> None:
+    _require_lark()
+
+    from compiler.frontend.pne_parser import PneParser
+    from compiler.semantic.collector_pne_intent import PNEIntentCollector
+
+    parser = PneParser()
+    result = parser.parse_text(
+        dedent(
+            """
+            module F() {
+              parser { eth; }
+              control { ; }
+            }
+            intent {
+              route R1 {
+                from: prefix({ kind: "cidr", value: "10.0.0.0/8" })
+                to: n1
+                via: n1
+                protocol: powerlink
+              }
+            }
+            """
+        )
+    )
+    assert result.ast is not None
+    collector = PNEIntentCollector()
+    sem = collector.collect(result.ast)
+    assert any(d.code == "INT204" for d in sem.diagnostics)
+
+
 def test_compile_pne_text_supports_builtin_include_directives() -> None:
     _require_lark()
 

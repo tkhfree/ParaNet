@@ -53,7 +53,7 @@ const Intent: React.FC = () => {
           geo: {},
           p4: {},
         },
-        warnings: ['当前为开发模式模拟结果，请部署后端 /intents/compile-preview 后使用真实编译'],
+        warnings: ['当前为开发模式模拟结果，请部署后端 /api/compile-artifacts/compile-preview 后使用真实编译'],
       }
       setCompileResult(mockResult)
       message.info('已使用模拟编译结果（后端未实现 compile-preview 时）')

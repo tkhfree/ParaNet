@@ -137,44 +137,43 @@ const Compile: React.FC = () => {
     }
     setSavingIntent(true)
     try {
-      const basePayload = {
-        name: `${currentProject.name}-编译产物`,
-        description: `由项目 ${currentProject.name} 的编译流程生成`,
-        type: 'dsl' as const,
+      const res = await intentApi.saveDeployArtifacts({
+        projectId: currentProjectId,
         content: sourceContent,
         topologyId: currentProject.topologyId ?? undefined,
-        projectId: currentProjectId,
+        compileArtifactId: currentProject.lastCompileArtifactId ?? undefined,
+        name: `${currentProject.name}-编译产物`,
+        description: `由项目 ${currentProject.name} 的编译流程生成`,
+      })
+      const data = res.data
+      if (!data?.success) {
+        message.error(data?.errors?.[0] ?? '保存失败')
+        return
       }
-      let intentId = currentProject.lastIntentId ?? null
-      if (intentId) {
-        await intentApi.update(intentId, basePayload)
-        const compileRes = await intentApi.compile({
-          intentId,
-          topologyId: currentProject.topologyId ?? '',
+      if (data.compile) {
+        setCompileResult(data.compile as IntentCompileResponse)
+      }
+      const artifactId = data.compileArtifactId ?? data.intentId
+      if (artifactId) {
+        await updateCurrentProject({ lastCompileArtifactId: artifactId })
+      }
+      const n = data.written?.length ?? 0
+      message.success(`已写入项目「output」文件夹（共 ${n} 个文件），可在开发页项目与文件中查看`)
+      window.dispatchEvent(
+        new CustomEvent<{ projectId: string }>('paranet-project-files-updated', {
+          detail: { projectId: currentProjectId },
         })
-        setCompileResult(compileRes.data)
-      } else {
-        const created = await intentApi.create(basePayload)
-        intentId = created.data.id
-        const compileRes = await intentApi.compile({
-          intentId,
-          topologyId: currentProject.topologyId ?? '',
-        })
-        setCompileResult(compileRes.data)
-      }
-      if (intentId) {
-        await updateCurrentProject({ lastIntentId: intentId })
-      }
-      message.success('已保存编译产物，部署子系统可直接复用')
+      )
+      await loadContext()
     } finally {
       setSavingIntent(false)
     }
-  }, [compileResult?.success, currentProject, currentProjectId, message, sourceContent, updateCurrentProject])
+  }, [compileResult?.success, currentProject, currentProjectId, loadContext, message, sourceContent, updateCurrentProject])
 
   if (!currentProject) {
     return (
       <div className={styles.emptyState}>
-        <Empty description="请先进入项目，然后再执行模态编译" />
+        <Empty description="请先进入项目，然后再使用模态编译子系统" />
       </div>
     )
   }
@@ -183,22 +182,12 @@ const Compile: React.FC = () => {
     <div className={styles.page}>
       <div className={styles.pageHeader}>
         <div>
-          <Typography.Title level={2}>模态编译</Typography.Title>
+          <Typography.Title level={2}>模态编译子系统</Typography.Title>
           <Typography.Text type="secondary">
-            从当前项目中选择 DSL 源文件，查看 AST、全局 IR、设备级 IR 和编译日志。
+            从当前项目中选择 DSL 源文件；编译按拓扑中各节点的「数据面目标」生成对应类型的 P4（在开发页拓扑画布编辑设备时设置）。
           </Typography.Text>
         </div>
         <Space wrap>
-          <Select
-            style={{ width: 260 }}
-            placeholder="选择编译源文件"
-            value={sourceFileId ?? undefined}
-            options={files.map((file) => ({
-              value: file.id,
-              label: file.filePath,
-            }))}
-            onChange={setSourceFileId}
-          />
           <Select
             style={{ width: 220 }}
             placeholder="选择项目拓扑"
@@ -226,6 +215,27 @@ const Compile: React.FC = () => {
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={9}>
           <Card title="编译输入">
+            <div className={styles.sourceRow}>
+              <Typography.Text className={styles.sourceLabel}>项目源文件</Typography.Text>
+              <Select
+                showSearch
+                allowClear
+                className={styles.sourceSelect}
+                placeholder={files.length ? '选择项目中的 DSL 文件作为编译输入' : '项目中暂无文件，请先在开发页创建文件'}
+                disabled={files.length === 0}
+                value={sourceFileId ?? undefined}
+                options={files.map((file) => ({
+                  value: file.id,
+                  label: file.filePath,
+                }))}
+                optionFilterProp="label"
+                onChange={(value) => setSourceFileId(value ?? null)}
+                notFoundContent="无匹配文件"
+              />
+            </div>
+            <Typography.Paragraph type="secondary" className={styles.sourceHint}>
+              选择后从项目读取内容；也可在下方编辑器中直接修改再编译（不会自动写回文件，需至开发页保存）。
+            </Typography.Paragraph>
             <div className={styles.editorWrap}>
               <DSLEditor value={sourceContent} onChange={setSourceContent} height={460} />
             </div>
@@ -233,7 +243,12 @@ const Compile: React.FC = () => {
         </Col>
         <Col xs={24} xl={15}>
           <Card title="编译总览">
-            <CompilePreview result={compileResult} loading={compiling} onCompile={handleCompile} />
+            <CompilePreview
+              result={compileResult}
+              loading={compiling}
+              onCompile={handleCompile}
+              showCompileButton={false}
+            />
           </Card>
         </Col>
       </Row>
@@ -244,12 +259,12 @@ const Compile: React.FC = () => {
             items={[
               {
                 key: 'ast',
-                label: 'AST',
+                label: 'AST (Program)',
                 children: <pre className={styles.jsonBlock}>{JSON.stringify(compileResult.ast ?? {}, null, 2)}</pre>,
               },
               {
                 key: 'globalIr',
-                label: '全局 IR',
+                label: '全局 IR (ProgramIR / Fragment / NodePlan)',
                 children: (
                   <pre className={styles.jsonBlock}>{JSON.stringify(compileResult.globalIr ?? {}, null, 2)}</pre>
                 ),

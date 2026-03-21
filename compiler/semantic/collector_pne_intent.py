@@ -6,12 +6,14 @@ from dataclasses import dataclass, field
 
 from compiler.frontend.pne_ast import (
     AttrNode,
+    DeterminismDefNode,
     IntentProgramNode,
     LinkDefNode,
     NetworkDefNode,
     NodeDefNode,
     PolicyDefNode,
     RouteDefNode,
+    ScheduleDefNode,
 )
 from compiler.frontend.pne_ast import IntentOverlayNode, ProgramNode, TopLevelNode
 from compiler.ir import ApplicationIR, InstructionIR, ModuleIR, ProgramIR, ServiceIR
@@ -20,8 +22,10 @@ from compiler.semantic.collector_pne import ProgramCollector
 from compiler.semantic.protocol_adapters import (
     ensure_protocol_map,
     get_protocol_adapter,
+    normalize_protocol_name,
     validate_protocol_headers,
 )
+from compiler.semantic.topology_validate import validate_topology_references
 
 
 @dataclass(slots=True)
@@ -35,6 +39,35 @@ def _find_attr(attrs: list[AttrNode], key: str) -> AttrNode | None:
         if attr.key == key:
             return attr
     return None
+
+
+def _attr_string_value(attr: AttrNode | None) -> str | None:
+    if attr is None or attr.value is None:
+        return None
+    if hasattr(attr.value, "raw"):
+        return str(attr.value.raw)
+    if isinstance(attr.value, str):
+        return attr.value
+    return None
+
+
+def _resolve_route_protocol_name(route: RouteDefNode) -> str | None:
+    """`profile` overrides `protocol` when both are present."""
+    profile = _attr_string_value(_find_attr(route.attrs, "profile"))
+    proto = _attr_string_value(_find_attr(route.attrs, "protocol"))
+    raw = profile if profile is not None else proto
+    if raw is None:
+        return None
+    return normalize_protocol_name(raw)
+
+
+def _resolve_policy_protocol_name(policy: PolicyDefNode) -> str | None:
+    profile = _attr_string_value(_find_attr(policy.attrs, "profile"))
+    proto = _attr_string_value(_find_attr(policy.attrs, "protocol"))
+    raw = profile if profile is not None else proto
+    if raw is None:
+        return None
+    return normalize_protocol_name(raw)
 
 
 def _find_or_create_overlay_module(program: ProgramIR) -> ModuleIR:
@@ -92,6 +125,9 @@ class PNEIntentCollector:
         for overlay in overlays:
             self._lower_overlay(program, module, overlay, diagnostics)
 
+        if program.metadata.get("topology") is not None:
+            diagnostics.extend(validate_topology_references(program))
+
         return OverlaySemanticResult(program=program, diagnostics=diagnostics)
 
     def _lower_overlay(
@@ -106,6 +142,10 @@ class PNEIntentCollector:
                 self._lower_route(program, module, decl, diagnostics)
             elif isinstance(decl, PolicyDefNode):
                 self._lower_policy(module, decl)
+            elif isinstance(decl, DeterminismDefNode):
+                self._lower_determinism(module, decl)
+            elif isinstance(decl, ScheduleDefNode):
+                self._lower_schedule(module, decl)
             elif isinstance(decl, NetworkDefNode):
                 program.constants[f"intent.network.{decl.name}"] = "present"
             elif isinstance(decl, NodeDefNode):
@@ -120,18 +160,13 @@ class PNEIntentCollector:
         route: RouteDefNode,
         diagnostics: list[Diagnostic],
     ) -> None:
-        protocol_attr = _find_attr(route.attrs, "protocol")
-        protocol_name = None
-        if protocol_attr is not None and hasattr(protocol_attr.value, "raw"):
-            protocol_name = str(protocol_attr.value.raw)
-        elif protocol_attr is not None and isinstance(protocol_attr.value, str):
-            protocol_name = protocol_attr.value
+        protocol_name = _resolve_route_protocol_name(route)
 
         if not protocol_name:
             diagnostics.append(
                 Diagnostic(
                     code="INT202",
-                    message=f"Route '{route.name or '<anonymous>'}' is missing a protocol",
+                    message=f"Route '{route.name or '<anonymous>'}' is missing protocol or profile",
                     severity=DiagnosticSeverity.ERROR,
                     span=route.span,
                 )
@@ -140,13 +175,16 @@ class PNEIntentCollector:
 
         diagnostics.extend(validate_protocol_headers(protocol_name, program))
         adapter = get_protocol_adapter(protocol_name)
-        if adapter is None:
+
+        validation = adapter.validate_route(route, program)
+        diagnostics.extend(validation)
+        if any(d.severity == DiagnosticSeverity.ERROR for d in validation):
             return
 
-        route_map = ensure_protocol_map(module, protocol_name)
+        route_map = ensure_protocol_map(module, adapter)
         try:
             lowered = adapter.lower_route(route, module)
-        except ValueError as exc:
+        except (ValueError, RuntimeError) as exc:
             diagnostics.append(
                 Diagnostic(
                     code="INT203",
@@ -163,16 +201,48 @@ class PNEIntentCollector:
     def _lower_policy(self, module: ModuleIR, policy: PolicyDefNode) -> None:
         match_attr = _find_attr(policy.attrs, "match")
         action_attr = _find_attr(policy.attrs, "action")
+        protocol_name = _resolve_policy_protocol_name(policy)
+        data: dict = {
+            "name": policy.name,
+            "match": _serialize_intent_value(match_attr.value if match_attr else None),
+            "action": _serialize_intent_value(action_attr.value if action_attr else None),
+            "module": module.name,
+        }
+        if protocol_name is not None:
+            data["protocol"] = protocol_name
         module.body.append(
             InstructionIR(
                 kind="intent_policy",
+                data=data,
+                span=policy.span,
+            )
+        )
+
+    def _lower_determinism(self, module: ModuleIR, node: DeterminismDefNode) -> None:
+        payload = {attr.key: _serialize_intent_value(attr.value) for attr in node.attrs}
+        module.body.append(
+            InstructionIR(
+                kind="intent_determinism",
                 data={
-                    "name": policy.name,
-                    "match": _serialize_intent_value(match_attr.value if match_attr else None),
-                    "action": _serialize_intent_value(action_attr.value if action_attr else None),
+                    "name": node.name,
+                    "attrs": payload,
                     "module": module.name,
                 },
-                span=policy.span,
+                span=node.span,
+            )
+        )
+
+    def _lower_schedule(self, module: ModuleIR, node: ScheduleDefNode) -> None:
+        payload = {attr.key: _serialize_intent_value(attr.value) for attr in node.attrs}
+        module.body.append(
+            InstructionIR(
+                kind="intent_schedule",
+                data={
+                    "name": node.name,
+                    "attrs": payload,
+                    "module": module.name,
+                },
+                span=node.span,
             )
         )
 
@@ -194,4 +264,3 @@ def _serialize_intent_value(value: object) -> object:
 
 
 __all__ = ["OverlaySemanticResult", "PNEIntentCollector"]
-

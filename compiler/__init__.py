@@ -20,6 +20,8 @@ __all__ = [
     "ProgramIR",
     "compile_pne_to_program_ir",
     "compile_pne_text_to_program_ir",
+    "compile_pipeline",
+    "CompilePipelineResult",
 ]
 
 
@@ -89,4 +91,6 @@ def compile_pne_text_to_program_ir(
         raise ValueError(f"Semantic error: {first.message}{loc}")
     return semantic_result.program
 
+
+from compiler.pipeline import CompilePipelineResult, compile_pipeline  # noqa: E402
 

@@ -153,11 +153,11 @@ export function resolveDeviceImage(type: string): string {
 /** 力导向模拟配置 */
 export const FORCE_CONFIG = {
   /** 连线距离 */
-  linkDistance: 120,
+  linkDistance: 140,
   /** 节点间斥力强度 */
   chargeStrength: -120,
-  /** 碰撞半径 */
-  collisionRadius: 42,
+  /** 碰撞半径（与 NODE_CONFIG 卡片尺寸匹配） */
+  collisionRadius: 52,
   /** 中心引力强度 */
   centerStrength: 0.03,
   /** Alpha 衰减率 */
@@ -168,26 +168,26 @@ export const FORCE_CONFIG = {
 
 /** 节点视觉配置 */
 export const NODE_CONFIG = {
-  /** 节点半径 */
-  radius: 34,
+  /** 节点半径（逻辑/占位，与卡片视觉同量级） */
+  radius: 42,
   /** 节点卡片宽度 */
-  width: 104,
+  width: 124,
   /** 节点卡片高度 */
-  height: 72,
+  height: 86,
   /** 设备图示宽度 */
-  imageWidth: 72,
+  imageWidth: 88,
   /** 设备图示高度 */
-  imageHeight: 34,
+  imageHeight: 42,
   /** 选中时边框宽度 */
   selectedStrokeWidth: 3,
   /** 默认边框宽度 */
   strokeWidth: 2,
   /** 悬停边框宽度 */
   hoverStrokeWidth: 3,
-  /** 标签偏移 */
-  labelOffset: 52,
-  /** 字体大小 */
-  fontSize: 12,
+  /** 标签偏移（相对节点中心的 dy，与 fontSize 略同步增大） */
+  labelOffset: 60,
+  /** 字体大小（画布 zoom 后仍保持可读） */
+  fontSize: 16,
 }
 
 /** 连线视觉配置 */

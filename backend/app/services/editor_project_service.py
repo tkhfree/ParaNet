@@ -28,7 +28,7 @@ def _row_to_project(row) -> dict:
         "remark": row["remark"] or "",
         "topologyId": row["topology_id"],
         "currentFileId": row["current_file_id"],
-        "lastIntentId": row["last_intent_id"],
+        "lastCompileArtifactId": row["last_compile_artifact_id"],
         "createdAt": row["created_at"],
         "updatedAt": row["updated_at"],
     }
@@ -39,7 +39,7 @@ def list_projects() -> list[dict]:
     try:
         rows = conn.execute(
             """
-            SELECT id, name, remark, topology_id, current_file_id, last_intent_id, created_at, updated_at
+            SELECT id, name, remark, topology_id, current_file_id, last_compile_artifact_id, created_at, updated_at
             FROM project
             ORDER BY updated_at DESC, created_at DESC
             """
@@ -54,7 +54,7 @@ def get_project(project_id: str) -> dict | None:
     try:
         row = conn.execute(
             """
-            SELECT id, name, remark, topology_id, current_file_id, last_intent_id, created_at, updated_at
+            SELECT id, name, remark, topology_id, current_file_id, last_compile_artifact_id, created_at, updated_at
             FROM project
             WHERE id = ?
             """,
@@ -94,7 +94,7 @@ def create_project(name: str, remark: str | None = None) -> dict:
     try:
         conn.execute(
             """
-            INSERT INTO project(id, name, remark, topology_id, current_file_id, last_intent_id, created_at, updated_at)
+            INSERT INTO project(id, name, remark, topology_id, current_file_id, last_compile_artifact_id, created_at, updated_at)
             VALUES(?, ?, ?, NULL, NULL, NULL, ?, ?)
             """,
             (project_id, project_name, remark or "", now, now),
@@ -124,7 +124,7 @@ def update_project(project_id: str, **kwargs) -> dict | None:
         "remark": "remark",
         "topologyId": "topology_id",
         "currentFileId": "current_file_id",
-        "lastIntentId": "last_intent_id",
+        "lastCompileArtifactId": "last_compile_artifact_id",
     }
     assignments: list[str] = []
     values: list[object] = []

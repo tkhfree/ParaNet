@@ -1,10 +1,10 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import type { Deployment, DeploymentLog, DeploymentStatus } from '@/api/deploy'
+import type { Deployment, DeploymentLog, DeploymentStatus, SshConnectionStatus } from '@/api/deploy'
 import type { DeploymentPreviewConfig } from '@/model/deploy'
 
 export interface DeployState {
-  // 向导步骤 0: 选择意图与拓扑 1: 配置预览 2: 执行部署 3: 完成
+  // 向导步骤 0: 选择编译产物与拓扑 1: 配置预览 2: 执行部署 3: 完成
   wizardStep: number
   setWizardStep: (step: number) => void
   resetWizard: () => void
@@ -28,9 +28,11 @@ export interface DeployState {
   // 实时进度日志（WebSocket 推送 + 轮询补充）
   progressLogs: DeploymentLog[]
   progressPercent: number
+  sshConnections: SshConnectionStatus[]
   setProgressLogs: (logs: DeploymentLog[]) => void
   appendProgressLog: (log: DeploymentLog) => void
   setProgressPercent: (p: number) => void
+  setSshConnections: (rows: SshConnectionStatus[]) => void
   setDeploymentStatus: (status: DeploymentStatus) => void
   clearProgress: () => void
 
@@ -50,6 +52,7 @@ const initialWizard = {
   currentDeployment: null as Deployment | null,
   progressLogs: [] as DeploymentLog[],
   progressPercent: 0,
+  sshConnections: [] as SshConnectionStatus[],
   deploymentList: [] as Deployment[],
   listLoading: false,
 }
@@ -70,6 +73,7 @@ const useDeployStore = create<DeployState>()(
           currentDeployment: null,
           progressLogs: [],
           progressPercent: 0,
+          sshConnections: [],
         }),
 
       setSelectedIntentId: (selectedIntentId) => set({ selectedIntentId }),
@@ -84,6 +88,7 @@ const useDeployStore = create<DeployState>()(
       appendProgressLog: (log) =>
         set((s) => ({ progressLogs: [...s.progressLogs, log] })),
       setProgressPercent: (progressPercent) => set({ progressPercent }),
+      setSshConnections: (sshConnections) => set({ sshConnections }),
       setDeploymentStatus: (status) =>
         set((s) =>
           s.currentDeployment
@@ -91,7 +96,7 @@ const useDeployStore = create<DeployState>()(
             : {}
         ),
       clearProgress: () =>
-        set({ progressLogs: [], progressPercent: 0 }),
+        set({ progressLogs: [], progressPercent: 0, sshConnections: [] }),
 
       setDeploymentList: (deploymentList) => set({ deploymentList }),
       setListLoading: (listLoading) => set({ listLoading }),

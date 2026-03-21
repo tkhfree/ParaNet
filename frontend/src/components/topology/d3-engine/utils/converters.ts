@@ -34,13 +34,22 @@ export function topologyNodeToD3(node: TopologyNode, index: number): D3Node {
     y = radius * Math.sin(angle)
   }
 
+  const p = node.properties || {}
+  const caps = node.capabilities
+  const dataPlane =
+    (typeof p.dataPlaneTarget === 'string' && p.dataPlaneTarget) ||
+    (caps && typeof caps.dataPlaneTarget === 'string' ? caps.dataPlaneTarget : undefined)
+
   return {
     id: node.id,
     name: node.name,
     type: node.type,
     x,
     y,
-    properties: node.properties || {},
+    properties: {
+      ...p,
+      ...(dataPlane ? { dataPlaneTarget: dataPlane } : {}),
+    },
     config: node.config,
   }
 }
@@ -61,12 +70,24 @@ export function topologyLinkToD3(link: TopologyLink): D3Link {
 
 /** D3Node -> API TopologyNode */
 export function d3NodeToTopologyNode(node: D3Node): TopologyNode {
+  const p = node.properties || {}
+  const raw = typeof p.dataPlaneTarget === 'string' ? p.dataPlaneTarget.trim() : ''
+  const baseCaps: Record<string, unknown> =
+    typeof p.capabilities === 'object' && p.capabilities !== null
+      ? { ...(p.capabilities as Record<string, unknown>) }
+      : {}
+  if (raw !== '') {
+    baseCaps.dataPlaneTarget = raw
+  }
+  const capabilities = Object.keys(baseCaps).length > 0 ? baseCaps : undefined
+
   return {
     id: node.id,
     name: node.name,
     type: node.type,
     position: { x: node.x, y: node.y },
-    properties: node.properties || {},
+    properties: p,
+    ...(capabilities && Object.keys(capabilities).length > 0 ? { capabilities } : {}),
     config: node.config,
   }
 }

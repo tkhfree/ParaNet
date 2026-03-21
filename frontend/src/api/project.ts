@@ -7,7 +7,8 @@ export interface ProjectRecord {
   remark?: string
   topologyId?: string | null
   currentFileId?: string | null
-  lastIntentId?: string | null
+  /** 最近保存的可部署编译产物记录 id */
+  lastCompileArtifactId?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -21,7 +22,20 @@ export interface ProjectUpdatePayload extends Partial<ProjectPayload> {
   id: string
   topologyId?: string | null
   currentFileId?: string | null
-  lastIntentId?: string | null
+  lastCompileArtifactId?: string | null
+}
+
+/** POST /project/checkProjectResources 返回 */
+export interface ProjectResourceCheckPayload {
+  projectId: string
+  topologyId?: string | null
+  compileArtifactId?: string | null
+}
+
+export interface ProjectResourceCheckData {
+  ok: boolean
+  error?: string
+  checks?: Record<string, unknown>
 }
 
 export const projectApi = {
@@ -36,5 +50,11 @@ export const projectApi = {
   delete: (id: string) => axios.get<void, ApiResponse<void>>(`/project/deleteProject/${id}`),
   checkNameExists: (params: { name: string; excludeId?: string }) => {
     return axios.get<typeof params, ApiResponse<boolean>>('/project/checkProjectNameExists', { params })
+  },
+  checkProjectResources: (data: ProjectResourceCheckPayload) => {
+    return axios.post<ProjectResourceCheckPayload, ApiResponse<ProjectResourceCheckData>>(
+      '/project/checkProjectResources',
+      data
+    )
   },
 }

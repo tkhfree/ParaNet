@@ -274,13 +274,42 @@
 
 .stageHeader {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   margin-bottom: 16px;
+  min-width: 0;
 
   :global(.ant-typography) {
     margin-bottom: 0;
+  }
+}
+
+.stageTitleBlock {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.stageTitle {
+  margin-bottom: 2px !important;
+  line-height: 1.25 !important;
+  font-weight: 600 !important;
+}
+
+.stageMeta {
+  display: block;
+  margin-top: 2px !important;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.stageActions {
+  width: 100%;
+
+  :global(.ant-btn-sm) {
+    font-size: 12px;
+    padding-inline: 9px;
+    height: 28px;
   }
 }
 
@@ -289,15 +318,17 @@
 }
 
 .stageHeaderCompact :global(.ant-space) {
-  gap: 8px !important;
+  gap: 6px !important;
 }
 
-.stageHeaderCompact :global(.ant-btn) {
-  padding-inline: 10px;
+.stageHeaderCompact :global(.ant-btn-sm) {
+  padding-inline: 8px;
+  height: 26px;
+  font-size: 12px;
 }
 
-.stageHeaderCompact :global(.ant-typography h4) {
-  font-size: 20px;
+.stageHeaderCompact .stageTitle {
+  font-size: 18px !important;
 }
 
 .stageSurface {
@@ -311,6 +342,7 @@
 .stageLegend {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 14px;
   padding: 4px 0;
 }
@@ -327,6 +359,7 @@
   width: 10px;
   height: 10px;
   border-radius: 999px;
+  flex-shrink: 0;
   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.9);
 }
 
@@ -1002,11 +1035,6 @@
 
   .overviewMetaGrid {
     grid-template-columns: 1fr;
-  }
-
-  .stageHeader {
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   .sidebarLegendGrid {

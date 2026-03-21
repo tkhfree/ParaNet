@@ -1,65 +1,75 @@
 import axios from './axios'
 import type { ApiResponse, PaginatedResponse, PaginationParams } from './axios'
-import type { 
-  Intent, 
+import type {
+  Intent,
   IntentCreateRequest,
   IntentCompileRequest,
   IntentCompileResponse,
   CompilePreviewRequest,
   NaturalLanguageRequest,
   NaturalLanguageResponse,
+  SaveDeployArtifactsRequest,
 } from '@/model/intent'
 
+const ARTIFACTS = '/compile-artifacts'
+
 export const intentApi = {
-  // 获取意图列表
+  /** 编译产物记录列表（后端资源路径 /compile-artifacts，与历史 /intents 等价） */
   getList: (params?: PaginationParams & { status?: string; projectId?: string }) => {
-    return axios.get<typeof params, ApiResponse<PaginatedResponse<Intent>>>(
-      '/intents',
-      { params }
-    )
+    return axios.get<typeof params, ApiResponse<PaginatedResponse<Intent>>>(ARTIFACTS, { params })
   },
 
-  // 获取意图详情
   getById: (id: string) => {
-    return axios.get<void, ApiResponse<Intent>>(`/intents/${id}`)
+    return axios.get<void, ApiResponse<Intent>>(`${ARTIFACTS}/${id}`)
   },
 
-  // 创建意图
   create: (data: IntentCreateRequest) => {
-    return axios.post<IntentCreateRequest, ApiResponse<Intent>>('/intents', data)
+    return axios.post<IntentCreateRequest, ApiResponse<Intent>>(ARTIFACTS, data)
   },
 
-  // 更新意图
   update: (id: string, data: Partial<IntentCreateRequest>) => {
-    return axios.put<typeof data, ApiResponse<Intent>>(`/intents/${id}`, data)
+    return axios.put<typeof data, ApiResponse<Intent>>(`${ARTIFACTS}/${id}`, data)
   },
 
-  // 删除意图
   delete: (id: string) => {
-    return axios.delete<void, ApiResponse<void>>(`/intents/${id}`)
+    return axios.delete<void, ApiResponse<void>>(`${ARTIFACTS}/${id}`)
   },
 
-  // 编译意图
   compile: (data: IntentCompileRequest) => {
     return axios.post<IntentCompileRequest, ApiResponse<IntentCompileResponse>>(
-      '/intents/compile',
+      `${ARTIFACTS}/compile`,
       data
     )
   },
 
-  // 编译预览（直接编译 DSL 内容，无需保存意图）
+  /** 编译并写入项目 output/（P4、entries、manifest） */
+  saveDeployArtifacts: (data: SaveDeployArtifactsRequest) => {
+    return axios.post<
+      SaveDeployArtifactsRequest,
+      ApiResponse<{
+        success: boolean
+        intentId?: string
+        compileArtifactId?: string
+        written?: string[]
+        outputFolder?: string
+        errors?: string[]
+        warnings?: string[]
+        compile?: IntentCompileResponse
+      }>
+    >(`${ARTIFACTS}/save-deploy-artifacts`, data)
+  },
+
   compilePreview: (data: CompilePreviewRequest, signal?: AbortSignal) => {
     return axios.post<CompilePreviewRequest, ApiResponse<IntentCompileResponse>>(
-      '/intents/compile-preview',
+      `${ARTIFACTS}/compile-preview`,
       data,
       { signal }
     )
   },
 
-  // 自然语言转 DSL
   translateNaturalLanguage: (data: NaturalLanguageRequest) => {
     return axios.post<NaturalLanguageRequest, ApiResponse<NaturalLanguageResponse>>(
-      '/intents/translate',
+      `${ARTIFACTS}/translate`,
       data
     )
   },

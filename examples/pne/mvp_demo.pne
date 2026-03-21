@@ -1,0 +1,20 @@
+// MVP demo: compile with topology JSON (see mvp_topology.json)
+//   python -m compiler pipeline examples/pne/mvp_demo.pne --topology examples/pne/mvp_topology.json -o ./out
+
+module Forwarder() {
+  parser {
+    ipv4;
+  }
+  control {
+    ;
+  }
+}
+
+intent {
+  route R1 {
+    from: prefix({ kind: "cidr", value: "10.0.0.0/8" })
+    to: edge-1
+    via: core-1, edge-1
+    protocol: ip
+  }
+}

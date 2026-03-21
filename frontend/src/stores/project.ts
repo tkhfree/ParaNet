@@ -128,7 +128,8 @@ const useProjectStore = create<ProjectStore>()(
         remark: payload.remark ?? currentProject.remark,
         topologyId: payload.topologyId ?? currentProject.topologyId ?? null,
         currentFileId: payload.currentFileId ?? currentProject.currentFileId ?? null,
-        lastIntentId: payload.lastIntentId ?? currentProject.lastIntentId ?? null,
+        lastCompileArtifactId:
+          payload.lastCompileArtifactId ?? currentProject.lastCompileArtifactId ?? null,
       })
       const updatedProject = res.data
       set((state) => ({

@@ -114,6 +114,9 @@ intent_statement: intent_network_def
                 | intent_node_def
                 | intent_link_def
                 | intent_route_def
+                | intent_reachability_def
+                | intent_determinism_def
+                | intent_schedule_def
                 | intent_policy_def
                 | intent_import_stmt
 
@@ -135,16 +138,34 @@ intent_link_attr: INTENT_IDENTIFIER ":" intent_value
 intent_endpoint_pair: INTENT_IDENTIFIER "," INTENT_IDENTIFIER
 
 intent_route_def: "route" INTENT_IDENTIFIER? "{" intent_route_body "}"
-intent_route_body: intent_route_attr*
+intent_reachability_def: "reachability" INTENT_IDENTIFIER? "{" intent_route_body "}"
+intent_route_body: intent_route_item*
+intent_route_item: intent_route_attr
+                 | intent_constraints_block
+intent_constraints_block: "constraints" "{" intent_constraints_body "}"
+intent_constraints_body: intent_constraints_attr*
+intent_constraints_attr: INTENT_IDENTIFIER ":" intent_value
 intent_route_attr: INTENT_IDENTIFIER ":" intent_value
                  | intent_from_attr
                  | intent_to_attr
                  | intent_via_attr
                  | intent_protocol_attr
+                 | intent_profile_attr
+                 | intent_path_attr
 intent_from_attr: "from" ":" intent_endpoint_spec
 intent_to_attr: "to" ":" intent_endpoint_spec
 intent_via_attr: "via" ":" intent_via_spec
 intent_protocol_attr: "protocol" ":" intent_protocol_spec
+intent_profile_attr: "profile" ":" intent_protocol_spec
+intent_path_attr: "path" ":" intent_list_value
+
+intent_determinism_def: "determinism" INTENT_IDENTIFIER? "{" intent_determ_body "}"
+intent_determ_body: intent_determ_attr*
+intent_determ_attr: INTENT_IDENTIFIER ":" intent_value
+
+intent_schedule_def: "schedule" INTENT_IDENTIFIER? "{" intent_schedule_body "}"
+intent_schedule_body: intent_schedule_attr*
+intent_schedule_attr: INTENT_IDENTIFIER ":" intent_value
 
 intent_endpoint_spec: INTENT_IDENTIFIER
                     | intent_prefix_spec

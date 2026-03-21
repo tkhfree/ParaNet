@@ -1,14 +1,30 @@
 import axios from './axios'
 import type { ApiResponse, PaginatedResponse, PaginationParams } from './axios'
 
+export type SshConnectionStatusValue = 'pending' | 'connected' | 'failed' | 'skipped'
+
+/** 部署时与各拓扑节点的 SSH 探测结果 */
+export interface SshConnectionStatus {
+  nodeId: string
+  name: string
+  host: string
+  port: number
+  status: SshConnectionStatusValue
+  message?: string
+}
+
 export interface Deployment {
   id: string
   intentId: string
+  /** 与 intentId 同值；部署输入的编译产物记录 id */
+  compileArtifactId?: string
   topologyId: string
   projectId?: string | null
   status: DeploymentStatus
   progress: number
   logs: DeploymentLog[]
+  /** 按拓扑节点顺序的 SSH 连接状态（与模态开发中设备 SSH 配置对应） */
+  sshConnections?: SshConnectionStatus[]
   previewConfig?: import('@/model/deploy').DeploymentPreviewConfig
   createdAt: string
   completedAt?: string
@@ -31,7 +47,8 @@ export interface DeploymentLog {
 }
 
 export interface DeployRequest {
-  intentId: string
+  /** 与 intentId 二选一，优先本字段 */
+  compileArtifactId: string
   topologyId: string
   projectId?: string | null
   dryRun?: boolean

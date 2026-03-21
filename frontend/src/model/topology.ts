@@ -20,6 +20,13 @@ export interface TopologyNode {
   type: NodeType
   position: { x: number; y: number }
   properties: Record<string, unknown>
+  /** 与编译器 topology 契约一致：dataPlaneTarget 决定该节点生成的 P4 后端 */
+  capabilities?: {
+    parserRoots?: string[]
+    profiles?: string[]
+    dataPlaneTarget?: 'bmv2' | 'tofino' | 'stub' | string
+    [key: string]: unknown
+  }
   config?: NodeConfig
 }
 
@@ -29,6 +36,13 @@ export interface NodeConfig {
   ip?: string
   port?: number
   protocol?: string
+  /** SSH 管理地址（主机名或 IP） */
+  sshHost?: string
+  /** SSH 端口，默认 22 */
+  sshPort?: number
+  sshUsername?: string
+  /** 敏感信息，仅用于与真实设备建立 SSH 会话 */
+  sshPassword?: string
   [key: string]: unknown
 }
 
@@ -123,12 +137,20 @@ export interface ITopology {
 export interface IDevice {
   deviceName: string
   deviceClass: string
+  /** 数据面编译目标：与拓扑 capabilities.dataPlaneTarget 一致，驱动各设备 P4 形态 */
+  dataPlaneTarget?: 'bmv2' | 'tofino' | 'stub' | string
   deviceForm: string
   portForm: string
   capacity: string
   rate: string
   system: string
   ssd: string
+  /** SSH 主机（域名或 IP），与真实设备管理地址对应 */
+  sshHost: string
+  /** 表单中为字符串，写入节点时转为数字 */
+  sshPort: string
+  sshUsername: string
+  sshPassword: string
 }
 
 /** 拓扑引擎设备图元（侧边栏/设备库） */

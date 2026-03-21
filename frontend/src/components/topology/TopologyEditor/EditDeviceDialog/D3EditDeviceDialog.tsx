@@ -3,12 +3,18 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react'
-import { App, Button, Form, Input, Modal } from 'antd'
-import type { IDevice } from '@/model/topology'
+import { App, Button, Divider, Form, Input, Modal, Select } from 'antd'
+import type { IDevice, NodeConfig } from '@/model/topology'
 import type { D3Editor, D3Node } from '../../d3-engine'
 
 interface IProps {
   editor: D3Editor
+}
+
+function parseSshPortString(raw: string | undefined): number {
+  const n = parseInt(String(raw ?? '').trim(), 10)
+  if (Number.isNaN(n) || n < 1 || n > 65535) return 22
+  return n
 }
 
 export const D3EditDeviceDialog: React.FC<IProps> = ({ editor }) => {
@@ -21,16 +27,22 @@ export const D3EditDeviceDialog: React.FC<IProps> = ({ editor }) => {
     const onNodeContextMenu = (event: { node: D3Node; x: number; y: number }) => {
       const node = event.node
       oldNodeId.current = node.id
+      const cfg = (node.config ?? {}) as NodeConfig
 
       form.setFieldsValue({
         deviceName: node.name,
         deviceClass: node.type,
+        dataPlaneTarget: (node.properties?.dataPlaneTarget as string) || 'bmv2',
         deviceForm: (node.properties?.deviceForm as string) || '',
         portForm: (node.properties?.portForm as string) || '',
         capacity: (node.properties?.capacity as string) || '',
         rate: (node.properties?.rate as string) || '',
         system: (node.properties?.system as string) || '',
         ssd: (node.properties?.ssd as string) || '',
+        sshHost: cfg.sshHost ?? '',
+        sshPort: cfg.sshPort != null ? String(cfg.sshPort) : '22',
+        sshUsername: cfg.sshUsername ?? '',
+        sshPassword: '',
       })
       setVisible(true)
     }
@@ -62,13 +74,32 @@ export const D3EditDeviceDialog: React.FC<IProps> = ({ editor }) => {
   }
 
   const onFinish = (values: IDevice) => {
-    const { deviceName, deviceForm, portForm, capacity, rate, system, ssd } = values
+    const { deviceName, deviceForm, portForm, capacity, rate, system, ssd, dataPlaneTarget } = values
 
-    // 检查名称是否重复
     const existingNode = editor.getNodeByName(deviceName)
     if (existingNode && existingNode.id !== oldNodeId.current) {
       form.setFields([{ name: 'deviceName', errors: ['设备名称重复'] }])
       return
+    }
+
+    const node = editor.getNodeById(oldNodeId.current)
+    if (!node) {
+      message.error('节点已不存在')
+      return
+    }
+    const prevCfg = (node.config ?? {}) as NodeConfig
+
+    const nextConfig: NodeConfig = {
+      ...prevCfg,
+      protocol: 'ssh',
+      sshHost: values.sshHost.trim(),
+      sshPort: parseSshPortString(values.sshPort),
+      sshUsername: values.sshUsername.trim(),
+    }
+    if (values.sshPassword?.trim()) {
+      nextConfig.sshPassword = values.sshPassword.trim()
+    } else if (prevCfg.sshPassword) {
+      nextConfig.sshPassword = prevCfg.sshPassword
     }
 
     editor.updateDevice(oldNodeId.current, {
@@ -80,7 +111,9 @@ export const D3EditDeviceDialog: React.FC<IProps> = ({ editor }) => {
         rate,
         system,
         ssd,
+        dataPlaneTarget: dataPlaneTarget ?? 'bmv2',
       },
+      config: nextConfig,
     })
 
     message.success('设备信息已更新')
@@ -93,6 +126,7 @@ export const D3EditDeviceDialog: React.FC<IProps> = ({ editor }) => {
       open={visible}
       onOk={onOk}
       onCancel={onCancel}
+      width={640}
       footer={[
         <Button key="delete" danger onClick={handleDelete}>
           删除设备
@@ -105,7 +139,7 @@ export const D3EditDeviceDialog: React.FC<IProps> = ({ editor }) => {
         </Button>,
       ]}
     >
-      <Form labelCol={{ span: 4 }} wrapperCol={{ span: 20 }} form={form} onFinish={onFinish}>
+      <Form labelCol={{ span: 5 }} wrapperCol={{ span: 19 }} form={form} onFinish={onFinish}>
         <Form.Item
           name="deviceName"
           label="设备名称"
@@ -115,6 +149,19 @@ export const D3EditDeviceDialog: React.FC<IProps> = ({ editor }) => {
         </Form.Item>
         <Form.Item name="deviceClass" label="设备型号" rules={[{ required: true }]}>
           <Input readOnly />
+        </Form.Item>
+        <Form.Item
+          name="dataPlaneTarget"
+          label="数据面目标"
+          extra="编译时为本节点生成对应形态的 P4"
+        >
+          <Select
+            options={[
+              { value: 'bmv2', label: 'BMv2 (v1model)' },
+              { value: 'tofino', label: 'Tofino (TNA)' },
+              { value: 'stub', label: '占位 stub' },
+            ]}
+          />
         </Form.Item>
         <Form.Item name="deviceForm" label="设备形态">
           <Input />
@@ -133,6 +180,50 @@ export const D3EditDeviceDialog: React.FC<IProps> = ({ editor }) => {
         </Form.Item>
         <Form.Item name="ssd" label="SSD">
           <Input />
+        </Form.Item>
+
+        <Divider orientation="left" plain>
+          SSH 连接（与真实设备管理地址对应）
+        </Divider>
+
+        <Form.Item
+          name="sshHost"
+          label="SSH 主机"
+          rules={[{ required: true, message: '请输入设备 IP 或主机名' }]}
+        >
+          <Input autoComplete="off" />
+        </Form.Item>
+        <Form.Item
+          name="sshPort"
+          label="SSH 端口"
+          rules={[
+            {
+              validator: async (_, v) => {
+                const s = String(v ?? '').trim()
+                if (!s) return
+                const n = parseInt(s, 10)
+                if (Number.isNaN(n) || n < 1 || n > 65535) {
+                  throw new Error('端口范围为 1–65535')
+                }
+              },
+            },
+          ]}
+        >
+          <Input autoComplete="off" />
+        </Form.Item>
+        <Form.Item
+          name="sshUsername"
+          label="SSH 用户名"
+          rules={[{ required: true, message: '请输入 SSH 登录用户名' }]}
+        >
+          <Input autoComplete="off" />
+        </Form.Item>
+        <Form.Item
+          name="sshPassword"
+          label="SSH 密码"
+          extra="留空则不修改已保存的密码"
+        >
+          <Input.Password autoComplete="new-password" />
         </Form.Item>
       </Form>
     </Modal>

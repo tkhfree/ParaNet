@@ -13,7 +13,7 @@ import { D3EditDeviceDialog } from './EditDeviceDialog/D3EditDeviceDialog'
 import styles from './index.module.less'
 import { topologyApi } from '@/api/topology'
 import topologyStore from '@/stores/topology'
-import type { IDevice } from '@/model/topology'
+import type { DeviceLegend, IDevice } from '@/model/topology'
 
 const SAVE_DEBOUNCE_MS = 300
 
@@ -38,6 +38,8 @@ interface IProps {
   className?: string
   onGraphStatsChange?: (stats: D3TopologyEditorStats) => void
   onSelectionChange?: (node: D3Node | null) => void
+  /** 传入时用于画布内设备类型图例（与节点配色一致） */
+  deviceLegends?: DeviceLegend[]
 }
 
 function buildGraphStats(editor: D3Editor, title: string): D3TopologyEditorStats {
@@ -60,6 +62,7 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
   className,
   onGraphStatsChange,
   onSelectionChange,
+  deviceLegends,
 }, ref) => {
   const { message } = App.useApp()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -73,6 +76,8 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
   const [pendingDeviceType, setPendingDeviceType] = useState('')
   const [loadingTopology, setLoadingTopology] = useState(false)
   const [topologyLoadFailed, setTopologyLoadFailed] = useState(false)
+  /** 开发页保存 topology JSON 回写 DB 后，通过事件触发画布重新拉取 */
+  const [topologyReloadTick, setTopologyReloadTick] = useState(0)
 
   const openCreateDialog = useCallback((deviceType: string) => {
     setPendingDeviceType(deviceType)
@@ -116,6 +121,18 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
   }, [])
 
   useEffect(() => {
+    const onExternal = (ev: Event) => {
+      const ce = ev as CustomEvent<{ topologyId?: string }>
+      if (!ce.detail?.topologyId || ce.detail.topologyId !== topologyId) {
+        return
+      }
+      setTopologyReloadTick((n) => n + 1)
+    }
+    window.addEventListener('paranet-topology-updated', onExternal)
+    return () => window.removeEventListener('paranet-topology-updated', onExternal)
+  }, [topologyId])
+
+  useEffect(() => {
     if (editor && topologyId) {
       setLoadingTopology(true)
       setTopologyLoadFailed(false)
@@ -140,7 +157,15 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
     } else {
       setTopologyLoadFailed(false)
     }
-  }, [editor, message, onGraphStatsChange, onSelectionChange, title, topologyId])
+  }, [
+    editor,
+    message,
+    onGraphStatsChange,
+    onSelectionChange,
+    title,
+    topologyId,
+    topologyReloadTick,
+  ])
 
   useEffect(() => {
     if (!editor) return
@@ -255,6 +280,10 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
           rate: '',
           system: '',
           ssd: '',
+          sshHost: '',
+          sshPort: '22',
+          sshUsername: '',
+          sshPassword: '',
         },
         { x, y }
       )
@@ -284,6 +313,7 @@ export const D3TopologyEditor = forwardRef<D3TopologyEditorHandle, IProps>(({
               onGraphChange={handleGraphChange}
               onDeviceDrop={handleDeviceDrop}
               selectedNodeId={editor.selectedNodeId}
+              deviceLegends={deviceLegends}
             />
             {loadingTopology && (
               <div

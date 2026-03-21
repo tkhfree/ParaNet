@@ -286,6 +286,32 @@ def update_file_content(file_id: str, content: str) -> dict:
     if record["isFolder"]:
         raise ValueError("目录不能保存内容")
 
+    # 延迟导入，避免与 topology_service 的循环依赖
+    from app.services import topology_service
+
+    sync_info = topology_service.sync_topology_from_editor_json(
+        str(record["projectId"]), record["fileName"], content
+    )
+
+    if sync_info is not None and sync_info.get("synced"):
+        target_id = sync_info.get("fileId") or file_id
+        now = _now()
+        conn = get_connection()
+        try:
+            conn.execute(
+                "UPDATE editor_file SET updated_at = ? WHERE id = ?",
+                (now, target_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        editor_project_service.update_project(record["projectId"], currentFileId=target_id)
+        result = _load_file(target_id)
+        if not result:
+            raise ValueError("文件不存在")
+        return {**result, "topologySync": sync_info}
+
     path = _absolute_path(record["projectId"], record["filePath"])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content or "", encoding="utf-8")
@@ -302,7 +328,10 @@ def update_file_content(file_id: str, content: str) -> dict:
         conn.close()
 
     editor_project_service.update_project(record["projectId"], currentFileId=file_id)
-    return _load_file(file_id)  # type: ignore[return-value]
+    result = _load_file(file_id)  # type: ignore[return-value]
+    if sync_info is not None:
+        return {**result, "topologySync": sync_info}
+    return result
 
 
 def _load_descendants(project_id: str, file_path: str) -> list[dict]:
@@ -418,6 +447,49 @@ def move_file(file_id: str, parent_id: str | None) -> dict:
         conn.close()
 
     return _load_file(file_id)  # type: ignore[return-value]
+
+
+def replace_compile_output_tree(project_id: str, files: dict[str, str]) -> list[str]:
+    """
+    Remove existing ``output/`` subtree (if any) and write UTF-8 text files under the project.
+
+    ``files`` keys are project-relative POSIX paths (e.g. ``output/core-1/program.p4``).
+    Inserts DB rows and runs ``_rebuild_parent_links``. Does not change ``project.currentFileId``.
+    """
+    if not editor_project_service.get_project(project_id):
+        raise ValueError("项目不存在")
+
+    existing = _get_file_by_path(project_id, "output")
+    if existing:
+        delete_file(str(existing["id"]))
+
+    project_root = _get_project_root(project_id)
+    project_root.mkdir(parents=True, exist_ok=True)
+
+    all_dirs: set[str] = set()
+    normalized: dict[str, str] = {}
+    for rel, content in files.items():
+        rel_posix = rel.replace("\\", "/").strip("/")
+        normalized[rel_posix] = content
+        parts = Path(rel_posix).parts
+        for i in range(1, len(parts)):
+            all_dirs.add(str(Path(*parts[:i]).as_posix()))
+
+    for d in sorted(all_dirs, key=lambda x: (x.count("/"), x)):
+        abs_d = _absolute_path(project_id, d)
+        abs_d.mkdir(parents=True, exist_ok=True)
+        _insert_imported_file(project_id, d, None, True, 1)
+
+    written: list[str] = []
+    for rel_posix, content in sorted(normalized.items(), key=lambda kv: (kv[0].count("/"), kv[0])):
+        abs_f = _absolute_path(project_id, rel_posix)
+        abs_f.parent.mkdir(parents=True, exist_ok=True)
+        abs_f.write_text(content or "", encoding="utf-8")
+        _insert_imported_file(project_id, rel_posix, None, False, _guess_file_type(Path(rel_posix).name))
+        written.append(rel_posix)
+
+    _rebuild_parent_links(project_id)
+    return written
 
 
 def delete_file(file_id: str) -> None:

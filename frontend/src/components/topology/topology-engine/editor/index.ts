@@ -126,7 +126,16 @@ export class Editor {
   }
 
   createDevice(device: IDevice): ITopologyDevice {
-    const { deviceClass, deviceName, deviceForm, portForm, capacity, rate, system, ssd } = device
+    const {
+      deviceClass,
+      deviceName,
+      deviceForm,
+      portForm,
+      capacity,
+      rate,
+      system,
+      ssd,
+    } = device
     return {
       设备名称: deviceName,
       设备型号: deviceClass,

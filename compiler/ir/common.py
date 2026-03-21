@@ -48,6 +48,8 @@ class Diagnostic:
     severity: DiagnosticSeverity = DiagnosticSeverity.ERROR
     span: SourceSpan | None = None
     notes: list[str] | None = None
+    #: 与编译管线 pass 对齐：`parse` | `semantic` | `lowering` | `placement` | `emit`（后三者暂无诊断时预留）
+    phase: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return _serialize(self)

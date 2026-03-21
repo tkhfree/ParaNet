@@ -1,6 +1,15 @@
 import axios from './axios'
 import type { ApiResponse } from './axios'
 
+/** 保存 topology-*.json 时后端将 JSON 回写 topology 表后的同步结果 */
+export interface TopologySyncInfo {
+  synced: boolean
+  topologyId?: string
+  materializedFileName?: string
+  fileId?: string | null
+  error?: string
+}
+
 export interface ProjectFileNode {
   id: string
   projectId: string
@@ -10,6 +19,7 @@ export interface ProjectFileNode {
   fileType: number
   filePath: string
   children?: ProjectFileNode[]
+  topologySync?: TopologySyncInfo
 }
 
 export interface CreateFilePayload {

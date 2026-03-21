@@ -63,9 +63,9 @@ const Monitor: React.FC = () => {
     () => [
       { label: '当前项目', value: currentProject?.name ?? '未选择项目' },
       { label: '关联拓扑', value: topologyId ?? '未绑定' },
-      { label: '最近意图', value: currentProject?.lastIntentId ?? '未生成' },
+      { label: '最近编译产物', value: currentProject?.lastCompileArtifactId ?? '未生成' },
     ],
-    [currentProject?.lastIntentId, currentProject?.name, topologyId]
+    [currentProject?.lastCompileArtifactId, currentProject?.name, topologyId]
   )
 
   const tabItems = [

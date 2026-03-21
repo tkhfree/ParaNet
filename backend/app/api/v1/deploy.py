@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 
 from app.core.responses import ok
 from app.services import deploy_service
 
 router = APIRouter(prefix="/deployments", tags=["deploy"])
+
+
+def _body_compile_artifact_id(body: dict) -> str:
+    return str(body.get("compileArtifactId") or body.get("intentId") or "").strip()
 
 
 @router.get("")
@@ -23,12 +27,23 @@ def get_deployment(id: str):
 
 
 @router.post("")
-def create_deployment(body: dict):
-    intent_id = body.get("intentId", "")
+async def create_deployment(body: dict, background_tasks: BackgroundTasks):
+    intent_id = _body_compile_artifact_id(body)
     topology_id = body.get("topologyId", "")
     project_id = body.get("projectId")
     dry_run = body.get("dryRun", False)
-    dep = deploy_service.execute_deployment(intent_id, topology_id, project_id=project_id, dry_run=dry_run)
+    deploy_id = deploy_service.prepare_deployment(
+        intent_id, topology_id, project_id=project_id, dry_run=dry_run
+    )
+    background_tasks.add_task(
+        deploy_service.run_deployment_job,
+        deploy_id,
+        intent_id,
+        topology_id,
+        project_id,
+        dry_run,
+    )
+    dep = deploy_service.get_deployment(deploy_id)
     return ok(dep)
 
 
@@ -54,7 +69,7 @@ def cancel(id: str):
 
 @router.post("/validate")
 def validate(body: dict):
-    intent_id = body.get("intentId", "")
+    intent_id = _body_compile_artifact_id(body)
     topology_id = body.get("topologyId", "")
     project_id = body.get("projectId")
     result = deploy_service.validate(intent_id, topology_id, project_id)
@@ -63,7 +78,7 @@ def validate(body: dict):
 
 @router.post("/preview")
 def preview(body: dict):
-    intent_id = body.get("intentId", "")
+    intent_id = _body_compile_artifact_id(body)
     topology_id = body.get("topologyId", "")
     project_id = body.get("projectId")
     result = deploy_service.preview(intent_id, topology_id, project_id)

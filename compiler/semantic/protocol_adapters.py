@@ -9,6 +9,7 @@ from typing import Any
 from compiler.frontend.pne_ast import (
     AttrNode,
     EndpointSpecNode,
+    ListValueNode,
     ObjectValueNode,
     PolicyDefNode,
     RouteDefNode,
@@ -40,6 +41,8 @@ def _intent_value_to_python(value: Any) -> Any:
         return {pair.key: _intent_value_to_python(pair.value) for pair in value.pairs}
     if isinstance(value, ViaSpecNode):
         return list(value.nodes)
+    if isinstance(value, ListValueNode):
+        return [_intent_value_to_python(item) for item in value.items]
     if hasattr(value, "pairs"):
         return {pair.key: _intent_value_to_python(pair.value) for pair in value.pairs}
     if hasattr(value, "items"):
@@ -90,10 +93,27 @@ class LoweredRoute:
     instructions: list[InstructionIR]
 
 
+@dataclass(slots=True)
+class ProfileSpec:
+    """Static metadata for a protocol/profile (for docs and tooling)."""
+
+    name: str
+    extends: str | None = None
+    description: str = ""
+
+
 class ProtocolAdapter(ABC):
     """Lower protocol-specific intent constructs into ProgramIR artifacts."""
 
     protocol_name: str
+
+    @property
+    def profile_spec(self) -> ProfileSpec | None:
+        return None
+
+    def route_map_name(self) -> str:
+        """Logical route table name in ModuleIR.maps (stable across aliases)."""
+        return f"{self.protocol_name}_route_table"
 
     @abstractmethod
     def required_header_roots(self) -> set[str]:
@@ -106,6 +126,10 @@ class ProtocolAdapter(ABC):
     @abstractmethod
     def lower_route(self, route: RouteDefNode, module: ModuleIR) -> LoweredRoute:
         raise NotImplementedError
+
+    def validate_route(self, route: RouteDefNode, program: ProgramIR) -> list[Diagnostic]:
+        """Optional semantic checks before lowering."""
+        return []
 
     def lower_policy(self, policy: PolicyDefNode, module: ModuleIR) -> list[InstructionIR]:
         match_attr = _find_attr(policy.attrs, "match")
@@ -125,8 +149,25 @@ class ProtocolAdapter(ABC):
         ]
 
 
-class IPProtocolAdapter(ProtocolAdapter):
-    protocol_name = "ip"
+def _constraints_dict(route: RouteDefNode) -> dict[str, Any] | None:
+    c = _find_attr(route.attrs, "constraints")
+    if c is None or c.value is None:
+        return None
+    return _intent_value_to_python(c.value)  # type: ignore[return-value]
+
+
+class IPv4ProtocolAdapter(ProtocolAdapter):
+    """IPv4 LPM-style reachability (canonical name: ipv4)."""
+
+    protocol_name = "ipv4"
+
+    @property
+    def profile_spec(self) -> ProfileSpec:
+        return ProfileSpec(name="ipv4", description="IPv4 prefix routing")
+
+    def route_map_name(self) -> str:
+        # Preserve legacy table name used by existing tests and programs.
+        return "ip_route_table"
 
     def required_header_roots(self) -> set[str]:
         return {"ip", "ipv4"}
@@ -140,7 +181,7 @@ class IPProtocolAdapter(ProtocolAdapter):
         kind = raw.get("kind")
         value = raw.get("value")
         if kind != "cidr" or not isinstance(value, str):
-            raise ValueError("IP prefix requires prefix({ kind: \"cidr\", value: \"x/y\" })")
+            raise ValueError('IPv4 prefix requires prefix({ kind: "cidr", value: "x/y" })')
         return {"kind": kind, "value": value}
 
     def lower_route(self, route: RouteDefNode, module: ModuleIR) -> LoweredRoute:
@@ -154,7 +195,8 @@ class IPProtocolAdapter(ProtocolAdapter):
         prefix_key = self.prefix_to_match_key(from_attr.value)
         destination = _intent_value_to_python(to_attr.value if to_attr else None)
         via_nodes = _intent_value_to_python(via_attr.value if via_attr else None)
-        map_name = f"{self.protocol_name}_route_table"
+        map_name = self.route_map_name()
+        constraints = _constraints_dict(route)
 
         return LoweredRoute(
             map_entries=[[prefix_key, destination, via_nodes]],
@@ -169,6 +211,116 @@ class IPProtocolAdapter(ProtocolAdapter):
                         "destination": destination,
                         "via": via_nodes,
                         "module": module.name,
+                        "constraints": constraints,
+                    },
+                    span=route.span,
+                )
+            ],
+        )
+
+
+class IPv6ProtocolAdapter(ProtocolAdapter):
+    """IPv6 LPM-style reachability."""
+
+    protocol_name = "ipv6"
+
+    @property
+    def profile_spec(self) -> ProfileSpec:
+        return ProfileSpec(name="ipv6", description="IPv6 prefix routing")
+
+    def required_header_roots(self) -> set[str]:
+        return {"ipv6"}
+
+    def prefix_to_match_key(self, prefix: EndpointSpecNode) -> object:
+        payload = prefix.value
+        if not isinstance(payload, ObjectValueNode):
+            raise ValueError("IPv6 prefix must be an object payload")
+
+        raw = {pair.key: _intent_value_to_python(pair.value) for pair in payload.pairs}
+        kind = raw.get("kind")
+        value = raw.get("value")
+        if kind != "cidr" or not isinstance(value, str):
+            raise ValueError('IPv6 prefix requires prefix({ kind: "cidr", value: "x/y" })')
+        return {"kind": kind, "value": value}
+
+    def lower_route(self, route: RouteDefNode, module: ModuleIR) -> LoweredRoute:
+        from_attr = _find_attr(route.attrs, "from")
+        to_attr = _find_attr(route.attrs, "to")
+        via_attr = _find_attr(route.attrs, "via")
+
+        if not isinstance(from_attr.value if from_attr else None, EndpointSpecNode):
+            raise ValueError("route.from must be an endpoint spec")
+
+        prefix_key = self.prefix_to_match_key(from_attr.value)
+        destination = _intent_value_to_python(to_attr.value if to_attr else None)
+        via_nodes = _intent_value_to_python(via_attr.value if via_attr else None)
+        map_name = self.route_map_name()
+        constraints = _constraints_dict(route)
+
+        return LoweredRoute(
+            map_entries=[[prefix_key, destination, via_nodes]],
+            instructions=[
+                InstructionIR(
+                    kind="intent_route_lookup",
+                    data={
+                        "name": route.name,
+                        "protocol": self.protocol_name,
+                        "map": map_name,
+                        "match": prefix_key,
+                        "destination": destination,
+                        "via": via_nodes,
+                        "module": module.name,
+                        "constraints": constraints,
+                    },
+                    span=route.span,
+                )
+            ],
+        )
+
+
+class SRv6ProtocolAdapter(IPv6ProtocolAdapter):
+    """Segment Routing over IPv6 (SRH semantics; requires IPv6 parser roots)."""
+
+    protocol_name = "srv6"
+
+    @property
+    def profile_spec(self) -> ProfileSpec:
+        return ProfileSpec(name="srv6", extends="ipv6", description="SRv6 segment routing")
+
+    def required_header_roots(self) -> set[str]:
+        return {"ipv6", "srv6"}
+
+    def lower_route(self, route: RouteDefNode, module: ModuleIR) -> LoweredRoute:
+        from_attr = _find_attr(route.attrs, "from")
+        to_attr = _find_attr(route.attrs, "to")
+        via_attr = _find_attr(route.attrs, "via")
+        path_attr = _find_attr(route.attrs, "path")
+
+        if not isinstance(from_attr.value if from_attr else None, EndpointSpecNode):
+            raise ValueError("route.from must be an endpoint spec")
+
+        prefix_key = self.prefix_to_match_key(from_attr.value)
+        destination = _intent_value_to_python(to_attr.value if to_attr else None)
+        via_nodes = _intent_value_to_python(via_attr.value if via_attr else None)
+        path_val = _intent_value_to_python(path_attr.value if path_attr else None)
+        map_name = self.route_map_name()
+        constraints = _constraints_dict(route)
+
+        return LoweredRoute(
+            map_entries=[[prefix_key, destination, via_nodes, path_val]],
+            instructions=[
+                InstructionIR(
+                    kind="intent_route_lookup",
+                    data={
+                        "name": route.name,
+                        "protocol": self.protocol_name,
+                        "map": map_name,
+                        "match": prefix_key,
+                        "destination": destination,
+                        "via": via_nodes,
+                        "path": path_val,
+                        "module": module.name,
+                        "constraints": constraints,
                     },
                     span=route.span,
                 )
@@ -178,19 +330,15 @@ class IPProtocolAdapter(ProtocolAdapter):
 
 class CustomProtocolAdapter(ProtocolAdapter):
     """
-    Generic adapter for non-IP protocols.
+    Generic adapter for protocols using prefix({ kind, value }) style keys.
 
-    First implementation is intentionally conservative: it mainly encodes intent
-    routes into ProgramIR artifacts and does not enforce detailed header/field
-    presence (so custom protocols can be prototyped end-to-end).
+    Used for registered profiles like ndn/geo and as a fallback for unknown names.
     """
 
     def __init__(self, protocol_name: str):
         self.protocol_name = protocol_name
 
     def required_header_roots(self) -> set[str]:
-        # For now, allow custom protocols even if we cannot precisely validate
-        # header roots without a full adapter->parser-field spec.
         return set()
 
     def prefix_to_match_key(self, prefix: EndpointSpecNode) -> object:
@@ -218,7 +366,8 @@ class CustomProtocolAdapter(ProtocolAdapter):
         prefix_key = self.prefix_to_match_key(from_attr.value)
         destination = _intent_value_to_python(to_attr.value if to_attr else None)
         via_nodes = _intent_value_to_python(via_attr.value if via_attr else None)
-        map_name = f"{self.protocol_name}_route_table"
+        map_name = self.route_map_name()
+        constraints = _constraints_dict(route)
 
         return LoweredRoute(
             map_entries=[[prefix_key, destination, via_nodes]],
@@ -233,6 +382,7 @@ class CustomProtocolAdapter(ProtocolAdapter):
                         "destination": destination,
                         "via": via_nodes,
                         "module": module.name,
+                        "constraints": constraints,
                     },
                     span=route.span,
                 )
@@ -240,33 +390,113 @@ class CustomProtocolAdapter(ProtocolAdapter):
         )
 
 
-_REGISTRY: dict[str, ProtocolAdapter] = {
-    "ip": IPProtocolAdapter(),
+class PowerlinkProtocolAdapter(ProtocolAdapter):
+    """Industrial real-time: routes are not used; prefer determinism/schedule blocks."""
+
+    protocol_name = "powerlink"
+
+    @property
+    def profile_spec(self) -> ProfileSpec:
+        return ProfileSpec(name="powerlink", description="Powerlink / cyclic deterministic networking")
+
+    def required_header_roots(self) -> set[str]:
+        return set()
+
+    def validate_route(self, route: RouteDefNode, program: ProgramIR) -> list[Diagnostic]:
+        return [
+            Diagnostic(
+                code="INT204",
+                message=(
+                    "Profile 'powerlink' does not use L3 route intents; "
+                    "use 'determinism' / 'schedule' blocks instead"
+                ),
+                severity=DiagnosticSeverity.ERROR,
+                span=route.span,
+            )
+        ]
+
+    def prefix_to_match_key(self, prefix: EndpointSpecNode) -> object:
+        raise ValueError("powerlink routes are not supported")
+
+    def lower_route(self, route: RouteDefNode, module: ModuleIR) -> LoweredRoute:
+        raise RuntimeError("powerlink routes should not be lowered")
+
+
+# Canonical profile name -> alias list (surface syntax / legacy)
+PROFILE_ALIASES: dict[str, tuple[str, ...]] = {
+    "ipv4": ("ip",),
 }
+
+_CANONICAL_BY_ALIAS: dict[str, str] = {}
+for _canonical, _aliases in PROFILE_ALIASES.items():
+    for _a in _aliases:
+        _CANONICAL_BY_ALIAS[_a] = _canonical
+
+
+def normalize_protocol_name(name: str) -> str:
+    """Map alias (e.g. ip) to canonical profile id (ipv4)."""
+    key = name.strip().lower()
+    return _CANONICAL_BY_ALIAS.get(key, key)
+
+
+_REGISTRY: dict[str, ProtocolAdapter] = {}
+_PROFILE_SPECS: dict[str, ProfileSpec] = {}
+
+
+def _register_defaults() -> None:
+    ipv4 = IPv4ProtocolAdapter()
+    _REGISTRY["ipv4"] = ipv4
+    _REGISTRY["ip"] = ipv4
+    _PROFILE_SPECS["ipv4"] = ipv4.profile_spec  # type: ignore[assignment]
+
+    ipv6 = IPv6ProtocolAdapter()
+    _REGISTRY["ipv6"] = ipv6
+    if ipv6.profile_spec:
+        _PROFILE_SPECS["ipv6"] = ipv6.profile_spec
+
+    srv6 = SRv6ProtocolAdapter()
+    _REGISTRY["srv6"] = srv6
+    if srv6.profile_spec:
+        _PROFILE_SPECS["srv6"] = srv6.profile_spec
+
+    for name in ("ndn", "geo"):
+        adapter = CustomProtocolAdapter(name)
+        _REGISTRY[name] = adapter
+
+    pl = PowerlinkProtocolAdapter()
+    _REGISTRY["powerlink"] = pl
+    if pl.profile_spec:
+        _PROFILE_SPECS["powerlink"] = pl.profile_spec
+
+
+_register_defaults()
 
 
 def register_protocol_adapter(adapter: ProtocolAdapter) -> None:
     _REGISTRY[adapter.protocol_name] = adapter
+    spec = adapter.profile_spec
+    if spec is not None:
+        _PROFILE_SPECS[adapter.protocol_name] = spec
 
 
-def get_protocol_adapter(protocol_name: str) -> ProtocolAdapter | None:
-    adapter = _REGISTRY.get(protocol_name)
+def get_protocol_adapter(protocol_name: str) -> ProtocolAdapter:
+    key = normalize_protocol_name(protocol_name)
+    adapter = _REGISTRY.get(key)
     if adapter is not None:
         return adapter
     # Fallback: treat unknown protocols as custom protocols.
-    return CustomProtocolAdapter(protocol_name)
+    return CustomProtocolAdapter(key)
+
+
+def list_profile_specs() -> dict[str, ProfileSpec]:
+    return dict(_PROFILE_SPECS)
 
 
 def validate_protocol_headers(protocol_name: str, program: ProgramIR) -> list[Diagnostic]:
-    adapter = get_protocol_adapter(protocol_name)
+    key = normalize_protocol_name(protocol_name)
+    adapter = _REGISTRY.get(key)
     if adapter is None:
-        return [
-            Diagnostic(
-                code="INT200",
-                message=f"Unsupported protocol adapter: {protocol_name}",
-                severity=DiagnosticSeverity.ERROR,
-            )
-        ]
+        adapter = CustomProtocolAdapter(key)
 
     required = adapter.required_header_roots()
     if not required:
@@ -280,14 +510,14 @@ def validate_protocol_headers(protocol_name: str, program: ProgramIR) -> list[Di
     return [
         Diagnostic(
             code="INT201",
-            message=f"Protocol '{protocol_name}' requires parser headers rooted at one of: {headers}",
+            message=f"Protocol '{key}' requires parser headers rooted at one of: {headers}",
             severity=DiagnosticSeverity.ERROR,
         )
     ]
 
 
-def ensure_protocol_map(module: ModuleIR, protocol_name: str) -> MapDeclIR:
-    map_name = f"{protocol_name}_route_table"
+def ensure_protocol_map(module: ModuleIR, adapter: ProtocolAdapter) -> MapDeclIR:
+    map_name = adapter.route_map_name()
     existing = module.maps.get(map_name)
     if existing is not None:
         return existing
@@ -301,3 +531,21 @@ def ensure_protocol_map(module: ModuleIR, protocol_name: str) -> MapDeclIR:
     module.maps[map_name] = route_map
     return route_map
 
+
+__all__ = [
+    "CustomProtocolAdapter",
+    "IPv4ProtocolAdapter",
+    "IPv6ProtocolAdapter",
+    "LoweredRoute",
+    "PowerlinkProtocolAdapter",
+    "ProfileSpec",
+    "ProtocolAdapter",
+    "SRv6ProtocolAdapter",
+    "ensure_protocol_map",
+    "get_protocol_adapter",
+    "list_profile_specs",
+    "normalize_protocol_name",
+    "parser_header_roots",
+    "register_protocol_adapter",
+    "validate_protocol_headers",
+]

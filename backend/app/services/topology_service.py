@@ -3,10 +3,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 import json
+import re
 import uuid
 
 from app.db.database import get_connection
 from app.services import editor_file_service
+
+# 与物化文件名一致：项目根目录下的 topology-*.json
+TOPOLOGY_FILE_RE = re.compile(r"^topology-.+\.json$", re.IGNORECASE)
 
 
 def _now() -> str:
@@ -74,6 +78,23 @@ def list_topologies(page_no: int = 1, page_size: int = 10, project_id: str | Non
         conn.close()
 
 
+def get_topology_snapshot(id: str) -> dict | None:
+    """从 DB 读取拓扑，不向项目目录写文件（避免在保存/同步流程中覆盖编辑器内容）。"""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            """
+            SELECT id, name, description, nodes, links, project_id, created_at, updated_at
+            FROM topology
+            WHERE id = ?
+            """,
+            (id,),
+        ).fetchone()
+        return _row_to_topology(row) if row else None
+    finally:
+        conn.close()
+
+
 def get_topology(id: str) -> dict | None:
     conn = get_connection()
     try:
@@ -129,7 +150,7 @@ def update_topology(
     links: list | None = None,
     project_id: str | None = None,
 ) -> dict | None:
-    current = get_topology(id)
+    current = get_topology_snapshot(id)
     if not current:
         return None
     effective_project_id = project_id if project_id is not None else current.get("projectId")
@@ -168,6 +189,11 @@ def update_topology(
         editor_file_service.delete_file_by_path(project_id=str(effective_project_id), file_name=old_file_name)
 
     return get_topology(id)
+
+
+def materialized_topology_filename(topo: dict[str, Any]) -> str:
+    """项目根目录下物化拓扑 JSON 的文件名（与 DB 物化逻辑一致）。"""
+    return _get_topology_file_name(topo)
 
 
 def _get_topology_file_name(topo: dict[str, Any]) -> str:
@@ -232,3 +258,75 @@ def import_topology(
     project_id: str | None = None,
 ) -> dict:
     return create_topology(name or "导入的拓扑", description, nodes, links, project_id)
+
+
+def sync_topology_from_editor_json(
+    project_id: str,
+    file_name: str,
+    content: str,
+) -> dict[str, Any] | None:
+    """若保存的是物化的 topology-*.json，则解析 JSON 并回写 topology 表。
+
+    返回 None 表示不是拓扑 JSON 文件，无需同步。
+    否则返回 {"synced": bool, ...} 供前端展示。
+    """
+    if not file_name or not TOPOLOGY_FILE_RE.match(file_name.strip()):
+        return None
+
+    try:
+        data = json.loads(content or "{}")
+    except json.JSONDecodeError as exc:
+        return {"synced": False, "error": f"JSON 解析失败: {exc}"}
+
+    if not isinstance(data, dict):
+        return {"synced": False, "error": "拓扑 JSON 顶层必须是对象"}
+
+    tid = data.get("id")
+    if not tid or not isinstance(tid, str):
+        return {"synced": False, "error": "缺少有效的顶层 id 字段"}
+
+    nodes = data.get("nodes")
+    links = data.get("links")
+    if nodes is None or not isinstance(nodes, list):
+        return {"synced": False, "error": "nodes 必须是数组"}
+    if links is None or not isinstance(links, list):
+        return {"synced": False, "error": "links 必须是数组"}
+
+    current = get_topology_snapshot(tid)
+    if not current:
+        return {"synced": False, "error": f"拓扑 {tid} 不存在"}
+
+    if str(current.get("projectId") or "") != str(project_id):
+        return {"synced": False, "error": "拓扑不属于当前项目"}
+
+    name_kw: str | None
+    if "name" in data:
+        name_kw = str(data["name"]) if data["name"] is not None else None
+    else:
+        name_kw = None
+
+    desc_kw: str | None
+    if "description" in data:
+        desc_kw = str(data["description"]) if data["description"] is not None else None
+    else:
+        desc_kw = None
+
+    updated = update_topology(
+        tid,
+        name=name_kw,
+        description=desc_kw,
+        nodes=nodes,
+        links=links,
+        project_id=None,
+    )
+    if not updated:
+        return {"synced": False, "error": "更新拓扑失败"}
+
+    mat_name = _get_topology_file_name(updated)
+    frec = editor_file_service._get_file_by_path(project_id, mat_name)
+    return {
+        "synced": True,
+        "topologyId": tid,
+        "materializedFileName": mat_name,
+        "fileId": frec["id"] if frec else None,
+    }

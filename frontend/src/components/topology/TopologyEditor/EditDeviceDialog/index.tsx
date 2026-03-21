@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Form, Input, Modal } from 'antd'
+import { Divider, Form, Input, Modal } from 'antd'
 import type { IDevice, ITopologyDevice } from '@/model/topology'
 import type { Editor } from '../../topology-engine'
 
@@ -25,6 +25,10 @@ export const EditDeviceDialog: React.FC<IProps> = ({ editor }) => {
         rate: 包转发率,
         system: CPU系统,
         ssd: SSD,
+        sshHost: '',
+        sshPort: '22',
+        sshUsername: '',
+        sshPassword: '',
       })
       setVisible(true)
     }
@@ -58,8 +62,8 @@ export const EditDeviceDialog: React.FC<IProps> = ({ editor }) => {
   }
 
   return (
-    <Modal title="编辑设备" open={visible} onOk={onOk} onCancel={onCancel}>
-      <Form labelCol={{ span: 4 }} wrapperCol={{ span: 20 }} form={form} onFinish={onFinish}>
+    <Modal title="编辑设备" open={visible} onOk={onOk} onCancel={onCancel} width={640}>
+      <Form labelCol={{ span: 5 }} wrapperCol={{ span: 19 }} form={form} onFinish={onFinish}>
         <Form.Item
           name="deviceName"
           label="设备名称"
@@ -87,6 +91,21 @@ export const EditDeviceDialog: React.FC<IProps> = ({ editor }) => {
         </Form.Item>
         <Form.Item name="ssd" label="SSD">
           <Input />
+        </Form.Item>
+        <Divider orientation="left" plain>
+          SSH 连接（画布拓扑为 D3 引擎时请使用右侧开发页编辑）
+        </Divider>
+        <Form.Item name="sshHost" label="SSH 主机">
+          <Input />
+        </Form.Item>
+        <Form.Item name="sshPort" label="SSH 端口">
+          <Input placeholder="22" />
+        </Form.Item>
+        <Form.Item name="sshUsername" label="SSH 用户名">
+          <Input />
+        </Form.Item>
+        <Form.Item name="sshPassword" label="SSH 密码">
+          <Input.Password />
         </Form.Item>
       </Form>
     </Modal>

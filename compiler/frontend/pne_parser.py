@@ -58,6 +58,7 @@ from compiler.frontend.pne_ast import (
     ImportStmtNode,
     IntentAstNode,
     IntentProgramNode,
+    DeterminismDefNode,
     LinkDefNode,
     ListValueNode,
     NetworkDefNode,
@@ -66,6 +67,7 @@ from compiler.frontend.pne_ast import (
     ObjectValueNode,
     PolicyDefNode,
     RouteDefNode,
+    ScheduleDefNode,
     ValueNode,
     ViaSpecNode,
 )
@@ -673,19 +675,44 @@ class _TreeToAstTransformer(Transformer[object, object]):
         )
 
     def intent_route_def(self, meta: object, children: list[object]) -> RouteDefNode:
+        return self._intent_route_like_def(meta, children)
+
+    def intent_reachability_def(self, meta: object, children: list[object]) -> RouteDefNode:
+        return self._intent_route_like_def(meta, children)
+
+    def _intent_route_like_def(self, meta: object, children: list[object]) -> RouteDefNode:
         name: str | None = None
         attrs: list[AttrNode] = []
         for child in children:
-            if isinstance(child, str):
-                name = child
-            elif isinstance(child, list):
+            if isinstance(child, list):
                 attrs = [c for c in child if isinstance(c, AttrNode)]
             elif isinstance(child, AttrNode):
                 attrs.append(child)
+            else:
+                if name is None:
+                    name = str(child)
         return RouteDefNode(span=self._span(meta), name=name, attrs=attrs)
 
     def intent_route_body(self, meta: object, children: list[object]) -> list[AttrNode]:
         return [cast(AttrNode, child) for child in children]
+
+    def intent_route_item(self, meta: object, children: list[object]) -> AttrNode:
+        return cast(AttrNode, children[0])
+
+    def intent_constraints_block(self, meta: object, children: list[object]) -> AttrNode:
+        pairs = cast(list[ObjectPairNode], children[0]) if children else []
+        obj = ObjectValueNode(span=self._span(meta), pairs=pairs)
+        return AttrNode(span=self._span(meta), key="constraints", value=obj)
+
+    def intent_constraints_body(self, meta: object, children: list[object]) -> list[ObjectPairNode]:
+        return [cast(ObjectPairNode, child) for child in children]
+
+    def intent_constraints_attr(self, meta: object, children: list[object]) -> ObjectPairNode:
+        return ObjectPairNode(
+            span=self._span(meta),
+            key=str(children[0]),
+            value=cast(IntentAstNode, children[1]),
+        )
 
     def intent_route_attr(self, meta: object, children: list[object]) -> AttrNode:
         if len(children) == 1 and isinstance(children[0], AttrNode):
@@ -707,6 +734,63 @@ class _TreeToAstTransformer(Transformer[object, object]):
 
     def intent_protocol_attr(self, meta: object, children: list[object]) -> AttrNode:
         return AttrNode(span=self._span(meta), key="protocol", value=cast(IntentAstNode, children[0]))
+
+    def intent_profile_attr(self, meta: object, children: list[object]) -> AttrNode:
+        spec = str(children[0])
+        return AttrNode(
+            span=self._span(meta),
+            key="profile",
+            value=ValueNode(span=self._span(meta), raw=spec, kind="string"),
+        )
+
+    def intent_path_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(span=self._span(meta), key="path", value=cast(IntentAstNode, children[0]))
+
+    def intent_determinism_def(self, meta: object, children: list[object]) -> DeterminismDefNode:
+        name: str | None = None
+        attrs: list[AttrNode] = []
+        for child in children:
+            if isinstance(child, list):
+                attrs = [c for c in child if isinstance(c, AttrNode)]
+            elif isinstance(child, AttrNode):
+                attrs.append(child)
+            else:
+                if name is None:
+                    name = str(child)
+        return DeterminismDefNode(span=self._span(meta), name=name, attrs=attrs)
+
+    def intent_determ_body(self, meta: object, children: list[object]) -> list[AttrNode]:
+        return [cast(AttrNode, child) for child in children]
+
+    def intent_determ_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(
+            span=self._span(meta),
+            key=str(children[0]),
+            value=cast(IntentAstNode, children[1]),
+        )
+
+    def intent_schedule_def(self, meta: object, children: list[object]) -> ScheduleDefNode:
+        name: str | None = None
+        attrs: list[AttrNode] = []
+        for child in children:
+            if isinstance(child, list):
+                attrs = [c for c in child if isinstance(c, AttrNode)]
+            elif isinstance(child, AttrNode):
+                attrs.append(child)
+            else:
+                if name is None:
+                    name = str(child)
+        return ScheduleDefNode(span=self._span(meta), name=name, attrs=attrs)
+
+    def intent_schedule_body(self, meta: object, children: list[object]) -> list[AttrNode]:
+        return [cast(AttrNode, child) for child in children]
+
+    def intent_schedule_attr(self, meta: object, children: list[object]) -> AttrNode:
+        return AttrNode(
+            span=self._span(meta),
+            key=str(children[0]),
+            value=cast(IntentAstNode, children[1]),
+        )
 
     def intent_policy_def(self, meta: object, children: list[object]) -> PolicyDefNode:
         name = str(children[0])

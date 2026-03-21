@@ -1,5 +1,7 @@
-// 意图相关类型定义
-
+/**
+ * 编译产物记录（后端 REST 资源：/compile-artifacts；历史字段名仍为 Intent）
+ * 表示一次保存的可部署编译快照：DSL、编译结果、以及 output/ 下的数据面文件等。
+ */
 export interface Intent {
   id: string
   name: string
@@ -43,7 +45,9 @@ export interface IntentCreateRequest {
 }
 
 export interface IntentCompileRequest {
-  intentId: string
+  /** 与 compileArtifactId 二选一，后者优先 */
+  intentId?: string
+  compileArtifactId?: string
   topologyId: string
 }
 
@@ -54,27 +58,50 @@ export interface CompilePreviewRequest {
   projectId?: string | null
 }
 
+/** 保存可部署产物：编译并写入项目 output/ 目录 */
+export interface SaveDeployArtifactsRequest {
+  projectId: string
+  content: string
+  topologyId?: string
+  /** 更新已有记录时传入；与 intentId 同义，优先使用本字段 */
+  compileArtifactId?: string
+  intentId?: string
+  name?: string
+  description?: string
+}
+
+/** 编译器诊断；`phase` 与内部 pass 对齐（parse / semantic / lowering / placement / emit） */
+export interface CompilerDiagnostic {
+  code: string
+  message: string
+  severity: 'error' | 'warning' | 'info'
+  phase?: string | null
+  span?: {
+    file: string
+    line: number
+    column: number
+    end_line: number
+    end_column: number
+  } | null
+  notes?: string[] | null
+}
+
 export interface IntentCompileResponse {
   success: boolean
   config?: CompiledConfig
   errors?: string[]
   warnings?: string[]
+  /** 结构化诊断（含阶段）；与 errors/warnings 同源时优先展示本字段以标注 pass */
+  diagnostics?: CompilerDiagnostic[]
   projectId?: string | null
-  ast?: {
-    type: string
-    children: Array<{
-      line: number
-      kind: string
-      text: string
-    }>
-  }
-  globalIr?: {
-    summary?: Record<string, unknown>
-    instructions?: Array<Record<string, unknown>>
-  }
+  /** PNE 语法树：`{ type: 'Program', value: ... }` */
+  ast?: Record<string, unknown> | null
+  /** ProgramIR + FragmentIR + NodePlanIR + 管线产物预览 */
+  globalIr?: Record<string, unknown> | null
+  /** 每设备：nodePlan + artifacts（与 compile_pipeline 一致） */
   deviceIr?: Array<{
     deviceId: string
-    instructions: Array<Record<string, unknown>>
+    instructions: Record<string, unknown>
   }>
   logs?: Array<{
     timestamp: string

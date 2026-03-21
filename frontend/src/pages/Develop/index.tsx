@@ -524,6 +524,16 @@ const Develop: React.FC = () => {
   }, [currentProjectId, loadProjectFiles, loadTopologies])
 
   useEffect(() => {
+    const onProjectFilesUpdated = () => {
+      if (currentProjectId) {
+        void loadProjectFiles()
+      }
+    }
+    window.addEventListener('paranet-project-files-updated', onProjectFilesUpdated)
+    return () => window.removeEventListener('paranet-project-files-updated', onProjectFilesUpdated)
+  }, [currentProjectId, loadProjectFiles])
+
+  useEffect(() => {
     setSelectedTopologyNode(null)
     setTopologyStats(null)
   }, [activeTopologyId])
@@ -615,15 +625,67 @@ const Develop: React.FC = () => {
     if (!activeTab) {
       return
     }
-    await fileApi.updateContent({
+    const res = await fileApi.updateContent({
       fileId: activeTab.id,
       content: activeTab.content,
     })
+    const data = res.data
+    if (!data) {
+      message.error('保存失败')
+      return
+    }
+
+    const sync = data.topologySync
+    if (sync?.synced && sync.topologyId) {
+      window.dispatchEvent(
+        new CustomEvent<{ topologyId: string }>('paranet-topology-updated', {
+          detail: { topologyId: sync.topologyId },
+        })
+      )
+    }
+
+    if (sync?.synced) {
+      const canonicalId = sync.fileId ?? activeTab.id
+      const readRes = await fileApi.read(canonicalId)
+      const content = readRes.data ?? ''
+      if (sync.fileId && sync.fileId !== activeTab.id) {
+        closeTab(activeTab.id)
+        openFileTab({
+          id: sync.fileId,
+          name: data.fileName,
+          path: data.filePath,
+          content,
+          language: detectLanguage(data.filePath),
+          dirty: false,
+        })
+        await updateCurrentProject({ currentFileId: sync.fileId })
+        message.success(`已保存 ${data.fileName}，拓扑已同步`)
+      } else {
+        markTabSaved(activeTab.id, content)
+        await updateCurrentProject({ currentFileId: activeTab.id })
+        message.success(`已保存 ${activeTab.name}，拓扑已同步`)
+      }
+      loadProjectFiles()
+      return
+    }
+
     markTabSaved(activeTab.id)
     await updateCurrentProject({ currentFileId: activeTab.id })
-    message.success(`已保存 ${activeTab.name}`)
+    if (sync && !sync.synced && sync.error) {
+      message.warning(`已保存文件，但拓扑未同步：${sync.error}`)
+    } else {
+      message.success(`已保存 ${activeTab.name}`)
+    }
     loadProjectFiles()
-  }, [activeTab, loadProjectFiles, markTabSaved, message, updateCurrentProject])
+  }, [
+    activeTab,
+    closeTab,
+    loadProjectFiles,
+    markTabSaved,
+    message,
+    openFileTab,
+    updateCurrentProject,
+  ])
 
   const openFileModal = (mode: FileModalMode) => {
     setFileModalMode(mode)
@@ -1261,28 +1323,39 @@ const Develop: React.FC = () => {
                             {topologyWorkbenchMode === 'topology' && (
                               <div className={styles.topologyStageColumn}>
                                 <div className={styles.topologyStageCard}>
-                                  <div className={`${styles.stageHeader} ${isWorkspaceTight ? styles.stageHeaderCompact : ''}`}>
-                                    <div>
-                                      <Typography.Title level={4}>NetProgrammable</Typography.Title>
+                                    <div className={`${styles.stageHeader} ${isWorkspaceTight ? styles.stageHeaderCompact : ''}`}>
+                                    <div className={styles.stageTitleBlock}>
+                                      <Typography.Title level={4} className={styles.stageTitle}>
+                                        NetProgrammable
+                                      </Typography.Title>
                                       {!isWorkspaceUltraTight && (
-                                        <Typography.Text type="secondary">
+                                        <Typography.Text type="secondary" className={styles.stageMeta}>
                                           {currentProject.name}
                                           {' / '}
                                           {activeTopology?.name ?? '未选择拓扑'}
                                         </Typography.Text>
                                       )}
                                     </div>
-                                    <Space wrap>
-                                      <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenDevicePicker}>
+                                    <Space wrap size={6} className={styles.stageActions}>
+                                      <Button
+                                        type="primary"
+                                        size="small"
+                                        icon={<PlusOutlined />}
+                                        onClick={handleOpenDevicePicker}
+                                      >
                                         Add Device
                                       </Button>
-                                      <Button icon={<NodeIndexOutlined />} onClick={handleStartLinkMode}>
+                                      <Button size="small" icon={<NodeIndexOutlined />} onClick={handleStartLinkMode}>
                                         Add Link
                                       </Button>
-                                      <Button icon={<AimOutlined />} onClick={handleResetTopologyView}>
+                                      <Button size="small" icon={<AimOutlined />} onClick={handleResetTopologyView}>
                                         Reset View
                                       </Button>
-                                      <Button icon={<EyeOutlined />} onClick={() => void handleToggleFloatingPreview()}>
+                                      <Button
+                                        size="small"
+                                        icon={<EyeOutlined />}
+                                        onClick={() => void handleToggleFloatingPreview()}
+                                      >
                                         {floatingPreviewOpen ? '关闭预览' : '打开预览'}
                                       </Button>
                                     </Space>
@@ -1304,6 +1377,7 @@ const Develop: React.FC = () => {
                                           ref={topologyEditorRef}
                                           topologyId={activeTopologyId}
                                           title={activeTopology?.name ?? '项目拓扑'}
+                                          deviceLegends={deviceLegendList}
                                           onGraphStatsChange={setTopologyStats}
                                           onSelectionChange={setSelectedTopologyNode}
                                         />

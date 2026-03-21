@@ -7,19 +7,23 @@ import React, {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
 } from 'react'
 import * as d3 from 'd3'
 import type { D3Node, D3Link, CanvasSize } from '../types'
+import type { DeviceLegend } from '@/model/topology'
 import {
   resolveDeviceColor,
   resolveDeviceImage,
   resolveDeviceName,
+  getDeviceLegendRegistry,
   NODE_CONFIG,
   LINK_CONFIG,
   CANVAS_CONFIG,
 } from '../config'
+import { CanvasLegendOverlay } from './CanvasLegendOverlay'
 import {
   DEVICE_DRAG_FALLBACK_MIME_TYPE,
   DEVICE_DRAG_MIME_TYPE,
@@ -49,6 +53,8 @@ interface D3CanvasProps {
   onDeviceDrop?: (deviceType: string, x: number, y: number) => void
   selectedNodeId?: string | null
   className?: string
+  /** 传入时用于画布内图例；不传则使用当前全局注册表 */
+  deviceLegends?: DeviceLegend[]
 }
 
 export interface D3CanvasHandle {
@@ -65,7 +71,9 @@ export const D3Canvas = forwardRef<D3CanvasHandle, D3CanvasProps>(({
   onBlankClick,
   onGraphChange,
   onDeviceDrop,
+  selectedNodeId: _selectedNodeId,
   className = '',
+  deviceLegends: deviceLegendsProp,
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -74,6 +82,12 @@ export const D3Canvas = forwardRef<D3CanvasHandle, D3CanvasProps>(({
   const [size, setSize] = useState<CanvasSize>({ width: 800, height: 600 })
   const [draggingOver, setDraggingOver] = useState(false)
   const [dragDeviceType, setDragDeviceType] = useState<string | null>(null)
+
+  const canvasLegendItems = useMemo(
+    () =>
+      deviceLegendsProp && deviceLegendsProp.length > 0 ? deviceLegendsProp : getDeviceLegendRegistry(),
+    [deviceLegendsProp],
+  )
 
   // 内部状态（用于响应式更新）
   const [nodes, setNodes] = useState<D3Node[]>(initialNodes)
@@ -512,6 +526,7 @@ export const D3Canvas = forwardRef<D3CanvasHandle, D3CanvasProps>(({
       onDrop={handleDeviceDropEvent}
     >
       <svg ref={svgRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+      <CanvasLegendOverlay legends={canvasLegendItems} />
       {!draggingOver && nodes.length === 0 && (
         <div
           style={{

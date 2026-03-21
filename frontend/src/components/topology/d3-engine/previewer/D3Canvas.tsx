@@ -2,10 +2,19 @@
  * D3 预览器画布组件（只读模式）
  */
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import * as d3 from 'd3'
+import type { DeviceLegend } from '@/model/topology'
 import type { D3Node, D3Link, CanvasSize } from '../types'
-import { resolveDeviceColor, resolveDeviceImage, NODE_CONFIG, LINK_CONFIG, CANVAS_CONFIG } from '../config'
+import {
+  resolveDeviceColor,
+  resolveDeviceImage,
+  getDeviceLegendRegistry,
+  NODE_CONFIG,
+  LINK_CONFIG,
+  CANVAS_CONFIG,
+} from '../config'
+import { CanvasLegendOverlay } from '../editor/CanvasLegendOverlay'
 import { createForceSimulation, updateSimulationData, Simulation, createZoomBehavior, applyZoom, zoomToFit } from '../core'
 
 interface D3PreviewerCanvasProps {
@@ -16,6 +25,7 @@ interface D3PreviewerCanvasProps {
   onNodeMouseLeave?: () => void
   onLinkClick?: (link: D3Link, x: number, y: number) => void
   className?: string
+  deviceLegends?: DeviceLegend[]
 }
 
 export const D3PreviewerCanvas: React.FC<D3PreviewerCanvasProps> = ({
@@ -26,6 +36,7 @@ export const D3PreviewerCanvas: React.FC<D3PreviewerCanvasProps> = ({
   onNodeMouseLeave,
   onLinkClick,
   className = '',
+  deviceLegends: deviceLegendsProp,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -33,6 +44,12 @@ export const D3PreviewerCanvas: React.FC<D3PreviewerCanvasProps> = ({
   const [size, setSize] = useState<CanvasSize>({ width: 800, height: 600 })
   const [nodes, setNodes] = useState<D3Node[]>(initialNodes)
   const [links, setLinks] = useState<D3Link[]>(initialLinks)
+
+  const canvasLegendItems = useMemo(
+    () =>
+      deviceLegendsProp && deviceLegendsProp.length > 0 ? deviceLegendsProp : getDeviceLegendRegistry(),
+    [deviceLegendsProp],
+  )
 
   // 同步外部数据
   useEffect(() => {
@@ -286,8 +303,13 @@ export const D3PreviewerCanvas: React.FC<D3PreviewerCanvasProps> = ({
   }, [nodes, links, size, onNodeClick, onNodeMouseEnter, onNodeMouseLeave, onLinkClick])
 
   return (
-    <div ref={containerRef} className={className} style={{ width: '100%', height: '100%' }}>
-      <svg ref={svgRef} />
+    <div
+      ref={containerRef}
+      className={className}
+      style={{ width: '100%', height: '100%', position: 'relative' }}
+    >
+      <svg ref={svgRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+      <CanvasLegendOverlay legends={canvasLegendItems} />
     </div>
   )
 }

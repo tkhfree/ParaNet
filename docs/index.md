@@ -47,5 +47,7 @@ paranet> 在节点A和B之间建立一条NDN内容分发通道
 - [安装指南](installation.md)
 - [用户指南](user-guide.md)
 - [DSL 参考](dsl-reference.md)
+- [Intent 统一模型与剖面](intent-unified-model.md)
+- [拓扑快照契约](topology-snapshot-schema.md)
 - [API 参考](api-reference.md)
 - [开发指南](development.md)

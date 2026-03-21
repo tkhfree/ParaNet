@@ -14,6 +14,22 @@ def get_connection():
     return conn
 
 
+def _migrate_project_last_compile_artifact(conn: sqlite3.Connection) -> None:
+    """将 project.last_intent_id 迁移为 last_compile_artifact_id（兼容旧库）。"""
+    rows = conn.execute("PRAGMA table_info(project)").fetchall()
+    cols = {row[1] for row in rows}
+    if "last_compile_artifact_id" in cols:
+        return
+    if "last_intent_id" in cols:
+        try:
+            conn.execute("ALTER TABLE project RENAME COLUMN last_intent_id TO last_compile_artifact_id")
+        except sqlite3.OperationalError:
+            conn.execute("ALTER TABLE project ADD COLUMN last_compile_artifact_id TEXT")
+            conn.execute("UPDATE project SET last_compile_artifact_id = last_intent_id")
+    else:
+        conn.execute("ALTER TABLE project ADD COLUMN last_compile_artifact_id TEXT")
+
+
 def init_db():
     conn = get_connection()
     try:
@@ -41,7 +57,7 @@ def init_db():
                 remark TEXT,
                 topology_id TEXT,
                 current_file_id TEXT,
-                last_intent_id TEXT,
+                last_compile_artifact_id TEXT,
                 created_at TEXT,
                 updated_at TEXT
             )
@@ -80,6 +96,7 @@ def init_db():
                 updated_at TEXT
             )
         """)
+        _migrate_project_last_compile_artifact(conn)
         conn.commit()
     finally:
         conn.close()

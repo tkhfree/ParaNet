@@ -38,7 +38,7 @@ const Dashboard: React.FC = () => {
       },
       {
         key: 'intent',
-        title: '意图配置',
+        title: '编译产物记录',
         value: stats.intentCount,
         prefix: <CodeOutlined />,
         color: 'green',

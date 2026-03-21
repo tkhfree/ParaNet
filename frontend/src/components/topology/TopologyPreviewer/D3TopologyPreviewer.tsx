@@ -19,6 +19,7 @@ export const D3TopologyPreviewer: React.FC<IProps> = ({ topologyId, onPopup }) =
   const [previewer, setPreviewer] = useState<D3Previewer | null>(null)
   const [, setUpdateCounter] = useState(0)
   const [loadingTopology, setLoadingTopology] = useState(false)
+  const [topologyReloadTick, setTopologyReloadTick] = useState(0)
 
   // 初始化预览器
   useEffect(() => {
@@ -30,6 +31,18 @@ export const D3TopologyPreviewer: React.FC<IProps> = ({ topologyId, onPopup }) =
       setPreviewer(null)
     }
   }, [])
+
+  useEffect(() => {
+    const onExternal = (ev: Event) => {
+      const ce = ev as CustomEvent<{ topologyId?: string }>
+      if (!ce.detail?.topologyId || ce.detail.topologyId !== topologyId) {
+        return
+      }
+      setTopologyReloadTick((n) => n + 1)
+    }
+    window.addEventListener('paranet-topology-updated', onExternal)
+    return () => window.removeEventListener('paranet-topology-updated', onExternal)
+  }, [topologyId])
 
   // 加载拓扑数据
   useEffect(() => {
@@ -44,7 +57,7 @@ export const D3TopologyPreviewer: React.FC<IProps> = ({ topologyId, onPopup }) =
           setLoadingTopology(false)
         })
     }
-  }, [previewer, topologyId])
+  }, [previewer, topologyId, topologyReloadTick])
 
   // 节点点击
   const handleNodeClick = useCallback(

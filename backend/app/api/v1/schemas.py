@@ -13,6 +13,10 @@ class NodeConfig(BaseModel):
     ip: str | None = None
     port: int | None = None
     protocol: str | None = None
+    sshHost: str | None = None
+    sshPort: int | None = None
+    sshUsername: str | None = None
+    sshPassword: str | None = None
 
 
 class TopologyNode(BaseModel):
