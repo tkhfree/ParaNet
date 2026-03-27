@@ -4,6 +4,11 @@ Prompt Templates
 Pre-defined prompts for LLM interactions.
 """
 
+from __future__ import annotations
+
+from paranet.agent.prompts.skill_loader import build_skill_context
+
+
 SYSTEM_PROMPT = """You are ParaNet, an intelligent network programming assistant.
 
 You help users configure and manage multi-modal network infrastructure including:
@@ -70,3 +75,36 @@ Respond in JSON format:
     ]
 }}
 """
+
+DSL_GENERATION_PROMPT = """Translate the user request into valid ParaNet PNE DSL.
+
+Use the injected skill context as the grammar source of truth.
+Prefer exact topology IDs from the provided context.
+If required details are missing, describe the gap instead of inventing topology facts.
+
+Topology context:
+{topology_context}
+
+Active skill context:
+{skill_context}
+
+User request:
+{user_input}
+"""
+
+
+def build_dsl_generation_prompt(
+    user_input: str,
+    topology_context: str = "",
+    skill_names: list[str] | None = None,
+) -> tuple[list[str], str]:
+    """
+    Build the DSL-generation prompt with automatically injected skill context.
+    """
+    resolved_skill_names, skill_context = build_skill_context(skill_names)
+    prompt = DSL_GENERATION_PROMPT.format(
+        user_input=user_input.strip(),
+        topology_context=topology_context.strip() or "No topology context provided.",
+        skill_context=skill_context or "No skill context provided.",
+    )
+    return resolved_skill_names, prompt

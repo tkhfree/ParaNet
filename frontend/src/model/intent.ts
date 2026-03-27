@@ -115,6 +115,7 @@ export interface NaturalLanguageRequest {
   context?: {
     topologyId?: string
     previousIntents?: string[]
+    skills?: string[]
   }
 }
 
@@ -122,4 +123,7 @@ export interface NaturalLanguageResponse {
   dslCode: string
   explanation: string
   suggestions?: string[]
+  usedSkills?: string[]
+  agentPrompt?: string
+  compileResult?: IntentCompileResponse
 }

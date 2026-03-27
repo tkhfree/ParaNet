@@ -21,3 +21,11 @@ JWT_EXPIRE_MINUTES = 60 * 8
 # Mock mode for deploy/compile (optional HTTP call to editor-backend-dev)
 EDITOR_BACKEND_URL = os.getenv("PARANET_EDITOR_BACKEND_URL", "http://localhost:8080/api")
 USE_MOCK = os.getenv("PARANET_USE_MOCK", "true").lower() in ("1", "true", "yes")
+
+# Zhipu GLM
+ZHIPU_API_KEY = os.getenv("ZHIPU_API_KEY", "038da01c8d3843f1a5c870368c646ae8.4iRA7Ky1dxuDV7wE").strip()
+ZHIPU_BASE_URL = os.getenv("ZHIPU_BASE_URL", "https://open.bigmodel.cn/api/paas/v4/").strip()
+ZHIPU_MODEL = os.getenv("ZHIPU_MODEL", "GLM-4.7-Flash").strip()
+ZHIPU_TIMEOUT_SECONDS = float(os.getenv("ZHIPU_TIMEOUT_SECONDS", "60"))
+ZHIPU_TEMPERATURE = float(os.getenv("ZHIPU_TEMPERATURE", "0.1"))
+ZHIPU_MAX_TOKENS = int(os.getenv("ZHIPU_MAX_TOKENS", "4096"))

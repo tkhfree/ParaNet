@@ -48,7 +48,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
     try {
       const res = await intentApi.translateNaturalLanguage({
         input: text,
-        context: topologyId ? { topologyId } : undefined,
+        context: {
+          ...(topologyId ? { topologyId } : {}),
+          skills: ['pne-dsl-grammar'],
+        },
       })
       const data = res.data
       const assistantMsg: ChatMessage = {
