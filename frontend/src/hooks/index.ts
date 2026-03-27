@@ -5,6 +5,7 @@ export { useLocalStorage } from './useLocalStorage'
 export { useVisible } from './useVisible'
 export { useResizeObserver } from './useResizeObserver'
 export { useDashboardStats } from './useDashboardStats'
+export { useDeployProgressWebSocket } from './useDeployProgressWebSocket'
 
 export type { UseWebSocketOptions } from './useWebSocket'
 export type { DashboardStats } from './useDashboardStats'

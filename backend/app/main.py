@@ -98,6 +98,7 @@ def delete_device_legend(legend_id: str):
 
 
 from app.api.v1 import auth, topology, intent, deploy, monitor, editor_project, editor_file, device_legend
+from app.api.v1 import agent as _agent_api
 from app.api import websocket, editor_terminal_ws
 
 app.include_router(auth.router, prefix="/api")
@@ -109,5 +110,6 @@ app.include_router(monitor.router, prefix="/api")
 app.include_router(editor_project.router, prefix="/api")
 app.include_router(editor_file.router, prefix="/api")
 app.include_router(device_legend.router, prefix="/api")
+app.include_router(_agent_api.router, prefix="/api")
 app.include_router(websocket.router)
 app.include_router(editor_terminal_ws.router)

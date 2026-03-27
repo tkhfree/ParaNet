@@ -16,8 +16,10 @@ export const topologyApi = {
   },
 
   // 获取拓扑详情
-  getById: (id: string) => {
-    return axios.get<void, ApiResponse<Topology>>(`/topologies/${id}`)
+  getById: (id: string, options?: { silent?: boolean }) => {
+    return axios.get<void, ApiResponse<Topology>>(`/topologies/${id}`, {
+      _showErrorMessage: options?.silent ? false : undefined,
+    } as any)
   },
 
   // 创建拓扑

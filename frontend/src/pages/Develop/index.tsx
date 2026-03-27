@@ -159,8 +159,8 @@ const DEVICE_LEGEND_STORAGE_KEY = 'paranet-device-legends'
 const DEVELOP_LAYOUT_GAP = 16
 const DEVELOP_LEFT_MIN = 240
 const DEVELOP_LEFT_MAX = 420
-const DEVELOP_RIGHT_MIN = 300
-const DEVELOP_RIGHT_MAX = 520
+const DEVELOP_RIGHT_MIN = 360
+const DEVELOP_RIGHT_MAX = 600
 const DEVELOP_MIDDLE_MIN = 560
 // 窄屏时适当降低最小宽度，避免左右栏被 clamp 直接钉死导致“看起来能拖、实际上不动”
 const DEVELOP_LEFT_MIN_NARROW = 200
@@ -316,13 +316,13 @@ const Develop: React.FC = () => {
   })
   const [layoutWidths, setLayoutWidths] = useState<DevelopLayoutWidths>(() => {
     if (typeof window === 'undefined') {
-      return { left: 280, right: 360 }
+      return { left: 280, right: 400 }
     }
 
     try {
       const raw = window.localStorage.getItem(DEVELOP_LAYOUT_STORAGE_KEY)
       if (!raw) {
-        return { left: 280, right: 360 }
+        return { left: 280, right: 400 }
       }
       const parsed = JSON.parse(raw) as Partial<DevelopLayoutWidths>
       return {
@@ -330,7 +330,7 @@ const Develop: React.FC = () => {
         right: typeof parsed.right === 'number' ? parsed.right : 360,
       }
     } catch {
-      return { left: 280, right: 360 }
+      return { left: 280, right: 400 }
     }
   })
 
@@ -813,9 +813,11 @@ const Develop: React.FC = () => {
         await topologyApi.delete(topologyId)
         const nextTopologies = topologyList.filter((item) => item.id !== topologyId)
         const nextTopologyId = nextTopologies[0]?.id ?? null
+        // 立即更新 project 的 topologyId，避免旧 ID 触发 404 请求
         await updateCurrentProject({ topologyId: nextTopologyId })
+        await loadTopologies()
         message.success('拓扑已删除')
-        loadTopologies()
+        onFilesUpdated?.()
       },
     })
   }
@@ -1382,7 +1384,7 @@ const Develop: React.FC = () => {
                                           onSelectionChange={setSelectedTopologyNode}
                                         />
                                       ) : (
-                                        <Empty description="拓扑加载失败，请稍后重试" />
+                                        <Empty description="暂无拓扑，请选择或创建一个拓扑" />
                                       )}
                                     </div>
                                   </div>
@@ -1409,7 +1411,7 @@ const Develop: React.FC = () => {
                                 <div className={styles.orchestratorHero}>
                                   <div className={styles.orchestratorHeroIcon}>▶</div>
                                   <Typography.Paragraph type="secondary">
-                                    这里统一汇总当前项目、拓扑统计与节点上下文，供右侧多模态网络Agent生成协议与代码时参考。
+                                    这里统一汇总当前项目、拓扑统计与节点上下文，供右侧模态开发Agent生成协议与代码时参考。
                                   </Typography.Paragraph>
                                 </div>
                                 <div className={styles.orchestratorSection}>
@@ -1618,8 +1620,17 @@ const Develop: React.FC = () => {
           className={styles.rightPane}
           style={{ width: layoutWidths.right, flexBasis: layoutWidths.right }}
         >
-          <Card className={styles.assistantCard} title="多模态网络Agent">
-            <ChatInput topologyId={activeTopologyId ?? undefined} onApplyDSL={handleApplyDsl} />
+          <Card className={styles.assistantCard} title="模态开发Agent">
+            <ChatInput
+              topologyId={activeTopologyId ?? undefined}
+              projectId={currentProjectId ?? undefined}
+              onApplyDSL={handleApplyDsl}
+              onTopologyUpdated={() => {
+                void loadTopologies()
+                window.dispatchEvent(new CustomEvent('paranet-topology-updated', { detail: { topologyId: activeTopologyId } }))
+              }}
+              onFilesUpdated={() => void loadProjectFiles()}
+            />
           </Card>
         </div>
       </div>

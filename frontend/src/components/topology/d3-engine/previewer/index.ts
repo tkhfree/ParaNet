@@ -42,9 +42,13 @@ export class D3Previewer {
 
   async open(id: string): Promise<void> {
     this.clear()
-    const res = await topologyApi.getById(id)
-    const t = res.data as Topology
-    this._graph = topologyToD3(t)
+    try {
+      const res = await topologyApi.getById(id, { silent: true })
+      const t = res.data as Topology
+      this._graph = topologyToD3(t)
+    } catch {
+      // 拓扑可能已被删除，静默忽略
+    }
   }
 
   setGraph(graph: D3Graph): void {

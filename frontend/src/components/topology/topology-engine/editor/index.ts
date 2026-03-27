@@ -38,12 +38,16 @@ export class Editor {
 
   async open(id: string) {
     this.clear()
-    const res = await topologyApi.getById(id)
-    const t = res.data as Topology
-    this._meta = { id: t.id, name: t.name, createdAt: t.createdAt, updatedAt: t.updatedAt }
-    const it = topologyToX6(t)
-    this.rebuild(it)
-    this.bus.emit('GRAPH_DESERIALIZE')
+    try {
+      const res = await topologyApi.getById(id, { silent: true })
+      const t = res.data as Topology
+      this._meta = { id: t.id, name: t.name, createdAt: t.createdAt, updatedAt: t.updatedAt }
+      const it = topologyToX6(t)
+      this.rebuild(it)
+      this.bus.emit('GRAPH_DESERIALIZE')
+    } catch {
+      // 拓扑可能已被删除，静默忽略
+    }
   }
 
   deserialize(project: ITopology) {

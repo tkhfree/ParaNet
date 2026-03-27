@@ -77,10 +77,14 @@ export class D3Editor {
   /** 从 API 加载拓扑 */
   async open(id: string): Promise<void> {
     this.clear()
-    const res = await topologyApi.getById(id)
-    const t = res.data as Topology
-    this.graphData = topologyToD3(t)
-    this.emitGraphChanged()
+    try {
+      const res = await topologyApi.getById(id, { silent: true })
+      const t = res.data as Topology
+      this.graphData = topologyToD3(t)
+      this.emitGraphChanged()
+    } catch {
+      // 拓扑可能已被删除，静默忽略
+    }
   }
 
   /** 设置图数据（用于 React 状态更新） */

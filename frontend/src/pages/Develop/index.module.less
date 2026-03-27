@@ -20,7 +20,7 @@
 .mainGrid {
   display: flex;
   align-items: stretch;
-  min-height: calc(100vh - 220px);
+  height: calc(100vh - 220px);
 }
 
 .leftPane,
@@ -34,6 +34,7 @@
 .leftPane,
 .rightPane {
   flex: 0 0 auto;
+  overflow: hidden;
 }
 
 .workspacePane {
@@ -887,12 +888,14 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
 .assistantCard :global(.ant-card-body) {
   display: flex;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .emptyState {

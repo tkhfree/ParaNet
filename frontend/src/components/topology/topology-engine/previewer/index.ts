@@ -24,10 +24,14 @@ export class Previewer {
 
   async open(id: string) {
     this.clear()
-    const res = await topologyApi.getById(id)
-    const t = res.data as Topology
-    const it = topologyToX6(t)
-    this.rebuild(it)
+    try {
+      const res = await topologyApi.getById(id, { silent: true })
+      const t = res.data as Topology
+      const it = topologyToX6(t)
+      this.rebuild(it)
+    } catch {
+      // 拓扑可能已被删除，静默忽略
+    }
   }
 
   deserialize(project: ITopology) {

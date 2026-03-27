@@ -79,7 +79,10 @@ instance.interceptors.response.use(
       }
 
       if (status === 404) {
-        message?.error(`接口不存在: ${config?.url}`)
+        const showError = (config as any)?._showErrorMessage !== false
+        if (showError) {
+          message?.error(`接口不存在: ${config?.url}`)
+        }
         return Promise.reject(new Error('接口不存在'))
       }
 
