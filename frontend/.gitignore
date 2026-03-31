@@ -23,6 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Build info
+*.tsbuildinfo
+
 # Environment variables
 .env
 .env.local
