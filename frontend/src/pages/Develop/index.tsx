@@ -816,8 +816,8 @@ const Develop: React.FC = () => {
         // 立即更新 project 的 topologyId，避免旧 ID 触发 404 请求
         await updateCurrentProject({ topologyId: nextTopologyId })
         await loadTopologies()
+        void loadProjectFiles()
         message.success('拓扑已删除')
-        onFilesUpdated?.()
       },
     })
   }
