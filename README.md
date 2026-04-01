@@ -48,6 +48,8 @@ ParaNet/
 
 ## 安装（核心与编译器）
 
+`pyproject.toml` 不是一个需要手动“安装”的文件，它是 Python 项目的**构建与依赖配置文件**。正确方式是在仓库根目录执行 `pip install ...`，由 `pip` 读取 `pyproject.toml` 并安装当前项目。
+
 在仓库根目录执行（便于 `backend` 引用 `compiler`）：
 
 ```bash
@@ -62,6 +64,30 @@ source venv/bin/activate
 
 # 可编辑安装 paranet + compiler
 pip install -e ".[dev]"
+```
+
+常见安装方式：
+
+```bash
+# 仅安装项目基础依赖（按 pyproject.toml 的 [project.dependencies]）
+pip install -e .
+
+# 安装开发依赖（基础依赖 + dev extras）
+pip install -e ".[dev]"
+
+# 安装 LLM 相关可选依赖（基础依赖 + llm extras）
+pip install -e ".[llm]"
+
+# 一次安装更多可选依赖
+pip install -e ".[all]"
+```
+
+如果你更习惯 `requirements` 方式，也可以使用下面这些兼容入口；它们本质上仍会回到 `pyproject.toml`：
+
+```bash
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+pip install -r requirements-llm.txt
 ```
 
 仅跑后端时，仍需先在根目录执行 `pip install -e .`（或 `pip install -e ".[dev]"`），否则无法导入 `compiler`。
@@ -108,13 +134,20 @@ npm run preview   # 本地预览构建结果
 
 ## 配置 LLM（智谱 GLM）API Key
 
-后端通过 **环境变量** 读取智谱开放平台凭证（仓库未使用 `python-dotenv`，需在 shell 或系统环境中设置）。
+后端启动时会自动加载 `.env`（优先读取仓库根目录 `.env`，其次兼容 `backend/.env`），因此你可以直接把智谱开放平台凭证写入 `.env`，也可以继续通过 shell / 系统环境变量覆盖。
 
 **必填（启用真实 LLM 调用）**
 
 | 变量 | 说明 |
 |------|------|
 | `ZHIPU_API_KEY` | 智谱 API Key（在[智谱开放平台](https://open.bigmodel.cn/)创建） |
+
+根目录 `.env` 示例：
+
+```env
+ZHIPU_API_KEY=your_zhipu_api_key
+ZHIPU_MODEL=glm-4.6v-flashx
+```
 
 **常用可选**
 
@@ -127,21 +160,21 @@ npm run preview   # 本地预览构建结果
 | `ZHIPU_MAX_TOKENS` | `4096` |
 | `PARANET_AGENT_MAX_ITERATIONS` | Agent 最大迭代轮数，默认 `8` |
 
-**Linux / macOS（当前终端会话）**
+**Linux / macOS（当前终端会话，优先级高于 `.env`）**
 
 ```bash
 export ZHIPU_API_KEY="你的_API_Key"
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**Windows PowerShell（当前会话）**
+**Windows PowerShell（当前会话，优先级高于 `.env`）**
 
 ```powershell
 $env:ZHIPU_API_KEY = "你的_API_Key"
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**Windows CMD（当前会话）**
+**Windows CMD（当前会话，优先级高于 `.env`）**
 
 ```cmd
 set ZHIPU_API_KEY=你的_API_Key

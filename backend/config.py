@@ -1,9 +1,16 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # 与进程 cwd 无关，始终落在 backend/data，避免从仓库根目录启动 uvicorn 时写到另一份 SQLite
 _BACKEND_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _BACKEND_DIR.parent
 _DEFAULT_DATA_DIR = _BACKEND_DIR / "data"
+
+# 优先加载仓库根目录 .env，其次兼容 backend/.env。
+load_dotenv(_REPO_ROOT / ".env")
+load_dotenv(_BACKEND_DIR / ".env")
 
 # API
 API_HOST = os.getenv("PARANET_API_HOST", "0.0.0.0")

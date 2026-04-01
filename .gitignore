@@ -155,6 +155,7 @@ co/
 
 # Cursor
 .cursor/
+.claude/
 
 # Frontend / Node
 node_modules/

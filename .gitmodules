@@ -1,6 +1,12 @@
 [submodule "EPON-NetworkAgent"]
 	path = EPON-NetworkAgent
 	url = https://github.com/tkhfree/EPON-NetworkAgent.git
-[submodule "co/example1/lynette-dev"]
-	path = co/example1/lynette-dev
+[submodule "demo/example1/lynette-dev"]
+	path = demo/example1/lynette-dev
 	url = https://github.com/tkhfree/lynette-dev.git
+[submodule "google-aistudio-frontend"]
+	path = google-aistudio-frontend
+	url = https://github.com/tkhfree/google-aistudio-frontend.git
+[submodule "OpenHands"]
+	path = OpenHands
+	url = https://github.com/OpenHands/OpenHands.git
