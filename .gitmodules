@@ -10,3 +10,6 @@
 [submodule "OpenHands"]
 	path = OpenHands
 	url = https://github.com/OpenHands/OpenHands.git
+[submodule "p4-topology-designer"]
+	path = p4-topology-designer
+	url = https://github.com/tkhfree/p4-topology-designer.git
