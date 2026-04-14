@@ -1,0 +1,248 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="LGB1ZeKgf22cXVnf2QZK" name="第 1 页">
+    <mxGraphModel dx="1964" dy="1121" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;fontSize=22;fontStyle=1;align=center;verticalAlign=middle;fillColor=none;strokeColor=none;fontColor=#1a1a2e;" value="ParaNet - 多模态可编程网络基础设施智能体" vertex="1">
+          <mxGeometry height="40" width="900" x="200" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend-group" parent="1" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=14;rounded=1;arcSize=8;swimlaneLine=1;" value="前端 (React 19 + TypeScript + Vite)" vertex="1">
+          <mxGeometry height="380" width="460" x="40" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-topo" parent="frontend-group" style="rounded=1;whiteSpace=wrap;fillColor=#bbdefb;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" value="拓扑可视化&#xa;(D3.js 引擎)" vertex="1">
+          <mxGeometry height="60" width="195" x="20" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-editor" parent="frontend-group" style="rounded=1;whiteSpace=wrap;fillColor=#bbdefb;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" value="DSL 代码编辑器&#xa;(Monaco Editor)" vertex="1">
+          <mxGeometry height="60" width="195" x="245" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-state" parent="frontend-group" style="rounded=1;whiteSpace=wrap;fillColor=#bbdefb;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" value="状态管理&#xa;(Zustand Stores)" vertex="1">
+          <mxGeometry height="60" width="195" x="20" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-api" parent="frontend-group" style="rounded=1;whiteSpace=wrap;fillColor=#bbdefb;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" value="API 接口层&#xa;(Axios + 类型化端点)" vertex="1">
+          <mxGeometry height="60" width="195" x="245" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-stores" parent="frontend-group" style="rounded=0;whiteSpace=wrap;fillColor=#e3f2fd;strokeColor=#90caf9;fontSize=10;fontColor=#1565c0;dashed=1;" value="用户 | 拓扑 | 意图 | 部署 | 项目 | 系统" vertex="1">
+          <mxGeometry height="30" width="420" x="20" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-ui" parent="frontend-group" style="rounded=0;whiteSpace=wrap;fillColor=#e3f2fd;strokeColor=#90caf9;fontSize=10;fontColor=#1565c0;dashed=1;" value="Ant Design 5 | @antv/x6 | ECharts | xterm.js" vertex="1">
+          <mxGeometry height="30" width="420" x="20" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-modes" parent="frontend-group" style="rounded=0;whiteSpace=wrap;fillColor=#e3f2fd;strokeColor=#90caf9;fontSize=10;fontColor=#1565c0;dashed=1;" value="编辑器模式 | 预览器模式" vertex="1">
+          <mxGeometry height="30" width="420" x="20" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-syntax" parent="frontend-group" style="rounded=0;whiteSpace=wrap;fillColor=#e3f2fd;strokeColor=#90caf9;fontSize=10;fontColor=#1565c0;dashed=1;" value="自定义 DSL 语法高亮 | PNE 语言支持" vertex="1">
+          <mxGeometry height="30" width="420" x="20" y="335" as="geometry" />
+        </mxCell>
+        <mxCell id="backend-group" parent="1" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=14;rounded=1;arcSize=8;swimlaneLine=1;" value="后端 (FastAPI + Uvicorn)" vertex="1">
+          <mxGeometry height="380" width="420" x="580" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="be-rest" parent="backend-group" style="rounded=1;whiteSpace=wrap;fillColor=#c8e6c9;strokeColor=#82b366;fontSize=12;fontStyle=1;" value="REST API 端点&#xa;(/api/v1/*)" vertex="1">
+          <mxGeometry height="60" width="180" x="20" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="be-ws" parent="backend-group" style="rounded=1;whiteSpace=wrap;fillColor=#c8e6c9;strokeColor=#82b366;fontSize=12;fontStyle=1;" value="WebSocket 端点&#xa;(/ws/*)" vertex="1">
+          <mxGeometry height="60" width="180" x="220" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="be-auth" parent="backend-group" style="rounded=1;whiteSpace=wrap;fillColor=#c8e6c9;strokeColor=#82b366;fontSize=12;" value="认证与安全&#xa;(JWT + Passlib)" vertex="1">
+          <mxGeometry height="55" width="180" x="20" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="be-schema" parent="backend-group" style="rounded=1;whiteSpace=wrap;fillColor=#c8e6c9;strokeColor=#82b366;fontSize=12;" value="请求/响应模型&#xa;(Pydantic)" vertex="1">
+          <mxGeometry height="55" width="180" x="220" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="be-bg" parent="backend-group" style="rounded=1;whiteSpace=wrap;fillColor=#c8e6c9;strokeColor=#82b366;fontSize=12;" value="后台任务&#xa;(异步部署作业)" vertex="1">
+          <mxGeometry height="55" width="180" x="20" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="be-db" parent="backend-group" style="shape=cylinder3;whiteSpace=wrap;boundedLbl=1;size=12;fillColor=#c8e6c9;strokeColor=#82b366;fontSize=12;" value="SQLite 数据库&#xa;(SQLAlchemy + aiosqlite)" vertex="1">
+          <mxGeometry height="70" width="155" x="240" y="195" as="geometry" />
+        </mxCell>
+        <mxCell id="be-ws-detail" parent="backend-group" style="rounded=0;whiteSpace=wrap;fillColor=#e8f5e9;strokeColor=#a5d6a7;fontSize=10;fontColor=#2e7d32;dashed=1;" value="/ws/telemetry | /ws/deployments/{id}/progress | /ws/alerts" vertex="1">
+          <mxGeometry height="30" width="380" x="20" y="275" as="geometry" />
+        </mxCell>
+        <mxCell id="be-response" parent="backend-group" style="rounded=0;whiteSpace=wrap;fillColor=#e8f5e9;strokeColor=#a5d6a7;fontSize=10;fontColor=#2e7d32;dashed=1;" value="响应模式: ok(data) = {code: 200, data, message}" vertex="1">
+          <mxGeometry height="30" width="380" x="20" y="312" as="geometry" />
+        </mxCell>
+        <mxCell id="be-config" parent="backend-group" style="rounded=0;whiteSpace=wrap;fillColor=#e8f5e9;strokeColor=#a5d6a7;fontSize=10;fontColor=#2e7d32;dashed=1;" value="配置: PARANET_USE_MOCK | JWT_SECRET | DATA_DIR | EDITOR_BACKEND_URL" vertex="1">
+          <mxGeometry height="30" width="380" x="20" y="347" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-be-http" edge="1" parent="1" source="fe-api" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#e65100;strokeWidth=2;fontStyle=1;fontSize=11;labelBackgroundColor=#ffffff;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" target="be-rest" value="HTTP (REST API)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fe-be-ws" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#e65100;strokeWidth=2;fontStyle=1;fontSize=11;dashed=1;labelBackgroundColor=#ffffff;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" value="WebSocket 实时通信">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="500" y="364" as="sourcePoint" />
+            <mxPoint x="580" y="364" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="core-group" parent="1" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=14;rounded=1;arcSize=8;swimlaneLine=1;" value="核心引擎 (paranet/ + compiler/)" vertex="1">
+          <mxGeometry height="440" width="960" x="40" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="core-models" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#fff9c4;strokeColor=#d6b656;fontSize=12;fontStyle=1;" value="网络数据模型&#xa;(models/)" vertex="1">
+          <mxGeometry height="60" width="170" x="20" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="core-orch" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#fff9c4;strokeColor=#d6b656;fontSize=12;fontStyle=1;" value="部署编排器&#xa;(orchestrator/)" vertex="1">
+          <mxGeometry height="60" width="180" x="210" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="core-ctrl" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#fff9c4;strokeColor=#d6b656;fontSize=12;fontStyle=1;" value="网络控制器&#xa;(controller/)" vertex="1">
+          <mxGeometry height="60" width="170" x="410" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="core-agent" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#fff9c4;strokeColor=#d6b656;fontSize=12;fontStyle=1;" value="LLM 智能体集成&#xa;(agent/)" vertex="1">
+          <mxGeometry height="60" width="170" x="600" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="core-llm" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#ffe0b2;strokeColor=#fb8c00;fontSize=11;fontStyle=2;" value="LangChain&#xa;Anthropic | OpenAI" vertex="1">
+          <mxGeometry height="60" width="140" x="790" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="agent-llm" edge="1" parent="core-group" source="core-agent" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#fb8c00;strokeWidth=1;dashed=1;" target="core-llm" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="compiler-title" parent="core-group" style="text;html=1;fontSize=13;fontStyle=5;align=left;verticalAlign=middle;fillColor=none;strokeColor=none;fontColor=#795548;" value="编译器管线 (PNE DSL)" vertex="1">
+          <mxGeometry height="30" width="250" x="20" y="125" as="geometry" />
+        </mxCell>
+        <mxCell id="comp-frontend" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#ffe0b2;strokeColor=#e65100;fontSize=11;fontStyle=1;" value="前端处理&#xa;(Lark 解析器 +&#xa;预处理器)" vertex="1">
+          <mxGeometry height="65" width="155" x="20" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="comp-semantic" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#ffe0b2;strokeColor=#e65100;fontSize=11;fontStyle=1;" value="语义分析&#xa;(AST -&gt; ProgramIR)&#xa;协议适配器" vertex="1">
+          <mxGeometry height="65" width="165" x="195" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="comp-ir" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#ffe0b2;strokeColor=#e65100;fontSize=11;fontStyle=1;" value="IR 中间表示层&#xa;ProgramIR | FragmentIR&#xa;NodePlanIR | IntentIR" vertex="1">
+          <mxGeometry height="65" width="175" x="380" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="comp-lower" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#ffe0b2;strokeColor=#e65100;fontSize=11;fontStyle=1;" value="降低与&#xa;放置" vertex="1">
+          <mxGeometry height="65" width="130" x="575" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="comp-backend" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#ffe0b2;strokeColor=#e65100;fontSize=11;fontStyle=1;" value="代码生成&#xa;P4 | 入口发射器" vertex="1">
+          <mxGeometry height="65" width="155" x="725" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="pipe1" edge="1" parent="core-group" source="comp-frontend" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#e65100;strokeWidth=2;" target="comp-semantic" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pipe2" edge="1" parent="core-group" source="comp-semantic" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#e65100;strokeWidth=2;" target="comp-ir" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pipe3" edge="1" parent="core-group" source="comp-ir" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#e65100;strokeWidth=2;" target="comp-lower" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="pipe4" edge="1" parent="core-group" source="comp-lower" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#e65100;strokeWidth=2;" target="comp-backend" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="proto-label" parent="core-group" style="text;html=1;fontSize=11;fontStyle=1;align=left;fillColor=none;strokeColor=none;fontColor=#795548;" value="协议适配器:" vertex="1">
+          <mxGeometry height="25" width="100" x="20" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="proto-ip" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#f3e5f5;strokeColor=#9c27b0;fontSize=11;fontStyle=1;fontColor=#6a1b9a;" value="IP" vertex="1">
+          <mxGeometry height="30" width="60" x="120" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="proto-ndn" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#f3e5f5;strokeColor=#9c27b0;fontSize=11;fontStyle=1;fontColor=#6a1b9a;" value="NDN" vertex="1">
+          <mxGeometry height="30" width="60" x="195" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="proto-geo" parent="core-group" style="rounded=1;whiteSpace=wrap;fillColor=#f3e5f5;strokeColor=#9c27b0;fontSize=11;fontStyle=1;fontColor=#6a1b9a;" value="GEO" vertex="1">
+          <mxGeometry height="30" width="60" x="270" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="intent-label" parent="core-group" style="text;html=1;fontSize=11;fontStyle=1;align=left;fillColor=none;strokeColor=none;fontColor=#795548;" value="意图覆盖层:" vertex="1">
+          <mxGeometry height="25" width="100" x="380" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="intent-detail" parent="core-group" style="rounded=0;whiteSpace=wrap;fillColor=#fce4ec;strokeColor=#ef9a9a;fontSize=10;fontColor=#c62828;dashed=1;" value="PNE 文件支持可选的 intent { ... } 覆盖块，用于声明式路由策略" vertex="1">
+          <mxGeometry height="35" width="380" x="480" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="dsl-group" parent="core-group" style="swimlane;startSize=25;fillColor=#f3e5f5;strokeColor=#9c27b0;fontStyle=1;fontSize=12;rounded=1;arcSize=8;" value="PNE DSL (领域特定语言)" vertex="1">
+          <mxGeometry height="60" width="420" x="20" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="dsl-content" parent="dsl-group" style="text;html=1;fontSize=10;align=center;verticalAlign=middle;fillColor=none;strokeColor=none;fontColor=#6a1b9a;" value="语法定义 (.g4) | 示例程序 | #include 引入 | .domain 域展开" vertex="1">
+          <mxGeometry height="25" width="400" x="10" y="28" as="geometry" />
+        </mxCell>
+        <mxCell id="infra-group" parent="core-group" style="swimlane;startSize=25;fillColor=#eceff1;strokeColor=#607d8b;fontStyle=1;fontSize=12;rounded=1;arcSize=8;" value="基础设施与依赖" vertex="1">
+          <mxGeometry height="60" width="490" x="460" y="295" as="geometry" />
+        </mxCell>
+        <mxCell id="infra-content" parent="infra-group" style="text;html=1;fontSize=10;align=center;verticalAlign=middle;fillColor=none;strokeColor=none;fontColor=#455a64;" value="Python 3.10+ | Pydantic | gRPC | Redis | PyYAML | Paramiko | httpx" vertex="1">
+          <mxGeometry height="25" width="470" x="10" y="28" as="geometry" />
+        </mxCell>
+        <mxCell id="test-group" parent="core-group" style="swimlane;startSize=25;fillColor=#e0f7fa;strokeColor=#00acc1;fontStyle=1;fontSize=12;rounded=1;arcSize=8;" value="测试与质量保障" vertex="1">
+          <mxGeometry height="55" width="920" x="20" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="test-content" parent="test-group" style="text;html=1;fontSize=10;align=center;verticalAlign=middle;fillColor=none;strokeColor=none;fontColor=#006064;" value="pytest | black | ruff | mypy | test_models | test_compiler | test_pne_intent_overlay" vertex="1">
+          <mxGeometry height="20" width="900" x="10" y="28" as="geometry" />
+        </mxCell>
+        <mxCell id="be-core" edge="1" parent="1" source="backend-group" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2e7d32;strokeWidth=2;fontStyle=1;fontSize=11;labelBackgroundColor=#ffffff;" target="core-group" value="Python API 调用">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="790" y="490" />
+              <mxPoint x="520" y="490" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="openhands-group" parent="1" style="swimlane;startSize=30;fillColor=#fce4ec;strokeColor=#e57373;fontStyle=1;fontSize=14;rounded=1;arcSize=8;" value="OpenHands 智能体集成" vertex="1">
+          <mxGeometry height="200" width="440" x="1080" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="oh-agent" parent="openhands-group" style="rounded=1;whiteSpace=wrap;fillColor=#ffcdd2;strokeColor=#e57373;fontSize=12;fontStyle=1;" value="智能体系统&#xa;(模态开发)" vertex="1">
+          <mxGeometry height="55" width="190" x="20" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="oh-tools" parent="openhands-group" style="rounded=1;whiteSpace=wrap;fillColor=#ffcdd2;strokeColor=#e57373;fontSize=12;fontStyle=1;" value="工具调用框架" vertex="1">
+          <mxGeometry height="55" width="190" x="230" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="oh-llm" parent="openhands-group" style="rounded=1;whiteSpace=wrap;fillColor=#ffcdd2;strokeColor=#e57373;fontSize=12;" value="LLM 驱动的网络管理能力" vertex="1">
+          <mxGeometry height="55" width="400" x="20" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="oh-core-arrow" edge="1" parent="1" source="openhands-group" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#c62828;strokeWidth=2;fontStyle=1;fontSize=11;dashed=1;labelBackgroundColor=#ffffff;" target="core-agent" value="集成到">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1300" y="490" />
+              <mxPoint x="1070" y="490" />
+              <mxPoint x="1070" y="585" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="epon-group" parent="1" style="swimlane;startSize=30;fillColor=#e8eaf6;strokeColor=#5c6bc0;fontStyle=1;fontSize=14;rounded=1;arcSize=8;" value="EPON 网络代理" vertex="1">
+          <mxGeometry height="160" width="440" x="1080" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="epon-core" parent="epon-group" style="rounded=1;whiteSpace=wrap;fillColor=#c5cae9;strokeColor=#5c6bc0;fontSize=12;fontStyle=1;" value="EPON 代理&#xa;(子模块)" vertex="1">
+          <mxGeometry height="55" width="190" x="20" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="epon-net" parent="epon-group" style="rounded=1;whiteSpace=wrap;fillColor=#c5cae9;strokeColor=#5c6bc0;fontSize=12;fontStyle=1;" value="网络接口&#xa;(OLT/ONU 管理)" vertex="1">
+          <mxGeometry height="55" width="190" x="230" y="45" as="geometry" />
+        </mxCell>
+        <mxCell id="epon-detail" parent="epon-group" style="rounded=0;whiteSpace=wrap;fillColor=#e8eaf6;strokeColor=#9fa8da;fontSize=10;fontColor=#283593;dashed=1;" value="EPON-NetworkAgent 子模块 (Git Submodule)" vertex="1">
+          <mxGeometry height="30" width="400" x="20" y="115" as="geometry" />
+        </mxCell>
+        <mxCell id="epon-core-arrow" edge="1" parent="1" source="epon-group" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#283593;strokeWidth=2;fontStyle=1;fontSize=11;dashed=1;labelBackgroundColor=#ffffff;" target="core-ctrl" value="网络控制">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1300" y="600" />
+              <mxPoint x="585" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend-group" parent="1" style="swimlane;startSize=25;fillColor=#f5f5f5;strokeColor=#bdbdbd;fontStyle=1;fontSize=12;rounded=1;" value="图例" vertex="1">
+          <mxGeometry height="180" width="440" x="1080" y="760" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" edge="1" parent="legend-group" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#e65100;strokeWidth=2;fontSize=10;labelBackgroundColor=#ffffff;" value="HTTP/REST 通信">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="20" y="45" as="sourcePoint" />
+            <mxPoint x="170" y="45" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="leg2" edge="1" parent="legend-group" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#e65100;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#ffffff;" value="WebSocket 实时通信">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="20" y="75" as="sourcePoint" />
+            <mxPoint x="170" y="75" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="leg3" edge="1" parent="legend-group" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#2e7d32;strokeWidth=2;fontSize=10;labelBackgroundColor=#ffffff;" value="Python 内部 API">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="20" y="105" as="sourcePoint" />
+            <mxPoint x="170" y="105" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="leg4" edge="1" parent="legend-group" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#c62828;strokeWidth=2;dashed=1;fontSize=10;labelBackgroundColor=#ffffff;" value="集成连接">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="20" y="135" as="sourcePoint" />
+            <mxPoint x="170" y="135" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="leg5" edge="1" parent="legend-group" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#e65100;strokeWidth=2;fontSize=10;labelBackgroundColor=#ffffff;" value="编译器管线流向">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="20" y="160" as="sourcePoint" />
+            <mxPoint x="170" y="160" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
