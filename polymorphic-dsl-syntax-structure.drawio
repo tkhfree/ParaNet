@@ -1,0 +1,335 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="syntax-structure" name="DSL 语法结构">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=18;fontStyle=1;fontColor=#1a1a2e;" value="Polymorphic DSL 抽象语法结构" vertex="1">
+          <mxGeometry x="420" y="10" width="360" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Root node: protocol definition -->
+        <mxCell id="root" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontStyle=1;shadow=1;" value="&lt;b&gt;polymorphic&lt;/b&gt; ProtocolName&lt;br&gt;&lt;font color=&quot;#888&quot; style=&quot;font-size:11&quot;&gt;extends Parent with Mixin1, Mixin2&lt;/font&gt;" vertex="1">
+          <mxGeometry x="430" y="60" width="300" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Three block labels on top -->
+        <mxCell id="lb_topo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;dashed=1;" value="&lt;b&gt;topology { }&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;拓扑面&lt;/font&gt;" vertex="1">
+          <mxGeometry x="30" y="150" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="lb_ctrl" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;dashed=1;" value="&lt;b&gt;control { }&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;控制面&lt;/font&gt;" vertex="1">
+          <mxGeometry x="520" y="150" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="lb_data" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;dashed=1;" value="&lt;b&gt;data { }&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;数据面&lt;/font&gt;" vertex="1">
+          <mxGeometry x="1050" y="150" width="120" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Edges from root to three blocks -->
+        <mxCell id="e_root_topo" edge="1" parent="1" source="root" target="lb_topo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_root_ctrl" edge="1" parent="1" source="root" target="lb_ctrl" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_root_data" edge="1" parent="1" source="root" target="lb_data" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ===== TOPOLOGY BLOCK ===== -->
+        <!-- profile -->
+        <mxCell id="topo_profile" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2efda;strokeColor=#82b366;fontSize=12;fontStyle=1;" value="&lt;b&gt;profile&lt;/b&gt; Name { ... }" vertex="1">
+          <mxGeometry x="10" y="220" width="160" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="topo_profile_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;target: &quot;p4&quot; / &quot;bmv2&quot; / &quot;tofino&quot;&lt;br&gt;pipeline: &quot;v1model&quot; / &quot;tna&quot;&lt;br&gt;compiler: &quot;p4c&quot; / &quot;bf-p4c&quot;&lt;br&gt;&lt;b&gt;mgmt&lt;/b&gt; { protocol, port, auth }&lt;/font&gt;" vertex="1">
+          <mxGeometry x="10" y="260" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e_topo_profile" edge="1" parent="1" source="lb_topo" target="topo_profile" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- pattern -->
+        <mxCell id="topo_pattern" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2efda;strokeColor=#82b366;fontSize=12;fontStyle=1;" value="&lt;b&gt;pattern&lt;/b&gt; Name(params) { ... }" vertex="1">
+          <mxGeometry x="10" y="350" width="185" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="topo_pattern_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;&lt;b&gt;layer&lt;/b&gt; name(count) { profile }&lt;br&gt;&lt;b&gt;mesh&lt;/b&gt;(layer1, layer2)&lt;br&gt;&lt;b&gt;one_to_one&lt;/b&gt;(layer1, layer2)&lt;/font&gt;" vertex="1">
+          <mxGeometry x="10" y="390" width="185" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e_topo_pattern" edge="1" parent="1" source="lb_topo" target="topo_pattern" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="90" y="210" />
+              <mxPoint x="30" y="210" />
+              <mxPoint x="30" y="350" />
+              <mxPoint x="102" y="350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- node -->
+        <mxCell id="topo_node" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2efda;strokeColor=#82b366;fontSize=12;fontStyle=1;" value="&lt;b&gt;node&lt;/b&gt; Name { ... }" vertex="1">
+          <mxGeometry x="10" y="465" width="160" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="topo_node_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;role: &quot;spine&quot; / &quot;leaf&quot; / ...&lt;br&gt;profile: ProfileName&lt;br&gt;&lt;b&gt;mgmt&lt;/b&gt; { address, protocol, port }&lt;/font&gt;" vertex="1">
+          <mxGeometry x="10" y="505" width="160" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e_topo_node" edge="1" parent="1" source="lb_topo" target="topo_node" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="20" y="210" />
+              <mxPoint x="20" y="465" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- link -->
+        <mxCell id="topo_link" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2efda;strokeColor=#82b366;fontSize=12;fontStyle=1;" value="&lt;b&gt;link&lt;/b&gt; src -&amp;gt; dst { ... }" vertex="1">
+          <mxGeometry x="10" y="580" width="160" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="topo_link_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;bandwidth: &quot;100G&quot;&lt;br&gt;latency: &quot;0.1ms&quot;&lt;br&gt;dedicated: true / false&lt;/font&gt;" vertex="1">
+          <mxGeometry x="10" y="620" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_topo_link" edge="1" parent="1" source="lb_topo" target="topo_link" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="10" y="210" />
+              <mxPoint x="10" y="580" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- constrain -->
+        <mxCell id="topo_constrain" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2efda;strokeColor=#82b366;fontSize=12;fontStyle=1;" value="&lt;b&gt;constrain&lt;/b&gt; scope: expr" vertex="1">
+          <mxGeometry x="10" y="690" width="160" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="topo_constrain_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#82b366;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;links: &quot;latency &lt; 5ms&quot;&lt;br&gt;all_links: bandwidth &gt;= 1Gbps&lt;/font&gt;" vertex="1">
+          <mxGeometry x="10" y="730" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e_topo_constrain" edge="1" parent="1" source="lb_topo" target="topo_constrain" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5" y="210" />
+              <mxPoint x="5" y="690" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===== CONTROL BLOCK ===== -->
+        <!-- app -->
+        <mxCell id="ctrl_app" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0e6f6;strokeColor=#9673a6;fontSize=12;fontStyle=1;" value="&lt;b&gt;app&lt;/b&gt; { ... }" vertex="1">
+          <mxGeometry x="490" y="220" width="180" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_app_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f0fc;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;name: &quot;app-name&quot;&lt;br&gt;version: &quot;1.0.0&quot;&lt;br&gt;description: &quot;...&quot;&lt;br&gt;onos_version: &quot;&amp;gt;= 2.7&quot;&lt;br&gt;features: [...]" vertex="1">
+          <mxGeometry x="490" y="260" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ctrl_app" edge="1" parent="1" source="lb_ctrl" target="ctrl_app" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- capabilities -->
+        <mxCell id="ctrl_cap" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0e6f6;strokeColor=#9673a6;fontSize=12;fontStyle=1;" value="&lt;b&gt;capabilities&lt;/b&gt;: [...]" vertex="1">
+          <mxGeometry x="490" y="360" width="180" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_cap_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f0fc;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;[&quot;forwarding&quot;, &quot;monitoring&quot;,&lt;br&gt; &quot;deterministic_scheduling&quot;]&lt;/font&gt;" vertex="1">
+          <mxGeometry x="490" y="398" width="180" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ctrl_cap" edge="1" parent="1" source="lb_ctrl" target="ctrl_cap" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="490" y="210" />
+              <mxPoint x="490" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- state -->
+        <mxCell id="ctrl_state" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0e6f6;strokeColor=#9673a6;fontSize=12;fontStyle=1;" value="&lt;b&gt;state&lt;/b&gt; name: Type;" vertex="1">
+          <mxGeometry x="490" y="460" width="180" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_state_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f0fc;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;int / bool / string&lt;br&gt;map&amp;lt;K, V&amp;gt; / set&amp;lt;T&amp;gt;&lt;br&gt;(onOS Distributed Store)&lt;/font&gt;" vertex="1">
+          <mxGeometry x="490" y="498" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ctrl_state" edge="1" parent="1" source="lb_ctrl" target="ctrl_state" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="480" y="210" />
+              <mxPoint x="480" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- on event -->
+        <mxCell id="ctrl_event" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0e6f6;strokeColor=#9673a6;fontSize=12;fontStyle=1;" value="&lt;b&gt;on&lt;/b&gt; Event(params) { ... }" vertex="1">
+          <mxGeometry x="490" y="570" width="180" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_event_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f0fc;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;link_down(src, dst)&lt;br&gt;device_connected(device_id)&lt;br&gt;(onOS EventListener)&lt;/font&gt;" vertex="1">
+          <mxGeometry x="490" y="608" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ctrl_event" edge="1" parent="1" source="lb_ctrl" target="ctrl_event" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="470" y="210" />
+              <mxPoint x="470" y="570" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- periodic -->
+        <mxCell id="ctrl_periodic" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0e6f6;strokeColor=#9673a6;fontSize=12;fontStyle=1;" value="&lt;b&gt;periodic&lt;/b&gt; name { every: &quot;...&quot; }" vertex="1">
+          <mxGeometry x="490" y="680" width="180" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_periodic_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f0fc;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;every: &quot;60s&quot; / &quot;100ms&quot;&lt;br&gt;actions;&lt;br&gt;(ScheduledExecutorService)&lt;/font&gt;" vertex="1">
+          <mxGeometry x="490" y="718" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ctrl_periodic" edge="1" parent="1" source="lb_ctrl" target="ctrl_periodic" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="460" y="210" />
+              <mxPoint x="460" y="680" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- flow_push -->
+        <mxCell id="ctrl_flow" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0e6f6;strokeColor=#9673a6;fontSize=12;fontStyle=1;" value="&lt;b&gt;flow_push&lt;/b&gt; { ... }" vertex="1">
+          <mxGeometry x="490" y="790" width="180" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_flow_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8f0fc;strokeColor=#9673a6;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;target: device&lt;br&gt;rules: from data.module&lt;br&gt;via: device.mgmt&lt;br&gt;(FlowRuleService)&lt;/font&gt;" vertex="1">
+          <mxGeometry x="490" y="828" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ctrl_flow" edge="1" parent="1" source="lb_ctrl" target="ctrl_flow" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="450" y="210" />
+              <mxPoint x="450" y="790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===== DATA BLOCK ===== -->
+        <!-- packet -->
+        <mxCell id="data_packet" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fcd5d4;strokeColor=#b85450;fontSize=12;fontStyle=1;" value="&lt;b&gt;packet&lt;/b&gt; Name { ... }" vertex="1">
+          <mxGeometry x="1020" y="220" width="200" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="data_packet_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef2f1;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;&lt;b&gt;header&lt;/b&gt; { field: type; ... }&lt;br&gt;&lt;b&gt;metadata&lt;/b&gt; { field: type; ... }&lt;br&gt;&lt;font style=&quot;font-size:9&quot;&gt;类型: mac_addr, bit16, uint32, port_t&lt;/font&gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry x="1020" y="260" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e_data_packet" edge="1" parent="1" source="lb_data" target="data_packet" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- parse -->
+        <mxCell id="data_parse" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fcd5d4;strokeColor=#b85450;fontSize=12;fontStyle=1;" value="&lt;b&gt;parse&lt;/b&gt; PacketRef { ... }" vertex="1">
+          <mxGeometry x="1020" y="340" width="200" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="data_parse_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef2f1;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;&lt;b&gt;extract&lt;/b&gt; PacketName&lt;br&gt;&lt;b&gt;match&lt;/b&gt; field { value =&amp;gt; action }&lt;br&gt;_ =&amp;gt; drop&lt;/font&gt;" vertex="1">
+          <mxGeometry x="1020" y="378" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e_data_parse" edge="1" parent="1" source="lb_data" target="data_parse" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1010" y="210" />
+              <mxPoint x="1010" y="340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- module -->
+        <mxCell id="data_module" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fcd5d4;strokeColor=#b85450;fontSize=12;fontStyle=1;" value="&lt;b&gt;module&lt;/b&gt; Name(Packet) { ... }" vertex="1">
+          <mxGeometry x="1020" y="450" width="200" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="data_module_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef2f1;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;&lt;b&gt;when&lt;/b&gt;: match_condition&lt;br&gt;&lt;b&gt;action&lt;/b&gt;: action_description&lt;br&gt;&lt;b&gt;constraints&lt;/b&gt;: { priority, latency }&lt;/font&gt;" vertex="1">
+          <mxGeometry x="1020" y="488" width="200" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e_data_module" edge="1" parent="1" source="lb_data" target="data_module" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1000" y="210" />
+              <mxPoint x="1000" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- service -->
+        <mxCell id="data_service" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fcd5d4;strokeColor=#b85450;fontSize=12;fontStyle=1;" value="&lt;b&gt;service&lt;/b&gt; Name { ... }" vertex="1">
+          <mxGeometry x="1020" y="565" width="200" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="data_service_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef2f1;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;&lt;b&gt;applies&lt;/b&gt;: [&quot;leaf&quot;, &quot;spine&quot;]&lt;br&gt;&lt;b&gt;target_role&lt;/b&gt;: &quot;switch&quot;&lt;br&gt;&lt;b&gt;pipeline&lt;/b&gt;: &quot;ingress&quot; / &quot;egress&quot;&lt;br&gt;&lt;b&gt;constraints&lt;/b&gt;: [...]&lt;/font&gt;" vertex="1">
+          <mxGeometry x="1020" y="603" width="200" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e_data_service" edge="1" parent="1" source="lb_data" target="data_service" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="990" y="210" />
+              <mxPoint x="990" y="565" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- include -->
+        <mxCell id="data_include" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fcd5d4;strokeColor=#b85450;fontSize=12;fontStyle=1;" value="&lt;b&gt;include&lt;/b&gt; &quot;path/to/file&quot;" vertex="1">
+          <mxGeometry x="1020" y="690" width="200" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="data_include_body" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fef2f1;strokeColor=#b85450;fontSize=10;align=left;spacingLeft=8;" value="&lt;font color=&quot;#666&quot;&gt;外部文件引用&lt;br&gt;模块复用&lt;/font&gt;" vertex="1">
+          <mxGeometry x="1020" y="728" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e_data_include" edge="1" parent="1" source="lb_data" target="data_include" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="980" y="210" />
+              <mxPoint x="980" y="690" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Cross-block reference annotations -->
+        <mxCell id="cross1" edge="1" parent="1" source="ctrl_flow_body" target="data_module" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;dashed=1;dashPattern=8 4;fontSize=9;" value="引用模块">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="858" />
+              <mxPoint x="700" y="468" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="cross2" edge="1" parent="1" source="data_service_body" target="topo_node_body" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;dashed=1;dashPattern=8 4;fontSize=9;" value="匹配角色">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="970" y="636" />
+              <mxPoint x="970" y="900" />
+              <mxPoint x="190" y="900" />
+              <mxPoint x="190" y="530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend_title" parent="1" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" value="&lt;b&gt;图例&lt;/b&gt;" vertex="1">
+          <mxGeometry x="250" y="900" width="50" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" value="拓扑面 (topology)" vertex="1">
+          <mxGeometry x="250" y="930" width="130" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" value="控制面 (control)" vertex="1">
+          <mxGeometry x="400" y="930" width="130" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" value="数据面 (data)" vertex="1">
+          <mxGeometry x="550" y="930" width="130" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" parent="1" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" value="&lt;font color=&quot;#999&quot;&gt;- - - 跨面引用&lt;br&gt;─── 语法层次&lt;/font&gt;" vertex="1">
+          <mxGeometry x="700" y="920" width="100" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Inheritance note -->
+        <mxCell id="inherit_note" parent="1" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=6;" value="&lt;b&gt;继承与组合&lt;/b&gt;&lt;br&gt;extends: 单继承父协议&lt;br&gt;with: 多混入组合&lt;br&gt;子协议可覆写任意块" vertex="1">
+          <mxGeometry x="760" y="55" width="160" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e_inherit" edge="1" parent="1" source="root" target="inherit_note" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;dashed=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

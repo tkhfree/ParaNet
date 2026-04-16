@@ -1,0 +1,179 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="3IP9ECZhz50Si3QMfGpP" name="第 1 页">
+    <mxGraphModel dx="1334" dy="804" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=20;fontStyle=1;fontColor=#1a1a2e;" value="Polymorphic DSL 三面统一编译系统架构" vertex="1">
+          <mxGeometry height="40" width="500" x="400" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="dsl" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;shadow=1;" value="&lt;b&gt;Polymorphic DSL 协议定义文件&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666&quot;&gt;polymorphic EXAMPLE extends Parent with Mixin { ... }&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="460" x="420" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="dsl" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333;strokeWidth=2;" target="phase1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="phase1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;shadow=1;" value="&lt;b&gt;Phase 1: 前端编译&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#666&quot;&gt;Lark LALR 解析器 + Transformer&lt;br&gt;42个关键字 / 32种AST节点&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="440" x="430" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="phase1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333;strokeWidth=2;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" target="phase2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="phase1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333;strokeWidth=2;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="phase3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="phase1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333;strokeWidth=2;exitX=0.75;exitY=1;exitDx=0;exitDy=0;" target="phase4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="phase2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;shadow=1;" value="&lt;b&gt;Phase 2: 拓扑面编译&lt;/b&gt;" vertex="1">
+          <mxGeometry height="40" width="380" x="30" y="277" as="geometry" />
+        </mxCell>
+        <mxCell id="topo1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2efda;strokeColor=#82b366;fontSize=11;" value="Profile 收集&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;设备目标架构&lt;br&gt;管理通道配置&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="115" x="30" y="337" as="geometry" />
+        </mxCell>
+        <mxCell id="topo2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2efda;strokeColor=#82b366;fontSize=11;" value="Pattern 展开&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;spine-leaf 模板&lt;br&gt;mesh/one-to-one&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="115" x="160" y="337" as="geometry" />
+        </mxCell>
+        <mxCell id="topo3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e2efda;strokeColor=#82b366;fontSize=11;" value="TopologyIR&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;节点+链路+约束&lt;br&gt;D3.js 可视化&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="115" x="290" y="337" as="geometry" />
+        </mxCell>
+        <mxCell id="topo_out" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=8;fillColor=#f5f5f5;strokeColor=#666;fontSize=11;" value="&lt;b&gt;输出&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10&quot; color=&quot;#666&quot;&gt;D3.js 拓扑可视化 JSON&lt;br&gt;设备节点/链路/Profile&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="130" x="110" y="442" as="geometry" />
+        </mxCell>
+        <mxCell id="phase3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;shadow=1;" value="&lt;b&gt;Phase 3: 控制面编译&lt;/b&gt;" vertex="1">
+          <mxGeometry height="40" width="380" x="460" y="277" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0e6f6;strokeColor=#9673a6;fontSize=11;" value="事件映射&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;DSL→ONOS Event&lt;br&gt;LinkEvent等&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="115" x="460" y="337" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0e6f6;strokeColor=#9673a6;fontSize=11;" value="状态映射&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;DSL类型→Java&lt;br&gt;嵌套泛型解析&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="115" x="590" y="337" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0e6f6;strokeColor=#9673a6;fontSize=11;" value="ControlIR&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;App/State/Event&lt;br&gt;Periodic/FlowPush&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="115" x="720" y="337" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_out" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=8;fillColor=#f5f5f5;strokeColor=#666;fontSize=11;" value="&lt;b&gt;输出&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10&quot; color=&quot;#666&quot;&gt;app.xml + pom.xml&lt;br&gt;OSGi组件类&lt;br&gt;事件监听器&lt;/font&gt;" vertex="1">
+          <mxGeometry height="75" width="130" x="585" y="437" as="geometry" />
+        </mxCell>
+        <mxCell id="phase4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontStyle=1;shadow=1;" value="&lt;b&gt;Phase 4: 数据面编译&lt;/b&gt;" vertex="1">
+          <mxGeometry height="40" width="380" x="900" y="277" as="geometry" />
+        </mxCell>
+        <mxCell id="data1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fcd5d4;strokeColor=#b85450;fontSize=11;" value="类型映射&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;DSL→P4_16&lt;br&gt;mac_addr→bit&amp;lt;48&amp;gt;&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="115" x="900" y="337" as="geometry" />
+        </mxCell>
+        <mxCell id="data2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fcd5d4;strokeColor=#b85450;fontSize=11;" value="设备分区&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;角色匹配&lt;br&gt;模块分配&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="115" x="1030" y="337" as="geometry" />
+        </mxCell>
+        <mxCell id="data3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fcd5d4;strokeColor=#b85450;fontSize=11;" value="P4 代码生成&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;v1model / TNA&lt;br&gt;per-device程序&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="115" x="1160" y="337" as="geometry" />
+        </mxCell>
+        <mxCell id="data_out" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=8;fillColor=#f5f5f5;strokeColor=#666;fontSize=11;" value="&lt;b&gt;输出&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10&quot; color=&quot;#666&quot;&gt;per-device P4_16&lt;br&gt;headers/tables&lt;br&gt;parser/control&lt;/font&gt;" vertex="1">
+          <mxGeometry height="75" width="130" x="985" y="437" as="geometry" />
+        </mxCell>
+        <mxCell id="dep1" edge="1" parent="1" source="topo_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;dashed=1;dashPattern=8 4;fontSize=10;labelBackgroundColor=#fff;strokeWidth=3;" target="ctrl_out" value="设备信息">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dep2" edge="1" parent="1" source="topo_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999;dashed=1;dashPattern=8 4;fontSize=10;labelBackgroundColor=#fff;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;" target="data_out" value="设备Profile + 角色">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="280" y="470" />
+              <mxPoint x="280" y="417" />
+              <mxPoint x="960" y="417" />
+              <mxPoint x="960" y="475" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="phase5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666;fontSize=13;fontStyle=1;shadow=1;" value="" vertex="1">
+          <mxGeometry height="155" width="460" x="420" y="577" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="topo_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333;strokeWidth=2;" target="phase5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="180" y="537" />
+              <mxPoint x="460" y="537" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="ctrl_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333;strokeWidth=2;" target="phase5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="data_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333;strokeWidth=2;" target="phase5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1050" y="537" />
+              <mxPoint x="850" y="537" />
+            </Array>
+            <mxPoint x="850" y="567" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="int1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666;fontSize=11;" value="FastAPI REST API&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;/api/poly/parse&lt;br&gt;/api/poly/generate-control&lt;br&gt;/api/poly/generate-p4&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="160" x="435" y="647" as="geometry" />
+        </mxCell>
+        <mxCell id="int2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666;fontSize=11;" value="React + Monaco 编辑器&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;DSL代码编辑&lt;br&gt;语法高亮&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="130" x="615" y="647" as="geometry" />
+        </mxCell>
+        <mxCell id="int3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666;fontSize=11;" value="D3.js 拓扑可视化&lt;br&gt;&amp;amp; 代码查看器&lt;br&gt;&lt;font color=&quot;#666&quot; style=&quot;font-size:10&quot;&gt;多标签文件浏览&lt;/font&gt;" vertex="1">
+          <mxGeometry height="70" width="110" x="765" y="647" as="geometry" />
+        </mxCell>
+        <mxCell id="label_topo" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;dashed=1;" value="&lt;b&gt;topology { }&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10&quot; color=&quot;#666&quot;&gt;profile / pattern&lt;br&gt;node / link&lt;br&gt;constrain&lt;/font&gt;" vertex="1">
+          <mxGeometry height="80" width="110" x="210" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="label_ctrl" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;dashed=1;" value="&lt;b&gt;control { }&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10&quot; color=&quot;#666&quot;&gt;app / state&lt;br&gt;on event&lt;br&gt;periodic&lt;/font&gt;" vertex="1">
+          <mxGeometry height="80" width="110" x="920" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="label_data" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;dashed=1;" value="&lt;b&gt;data { }&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10&quot; color=&quot;#666&quot;&gt;packet / parse&lt;br&gt;module / service&lt;br&gt;include&lt;/font&gt;" vertex="1">
+          <mxGeometry height="80" width="110" x="210" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="lb1" edge="1" parent="1" source="label_topo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82b366;dashed=1;fontSize=9;strokeWidth=3;" target="phase1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lb2" edge="1" parent="1" source="label_ctrl" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#9673a6;dashed=1;fontSize=9;strokeWidth=3;" target="phase1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lb3" edge="1" parent="1" source="label_data" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;dashed=1;fontSize=9;strokeWidth=3;" target="phase1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="onos" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;shadow=1;" value="&lt;b&gt;ONOS SDN 控制器&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10&quot; color=&quot;#666&quot;&gt;加载生成的 App&lt;br&gt;运行控制面逻辑&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="200" x="1020" y="567" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="ctrl_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6c8ebf;fontSize=10;strokeWidth=3;" target="onos" value="加载">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="930" y="475" />
+              <mxPoint x="930" y="592" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p4dev" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;shadow=1;" value="&lt;b&gt;可编程数据平面设备&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10&quot; color=&quot;#666&quot;&gt;BMv2 (v1model)&lt;br&gt;Tofino (TNA)&lt;/font&gt;" vertex="1">
+          <mxGeometry height="50" width="200" x="1020" y="647" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="data_out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b85450;fontSize=10;strokeWidth=3;" target="p4dev" value="部署">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1250" y="475" />
+              <mxPoint x="1250" y="677" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="onos" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333;fontSize=10;" target="p4dev" value="流规则下发">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="user" parent="1" style="shape=mxgraph.flowchart.terminator;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" value="👤 网络工程师" vertex="1">
+          <mxGeometry height="40" width="130" x="585" y="767" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="user" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333;fontSize=10;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="phase5" value="Web UI">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="655" y="777" />
+              <mxPoint x="655" y="777" />
+            </Array>
+            <mxPoint x="940" y="767" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rD9lc0RaysqHVmlGGa_l-1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;strokeWidth=1;fontSize=15;" value="&lt;br&gt;&lt;b style=&quot;forced-color-adjust: none; color: rgb(0, 0, 0); font-family: Helvetica; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(236, 236, 236); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;Phase 5: Web UI全流程集成&lt;/b&gt;&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="200" x="555" y="587" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

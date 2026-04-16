@@ -1,0 +1,265 @@
+// Polymorphic Network Protocol DSL Grammar
+
+start: poly_program
+
+poly_program: polymorphic_def*
+
+// ---- Top-level protocol definition ----
+polymorphic_def: POLY_KW_POLYMORPHIC POLY_NAME (POLY_KW_EXTENDS POLY_NAME)? (POLY_KW_WITH poly_mixin_list)? "{" poly_block* "}"
+
+poly_mixin_list: POLY_NAME ("," POLY_NAME)*
+
+poly_block: topology_block
+          | control_block
+          | data_block
+
+// ---- Topology block ----
+topology_block: POLY_KW_TOPOLOGY "{" topo_item* "}"
+
+topo_item: profile_def
+         | pattern_def
+         | node_def
+         | link_def
+         | constrain_def
+
+profile_def: POLY_KW_PROFILE POLY_NAME "{" profile_attr* "}"
+
+profile_attr: POLY_KW_TARGET ":" poly_value
+            | POLY_KW_PIPELINE ":" poly_value
+            | POLY_KW_COMPILER ":" poly_value
+            | profile_mgmt
+
+profile_mgmt: POLY_KW_MGMT "{" profile_mgmt_attr* "}"
+
+profile_mgmt_attr: POLY_KW_PROTOCOL ":" poly_value
+                 | POLY_KW_PORT ":" poly_value
+                 | POLY_KW_AUTH ":" poly_value
+
+pattern_def: POLY_KW_PATTERN POLY_NAME "(" poly_param_list? ")" "{" pattern_body_item* "}"
+
+poly_param_list: poly_param ("," poly_param)*
+poly_param: POLY_NAME ":" poly_value
+
+pattern_body_item: layer_def
+                 | mesh_def
+
+layer_def: POLY_KW_LAYER POLY_NAME "(" POLY_NUMBER ")" "{" POLY_KW_PROFILE ":" poly_value "}"
+
+mesh_def: POLY_KW_MESH "(" POLY_NAME "," POLY_NAME ")"
+
+node_def: POLY_KW_NODE POLY_NAME "{" node_attr* "}"
+
+node_attr: POLY_KW_ROLE ":" poly_value
+         | POLY_KW_PROFILE ":" poly_value
+         | node_mgmt
+
+node_mgmt: POLY_KW_MGMT "{" node_mgmt_attr* "}"
+
+node_mgmt_attr: POLY_KW_ADDRESS ":" poly_value
+              | POLY_KW_PROTOCOL ":" poly_value
+              | POLY_KW_PORT ":" poly_value
+
+link_def: POLY_KW_LINK POLY_NAME link_arrow POLY_NAME "{" link_attr* "}"
+
+link_arrow: "->"  -> directed_link
+          | "--"  -> undirected_link
+
+link_attr: POLY_NAME ":" poly_value
+
+constrain_def: POLY_KW_CONSTRAIN POLY_NAME ":" poly_value
+
+// ---- Control block ----
+control_block: POLY_KW_CONTROL "{" ctrl_item* "}"
+
+ctrl_item: app_def
+         | capabilities_def
+         | state_def
+         | discovery_def
+         | on_event_def
+         | periodic_def
+         | flow_push_def
+
+app_def: POLY_KW_APP "{" app_attr* "}"
+
+app_attr: POLY_KW_NAME ":" poly_value
+        | POLY_KW_VERSION ":" poly_value
+        | POLY_KW_DESCRIPTION ":" poly_value
+        | POLY_KW_ONOS_VERSION ":" poly_value
+        | POLY_KW_FEATURES ":" poly_list
+
+capabilities_def: POLY_KW_CAPABILITIES ":" poly_list
+
+state_def: POLY_KW_STATE POLY_NAME ":" TYPE_EXPR ";"
+
+discovery_def: POLY_KW_DISCOVERY "{" discovery_item* "}"
+
+discovery_item: discovery_providers
+              | discovery_on_event
+
+discovery_providers: POLY_KW_PROVIDERS ":" "{" provider_entry* "}"
+
+provider_entry: POLY_NAME "{" provider_attr* "}"
+
+provider_attr: POLY_NAME ":" poly_value
+
+discovery_on_event: POLY_KW_ON POLY_NAME "(" poly_id_list? ")" "{" action_stmt* "}"
+
+action_stmt: POLY_NAME "(" poly_id_list? ")" ";"
+
+on_event_def: POLY_KW_ON POLY_NAME "(" poly_id_list? ")" "{" action_stmt* "}"
+
+poly_id_list: POLY_NAME ("," POLY_NAME)*
+
+periodic_def: POLY_KW_PERIODIC POLY_NAME "{" periodic_attr* "}"
+
+periodic_attr: POLY_KW_EVERY ":" poly_value
+             | action_stmt
+
+flow_push_def: POLY_KW_FLOW_PUSH "{" flow_push_attr* "}"
+
+flow_push_attr: POLY_KW_TARGET ":" poly_value
+              | POLY_KW_RULES ":" POLY_KW_FROM DOTTED_NAME
+              | POLY_KW_VIA ":" DOTTED_NAME
+
+// ---- Data block ----
+data_block: POLY_KW_DATA "{" data_item* "}"
+
+data_item: packet_def
+         | parse_def
+         | include_def
+         | module_def
+         | service_def
+
+packet_def: POLY_KW_PACKET POLY_NAME "{" packet_section* "}"
+
+packet_section: header_section
+              | metadata_section
+
+header_section: POLY_KW_HEADER "{" field_def* "}"
+metadata_section: POLY_KW_METADATA "{" field_def* "}"
+
+field_def: POLY_NAME ":" POLY_NAME ";"
+
+parse_def: POLY_KW_PARSE POLY_NAME "{" parse_item* "}"
+
+parse_item: extract_clause
+          | match_clause
+
+extract_clause: POLY_KW_EXTRACT POLY_NAME
+
+match_clause: POLY_KW_MATCH POLY_NAME "{" match_case* "}"
+
+match_case: match_value "=>" extract_or_drop ","?
+
+match_value: poly_value
+           | POLY_WILDCARD
+
+POLY_WILDCARD.3: "_"
+
+extract_or_drop: POLY_KW_EXTRACT POLY_NAME  -> match_extract
+               | POLY_KW_DROP               -> match_drop
+
+include_def: POLY_KW_INCLUDE STRING
+
+module_def: POLY_KW_MODULE POLY_NAME "(" POLY_NAME ")" "{" module_attr* "}"
+
+module_attr: POLY_KW_WHEN ":" MODULE_EXPR ";"
+           | POLY_KW_ACTION ":" MODULE_EXPR ";"
+           | module_constraints
+
+module_constraints: POLY_KW_CONSTRAINTS "{" module_constraint_attr* "}"
+
+module_constraint_attr: POLY_NAME ":" poly_value ";"
+
+service_def: POLY_KW_SERVICE POLY_NAME "{" service_attr* "}"
+
+service_attr: POLY_KW_APPLIES ":" poly_list
+            | POLY_KW_TARGET_ROLE ":" poly_value
+            | POLY_KW_PIPELINE ":" poly_value
+            | POLY_KW_CONSTRAINTS ":" poly_list
+
+// ---- Shared value types ----
+poly_value: STRING       -> poly_string
+          | POLY_NUMBER  -> poly_num
+          | POLY_BOOLEAN -> poly_bool
+          | poly_list
+          | poly_object
+
+poly_list: "[" (poly_value ("," poly_value)*)? "]"
+
+poly_object: "{" (poly_object_pair ("," poly_object_pair)*)? "}"
+
+poly_object_pair: POLY_NAME ":" poly_value
+
+// ---- Keywords (high priority to override POLY_NAME) ----
+POLY_KW_POLYMORPHIC.3: "polymorphic"
+POLY_KW_EXTENDS.3: "extends"
+POLY_KW_WITH.3: "with"
+POLY_KW_TOPOLOGY.3: "topology"
+POLY_KW_CONTROL.3: "control"
+POLY_KW_DATA.3: "data"
+POLY_KW_PROFILE.3: "profile"
+POLY_KW_TARGET.3: "target"
+POLY_KW_PIPELINE.3: "pipeline"
+POLY_KW_COMPILER.3: "compiler"
+POLY_KW_MGMT.3: "mgmt"
+POLY_KW_PROTOCOL.3: "protocol"
+POLY_KW_PORT.3: "port"
+POLY_KW_AUTH.3: "auth"
+POLY_KW_PATTERN.3: "pattern"
+POLY_KW_LAYER.3: "layer"
+POLY_KW_MESH.3: "mesh"
+POLY_KW_NODE.3: "node"
+POLY_KW_ROLE.3: "role"
+POLY_KW_LINK.3: "link"
+POLY_KW_CONSTRAIN.3: "constrain"
+POLY_KW_APP.3: "app"
+POLY_KW_NAME.3: "name"
+POLY_KW_VERSION.3: "version"
+POLY_KW_DESCRIPTION.3: "description"
+POLY_KW_ONOS_VERSION.3: "onos_version"
+POLY_KW_FEATURES.3: "features"
+POLY_KW_CAPABILITIES.3: "capabilities"
+POLY_KW_STATE.3: "state"
+POLY_KW_DISCOVERY.3: "discovery"
+POLY_KW_PROVIDERS.3: "providers"
+POLY_KW_ON.3: "on"
+POLY_KW_PERIODIC.3: "periodic"
+POLY_KW_EVERY.3: "every"
+POLY_KW_FLOW_PUSH.3: "flow_push"
+POLY_KW_RULES.3: "rules"
+POLY_KW_FROM.3: "from"
+POLY_KW_VIA.3: "via"
+POLY_KW_PACKET.3: "packet"
+POLY_KW_HEADER.3: "header"
+POLY_KW_METADATA.3: "metadata"
+POLY_KW_PARSE.3: "parse"
+POLY_KW_MATCH.3: "match"
+POLY_KW_EXTRACT.3: "extract"
+POLY_KW_DROP.3: "drop"
+POLY_KW_INCLUDE.3: "include"
+POLY_KW_MODULE.3: "module"
+POLY_KW_WHEN.3: "when"
+POLY_KW_ACTION.3: "action"
+POLY_KW_CONSTRAINTS.3: "constraints"
+POLY_KW_SERVICE.3: "service"
+POLY_KW_APPLIES.3: "applies"
+POLY_KW_TARGET_ROLE.3: "target_role"
+POLY_KW_ADDRESS.3: "address"
+
+// ---- Other terminals ----
+POLY_BOOLEAN.2: "true" | "false"
+POLY_NAME.1: /[A-Za-z_][A-Za-z0-9_-]*/
+POLY_NUMBER.1: /[0-9]+(\.[0-9]+)?/
+STRING: /"[^"]*"/ | /'[^']*'/
+
+TYPE_EXPR.2: /[A-Za-z_][A-Za-z0-9_<>[\], :]*/
+
+MODULE_EXPR: /[^;{}]+/
+DOTTED_NAME: /[A-Za-z_][A-Za-z0-9_-]*(\.[A-Za-z_][A-Za-z0-9_-]*)*/
+
+// ---- Whitespace & comments ----
+%import common.WS
+%ignore WS
+%ignore /\/\/[^\n]*/
+%ignore /\/\*[\s\S]*?\*\//

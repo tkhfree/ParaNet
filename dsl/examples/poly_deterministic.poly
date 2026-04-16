@@ -1,0 +1,224 @@
+// Deterministic Fabric Protocol Definition
+// A full example demonstrating the Polymorphic DSL syntax
+
+polymorphic DeterministicFabric extends BaseFabric with MonitoringMixin, SecurityMixin {
+    // ---- Topology Plane ----
+    topology {
+        // Device profiles
+        profile spine-profile {
+            target: "p4"
+            pipeline: "ingress"
+            compiler: "p4c"
+            mgmt {
+                protocol: "grpc"
+                port: 50051
+                auth: "tls"
+            }
+        }
+
+        profile leaf-profile {
+            target: "p4"
+            pipeline: "ingress"
+            compiler: "p4c"
+            mgmt {
+                protocol: "grpc"
+                port: 50052
+                auth: "tls"
+            }
+        }
+
+        profile host-profile {
+            target: "linux"
+            pipeline: "tc"
+            compiler: "tc-compiler"
+            mgmt {
+                protocol: "ssh"
+                port: 22
+                auth: "key"
+            }
+        }
+
+        // Topology patterns
+        pattern spine-leaf(redundancy: "dual") {
+            layer spine(2) { profile: "spine-profile" }
+            layer leaf(4) { profile: "leaf-profile" }
+            mesh(spine, leaf)
+        }
+
+        // Individual nodes
+        node spine1 {
+            role: "spine"
+            profile: "spine-profile"
+            mgmt {
+                address: "10.0.0.1"
+                protocol: "grpc"
+                port: 50051
+            }
+        }
+
+        node spine2 {
+            role: "spine"
+            profile: "spine-profile"
+            mgmt {
+                address: "10.0.0.2"
+                protocol: "grpc"
+                port: 50051
+            }
+        }
+
+        node leaf1 {
+            role: "leaf"
+            profile: "leaf-profile"
+            mgmt {
+                address: "10.0.1.1"
+                protocol: "grpc"
+                port: 50052
+            }
+        }
+
+        node leaf2 {
+            role: "leaf"
+            profile: "leaf-profile"
+            mgmt {
+                address: "10.0.1.2"
+                protocol: "grpc"
+                port: 50052
+            }
+        }
+
+        // Links
+        link spine1 -> leaf1 {
+            bandwidth: "100G"
+            latency: "0.1ms"
+        }
+
+        link spine1 -> leaf2 {
+            bandwidth: "100G"
+            latency: "0.1ms"
+        }
+
+        link spine2 -> leaf1 {
+            bandwidth: "100G"
+            latency: "0.1ms"
+        }
+
+        link spine2 -> leaf2 {
+            bandwidth: "100G"
+            latency: "0.1ms"
+        }
+
+        // Constraints
+        constrain links: "latency < 5ms"
+        constrain nodes: "redundancy >= 2"
+    }
+
+    // ---- Control Plane ----
+    control {
+        app {
+            name: "deterministic-controller"
+            version: "1.0.0"
+            description: "Deterministic fabric controller with TSN guarantees"
+            onos_version: "2.7"
+            features: ["topology_discovery", "path_computation", "flow_programming"]
+        }
+
+        capabilities: ["forwarding", "monitoring", "deterministic_scheduling"]
+
+        state device_count: int;
+        state flow_count: int;
+        state is_converged: bool;
+
+        periodic health_check {
+            every: "60s"
+            check_all_devices();
+            report_status();
+        }
+
+        on link_down(src, dst) {
+            detect_failure(src, dst);
+            trigger_reroute(src, dst);
+            notify_controller();
+        }
+
+        on device_connected(device_id) {
+            authenticate_device(device_id);
+            install_base_rules(device_id);
+            enable_monitoring(device_id);
+        }
+
+        flow_push {
+            target: "spine1"
+            rules: from acl.deterministic_rules
+            via: netconf.default
+        }
+    }
+
+    // ---- Data Plane ----
+    data {
+        packet ethernet_packet {
+            header {
+                dst_mac: mac_addr;
+                src_mac: mac_addr;
+                eth_type: bit16;
+                vlan_id: bit12;
+            }
+            metadata {
+                ingress_port: port_t;
+                timestamp: uint64;
+                flow_id: uint32;
+            }
+        }
+
+        packet ipv4_packet {
+            header {
+                version: bit4;
+                ihl: bit4;
+                src_ip: ipv4_addr;
+                dst_ip: ipv4_addr;
+                protocol: bit8;
+            }
+        }
+
+        parse eth_parser {
+            extract ethernet_packet
+            match eth_type {
+                "0x0800" => extract ipv4_parser,
+                "0x86DD" => extract ipv6_parser,
+                _ => drop,
+            }
+        }
+
+        include "common_headers.poly"
+
+        module forward(ethernet_packet) {
+            when: eth_type == 0x0800 && dst_mac != 0xFFFFFFFFFFFF;
+            action: l2_forward(pkt);
+            constraints {
+                priority: "high";
+                max_latency: "1ms";
+            }
+        }
+
+        module deterministic_schedule(ethernet_packet) {
+            when: flow_id != 0;
+            action: apply_schedule(flow_id);
+            constraints {
+                priority: "critical";
+                guarantee: "deterministic";
+            }
+        }
+
+        service l2_forwarding {
+            applies: ["leaf", "spine"]
+            target_role: "switch"
+            pipeline: "ingress"
+        }
+
+        service tsn_scheduler {
+            applies: ["spine"]
+            target_role: "switch"
+            pipeline: "egress"
+            constraints: ["must_have_timing_support", "requires_ptp"]
+        }
+    }
+}
