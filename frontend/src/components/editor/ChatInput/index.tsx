@@ -1,13 +1,76 @@
 import React, { useRef, useState } from 'react'
 import { Button, Spin } from 'antd'
-import { CheckCircleOutlined, CloseCircleOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  SendOutlined,
+  StopOutlined,
+  BulbOutlined,
+  ThunderboltOutlined,
+  CodeOutlined,
+  WarningOutlined,
+  FlagOutlined,
+} from '@ant-design/icons'
 import { agentChatStream, type AgentAction, type AgentStep } from '@/api/agent'
 import styles from './index.module.less'
+
+/** Extended step type supporting new event-driven format */
+type StepKind = 'thinking' | 'tool_call' | 'tool_result' | 'error' | 'finish' | 'legacy'
 
 interface ToolStep {
   toolName: string
   status: 'running' | 'success' | 'error'
   result?: unknown
+  /** New: step kind from the event-driven format */
+  kind?: StepKind
+  /** New: output text for tool_result / thinking / finish steps */
+  output?: string
+  /** New: error message for error steps */
+  errorMessage?: string
+  /** New: duration in milliseconds */
+  duration_ms?: number
+}
+
+/** Returns an icon element based on the step kind */
+function getStepIcon(step: ToolStep): React.ReactNode {
+  switch (step.kind) {
+    case 'thinking':
+      return <BulbOutlined />
+    case 'tool_call':
+      return <ThunderboltOutlined />
+    case 'tool_result':
+      return step.status === 'error' ? <CloseCircleOutlined /> : <CodeOutlined />
+    case 'error':
+      return <WarningOutlined />
+    case 'finish':
+      return <FlagOutlined />
+    default:
+      // Legacy rendering
+      if (step.status === 'running') return <Spin size="small" />
+      if (step.status === 'success') return <CheckCircleOutlined />
+      return <CloseCircleOutlined />
+  }
+}
+
+/** Returns a human-readable label based on the step kind */
+function getStepLabel(step: ToolStep): string {
+  const displayName = TOOL_DISPLAY_NAMES[step.toolName] || step.toolName
+  switch (step.kind) {
+    case 'thinking':
+      return '正在思考...'
+    case 'tool_call':
+      return `调用工具: ${displayName}`
+    case 'tool_result': {
+      const duration = step.duration_ms ? ` (${step.duration_ms}ms)` : ''
+      return `${displayName}${duration}`
+    }
+    case 'error':
+      return step.errorMessage || '发生错误'
+    case 'finish':
+      return '完成'
+    default:
+      return displayName
+  }
 }
 
 export interface ChatMessage {
@@ -45,6 +108,39 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   generate_dsl: '生成 DSL',
   compile_preview: '编译预览',
   save_deploy_artifacts: '保存部署产物',
+}
+
+/** Renders a single step row with type-aware icon, label, and optional collapsible output */
+const StepRow: React.FC<{ step: ToolStep }> = ({ step }) => {
+  const [expanded, setExpanded] = useState(false)
+
+  // Determine CSS class based on kind and status
+  const statusClass = step.kind === 'thinking' ? 'thinking' : step.status
+
+  // Check if there is output to preview
+  const hasOutput = !!step.output
+
+  return (
+    <div className={`${styles.toolStep} ${statusClass}`}>
+      <span className={styles.toolIcon}>{getStepIcon(step)}</span>
+      <span className={styles.toolName}>{getStepLabel(step)}</span>
+      {hasOutput && (
+        <span
+          className={styles.outputToggle}
+          onClick={() => setExpanded((v) => !v)}
+          role="button"
+          tabIndex={0}
+        >
+          {expanded ? '收起' : '详情'}
+        </span>
+      )}
+      {hasOutput && expanded && (
+        <div className={styles.outputPreview}>
+          <pre>{step.output}</pre>
+        </div>
+      )}
+    </div>
+  )
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -123,27 +219,61 @@ const ChatInput: React.FC<ChatInputProps> = ({
             if (idx < 0) return prev
             const msg = { ...updated[idx] }
             const steps = [...(msg.steps || [])]
+            const toolKey = step.tool || step.toolName
 
-            if (step.type === 'tool_call') {
+            if (step.type === 'thinking') {
               steps.push({
-                toolName: step.toolName,
+                toolName: 'thinking',
                 status: 'running',
+                kind: 'thinking',
+                output: step.output,
+                duration_ms: step.duration_ms,
+              })
+            } else if (step.type === 'tool_call') {
+              steps.push({
+                toolName: toolKey,
+                status: 'running',
+                kind: 'tool_call',
               })
             } else if (step.type === 'tool_result') {
               const existing = steps.findIndex(
-                (s) => s.toolName === step.toolName && s.status === 'running',
+                (s) => s.toolName === toolKey && s.status === 'running',
               )
+              const resultStep: ToolStep = {
+                toolName: toolKey,
+                status: step.success ? 'success' : 'error',
+                kind: 'tool_result',
+                result: step.result,
+                output: step.output,
+                duration_ms: step.duration_ms,
+              }
               if (existing >= 0) {
-                steps[existing] = {
-                  ...steps[existing],
-                  status: step.success ? 'success' : 'error',
-                  result: step.result,
-                }
+                steps[existing] = { ...steps[existing], ...resultStep }
               } else {
+                steps.push(resultStep)
+              }
+            } else if (step.type === 'error') {
+              steps.push({
+                toolName: 'error',
+                status: 'error',
+                kind: 'error',
+                errorMessage: step.error,
+              })
+            } else if (step.type === 'finish') {
+              steps.push({
+                toolName: 'finish',
+                status: 'success',
+                kind: 'finish',
+                output: step.output,
+                duration_ms: step.duration_ms,
+              })
+            } else if (step.type === undefined) {
+              // Legacy: no type field — fall back to old toolName/stepIndex logic
+              if (step.toolName) {
                 steps.push({
                   toolName: step.toolName,
-                  status: step.success ? 'success' : 'error',
-                  result: step.result,
+                  status: 'running',
+                  kind: 'legacy',
                 })
               }
             }
@@ -200,8 +330,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
     onApplyDSL?.(dslCode)
   }
 
-  const getToolDisplayName = (name: string) => TOOL_DISPLAY_NAMES[name] || name
-
   return (
     <div className={`${styles.chatInput} ${className ?? ''}`}>
       <div className={styles.messages}>
@@ -245,14 +373,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 {msg.steps && msg.steps.length > 0 && (
                   <div className={styles.toolSteps}>
                     {msg.steps.map((step, i) => (
-                      <div key={i} className={`${styles.toolStep} ${step.status}`}>
-                        <span className={styles.toolIcon}>
-                          {step.status === 'running' && <Spin size="small" />}
-                          {step.status === 'success' && <CheckCircleOutlined />}
-                          {step.status === 'error' && <CloseCircleOutlined />}
-                        </span>
-                        <span className={styles.toolName}>{getToolDisplayName(step.toolName)}</span>
-                      </div>
+                      <StepRow key={i} step={step} />
                     ))}
                   </div>
                 )}

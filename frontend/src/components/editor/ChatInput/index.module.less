@@ -144,10 +144,11 @@
 
     .toolStep {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 6px;
       padding: 3px 0;
       font-size: 12px;
+      flex-wrap: wrap;
 
       &.running {
         color: var(--ant-color-primary);
@@ -160,6 +161,10 @@
       &.error {
         color: var(--ant-color-error);
       }
+
+      &.thinking {
+        color: var(--ant-color-warning);
+      }
     }
 
     .toolIcon {
@@ -169,6 +174,38 @@
 
     .toolName {
       font-family: 'SFMono-Regular', Consolas, monospace;
+    }
+
+    .outputToggle {
+      font-size: 11px;
+      color: var(--ant-color-primary);
+      cursor: pointer;
+      user-select: none;
+      padding: 0 4px;
+      border-radius: 3px;
+      transition: background 0.15s;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.04);
+      }
+    }
+
+    .outputPreview {
+      width: 100%;
+      margin-top: 4px;
+
+      pre {
+        margin: 0;
+        padding: 6px 8px;
+        background: var(--ant-color-fill-quaternary);
+        border-radius: 4px;
+        font-size: 11px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 200px;
+        overflow-y: auto;
+      }
     }
   }
 
