@@ -134,7 +134,7 @@ class GeoRoute:
     """Geographic routing rule."""
     name: str
     source_region: str | None = None  # Region name or None for any
-    destination_region: str
+    destination_region: str = ""
     mode: GeoRoutingMode = GeoRoutingMode.GREEDY
     priority: int = 0
     metadata: dict[str, Any] = field(default_factory=dict)
