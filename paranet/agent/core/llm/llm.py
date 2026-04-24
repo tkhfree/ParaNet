@@ -31,8 +31,13 @@ class LLM:
         tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> Any:
+        model = self.model
+        # Auto-prefix for OpenAI-compatible providers (Zhipu GLM, DeepSeek, etc.)
+        if self.api_base and not model.startswith("openai/"):
+            model = f"openai/{model}"
+
         params: dict[str, Any] = {
-            "model": self.model,
+            "model": model,
             "messages": messages,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,

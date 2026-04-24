@@ -70,11 +70,23 @@ def run_agent_chat(
             "actions": list[dict],# Suggested frontend actions
         }
     """
-    # 1. Build ParaNetAgentConfig from env vars
+    # 1. Build ParaNetAgentConfig — prefer PARANET_LLM_* env vars,
+    #    fall back to ZHIPU_* config from backend/config.py
+    try:
+        from backend.config import config as backend_config
+
+        default_model = backend_config.ZHIPU_MODEL
+        default_key = backend_config.ZHIPU_API_KEY
+        default_base = backend_config.ZHIPU_BASE_URL
+    except Exception:
+        default_model = "glm-4-flash"
+        default_key = ""
+        default_base = "https://open.bigmodel.cn/api/paas/v4/"
+
     config = ParaNetAgentConfig(
-        model=os.getenv("PARANET_LLM_MODEL", "gpt-4o-mini"),
-        api_key=os.getenv("PARANET_LLM_API_KEY") or os.getenv("ZHIPU_API_KEY"),
-        api_base=os.getenv("PARANET_LLM_API_BASE") or os.getenv("ZHIPU_BASE_URL"),
+        model=os.getenv("PARANET_LLM_MODEL") or default_model,
+        api_key=os.getenv("PARANET_LLM_API_KEY") or default_key,
+        api_base=os.getenv("PARANET_LLM_API_BASE") or default_base,
         max_iterations=MAX_ITERATIONS,
     )
 
