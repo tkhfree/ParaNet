@@ -12,6 +12,7 @@ const Develop = lazy(() => import('@/pages/Develop'))
 const Compile = lazy(() => import('@/pages/Compile'))
 const Deploy = lazy(() => import('@/pages/Deploy'))
 const Monitor = lazy(() => import('@/pages/Monitor'))
+const Poly = lazy(() => import('@/pages/Poly'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
 // 包装懒加载组件
@@ -54,6 +55,11 @@ export const menuRoutes: RouteMenuItem[] = [
     path: '/monitor',
     title: '监控中心',
     icon: 'MonitorOutlined',
+  },
+  {
+    path: '/poly',
+    title: '协议设计',
+    icon: 'ExperimentOutlined',
   },
 ]
 
@@ -102,6 +108,10 @@ export const routes: RouteObject[] = [
       {
         path: 'monitor',
         element: LazyLoad(Monitor),
+      },
+      {
+        path: 'poly',
+        element: LazyLoad(Poly),
       },
     ],
   },
