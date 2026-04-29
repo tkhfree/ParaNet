@@ -119,5 +119,51 @@ class DBQueryAction(Action):
 
 
 @dataclass
+class ProjectAction(Action):
+    runnable: ClassVar[bool] = True
+    operation: str = ""
+    params: dict[str, Any] = field(default_factory=dict)
+    project_id: str = ""
+
+
+@dataclass
+class DeployAction(Action):
+    runnable: ClassVar[bool] = True
+    operation: str = ""
+    params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class MonitorAction(Action):
+    runnable: ClassVar[bool] = True
+    operation: str = ""
+    params: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class FileOpAction(Action):
+    runnable: ClassVar[bool] = True
+    operation: str = ""
+    params: dict[str, Any] = field(default_factory=dict)
+    project_id: str = ""
+
+
+@dataclass
+class IntentAction(Action):
+    runnable: ClassVar[bool] = True
+    operation: str = ""
+    params: dict[str, Any] = field(default_factory=dict)
+    intent_id: str = ""
+
+
+@dataclass
+class DeviceLegendAction(Action):
+    runnable: ClassVar[bool] = True
+    operation: str = ""
+    params: dict[str, Any] = field(default_factory=dict)
+    legend_id: str = ""
+
+
+@dataclass
 class UserMessageAction(Action):
     content: str = ""

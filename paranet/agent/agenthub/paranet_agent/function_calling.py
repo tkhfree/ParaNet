@@ -9,6 +9,7 @@ from paranet.agent.core.events.action import (
     FileReadAction,
     FileWriteAction,
     FileEditAction,
+    FileOpAction,
     BrowseURLAction,
     AgentFinishAction,
     DSLGenerateAction,
@@ -17,6 +18,11 @@ from paranet.agent.core.events.action import (
     TemplateCreateAction,
     TopologyAction,
     DBQueryAction,
+    ProjectAction,
+    DeployAction,
+    MonitorAction,
+    IntentAction,
+    DeviceLegendAction,
 )
 
 
@@ -59,10 +65,18 @@ def _tool_call_to_action(name: str, args: dict[str, Any]) -> Action:
         "create_from_template": TemplateCreateAction,
         "topology_op": TopologyAction,
         "query_db": DBQueryAction,
+        "project_op": ProjectAction,
+        "deploy_op": DeployAction,
+        "monitor_op": MonitorAction,
+        "file_op": FileOpAction,
+        "intent_op": IntentAction,
+        "device_legend_op": DeviceLegendAction,
     }
 
     cls = mapping.get(name)
     if cls is None:
+        if name == "finish":
+            return AgentFinishAction(outputs={"content": args.get("message", "")})
         return AgentFinishAction(outputs={"error": f"Unknown tool: {name}"})
 
     field_map: dict[type[Action], dict[str, Any]] = {
@@ -102,6 +116,34 @@ def _tool_call_to_action(name: str, args: dict[str, Any]) -> Action:
         DBQueryAction: {
             "query": args.get("query", ""),
             "params": args.get("params", {}),
+        },
+        ProjectAction: {
+            "operation": args.get("operation", ""),
+            "params": args.get("params", {}),
+            "project_id": args.get("project_id", ""),
+        },
+        DeployAction: {
+            "operation": args.get("operation", ""),
+            "params": args.get("params", {}),
+        },
+        MonitorAction: {
+            "operation": args.get("operation", ""),
+            "params": args.get("params", {}),
+        },
+        FileOpAction: {
+            "operation": args.get("operation", ""),
+            "params": args.get("params", {}),
+            "project_id": args.get("project_id", ""),
+        },
+        IntentAction: {
+            "operation": args.get("operation", ""),
+            "params": args.get("params", {}),
+            "intent_id": args.get("intent_id", ""),
+        },
+        DeviceLegendAction: {
+            "operation": args.get("operation", ""),
+            "params": args.get("params", {}),
+            "legend_id": args.get("legend_id", ""),
         },
     }
     return cls(**field_map.get(cls, {}))

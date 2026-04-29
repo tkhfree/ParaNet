@@ -118,14 +118,6 @@ def save_deploy_artifacts(body: dict):
     return ok(result)
 
 
-@_core.post("/translate", summary="自然语言转 DSL（占位）")
-def translate(body: dict):
-    input_text = body.get("input", "")
-    context = body.get("context")
-    result = intent_service.translate_natural_language(input_text, context)
-    return ok(result)
-
-
 # 推荐路径
 router = APIRouter()
 router.include_router(_core, prefix="/compile-artifacts")

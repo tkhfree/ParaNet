@@ -1,18 +1,5 @@
-"""PNE DSL 预置模板 —— 用于 create_pne_from_template 工具。
-
-模板由开发者维护，保证语法 100% 正确。
-LLM 只需选择模板和填写参数，不直接编写 PNE 代码。
-"""
-
+"""PNE DSL preset templates for create_from_template tool."""
 from __future__ import annotations
-
-from typing import Any
-
-from app.services.agent_tools import register_tool
-
-# ---------------------------------------------------------------------------
-# 模板定义
-# ---------------------------------------------------------------------------
 
 TEMPLATES: dict[str, dict[str, str]] = {
     "ipv4_parser": {
@@ -207,105 +194,8 @@ module EmptyModule() {
 
 
 def get_template_names() -> list[str]:
-    """Return all available template IDs."""
     return list(TEMPLATES.keys())
 
 
 def get_template(template_id: str) -> dict[str, str] | None:
     return TEMPLATES.get(template_id)
-
-
-# ---------------------------------------------------------------------------
-# Tool schema & executor
-# ---------------------------------------------------------------------------
-
-_TEMPLATE_LIST = "\n".join(
-    f"  - `{tid}`: {t['description']}"
-    for tid, t in TEMPLATES.items()
-)
-
-_CREATE_PNE_SCHEMA = {
-    "type": "function",
-    "function": {
-        "name": "create_pne_from_template",
-        "description": (
-            "根据预置模板创建 PNE 文件。这是创建 .pne 文件的推荐方式。"
-            "可用模板:\n" + _TEMPLATE_LIST
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "projectId": {"type": "string", "description": "项目 ID"},
-                "fileName": {
-                    "type": "string",
-                    "description": "文件名，需以 .pne 结尾，例如 router.pne",
-                },
-                "templateId": {
-                    "type": "string",
-                    "description": "模板 ID，从可用模板列表中选择",
-                    "enum": list(TEMPLATES.keys()),
-                },
-                "parentId": {"type": "string", "description": "父文件夹 ID，不传则放在根目录"},
-            },
-            "required": ["projectId", "fileName", "templateId"],
-        },
-    },
-}
-
-
-def _create_pne_from_template(
-    projectId: str,
-    fileName: str,
-    templateId: str,
-    parentId: str | None = None,
-    **_kwargs: Any,
-) -> dict[str, Any]:
-    from app.services import editor_file_service
-    from app.services.agent_tools._file_utils import auto_rename
-
-    tmpl = get_template(templateId)
-    if tmpl is None:
-        return {"error": f"未知模板: {templateId}，可用模板: {', '.join(TEMPLATES.keys())}"}
-
-    # Ensure .pne extension
-    if not fileName.endswith(".pne"):
-        fileName += ".pne"
-
-    try:
-        result = editor_file_service.create_file(
-            project_id=projectId,
-            file_name=fileName,
-            is_folder=0,
-            file_type=2,
-            content=tmpl["content"],
-            **({"parent_id": parentId} if parentId else {}),
-        )
-    except ValueError as exc:
-        err_msg = str(exc)
-        if "同名文件" in err_msg:
-            new_name = auto_rename(projectId, fileName)
-            result = editor_file_service.create_file(
-                project_id=projectId,
-                file_name=new_name,
-                is_folder=0,
-                file_type=2,
-                content=tmpl["content"],
-                **({"parent_id": parentId} if parentId else {}),
-            )
-            fileName = new_name
-        else:
-            return {"error": err_msg}
-
-    if isinstance(result, dict) and "error" in result:
-        return result
-
-    return {
-        "message": f"已基于模板 '{tmpl['name']}' 创建文件 {fileName}",
-        "templateId": templateId,
-        "templateName": tmpl["name"],
-        "content": tmpl["content"],
-        **(result if isinstance(result, dict) else {}),
-    }
-
-
-register_tool("create_pne_from_template", _CREATE_PNE_SCHEMA, _create_pne_from_template)

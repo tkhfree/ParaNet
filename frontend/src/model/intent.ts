@@ -110,20 +110,3 @@ export interface IntentCompileResponse {
   }>
 }
 
-export interface NaturalLanguageRequest {
-  input: string
-  context?: {
-    topologyId?: string
-    previousIntents?: string[]
-    skills?: string[]
-  }
-}
-
-export interface NaturalLanguageResponse {
-  dslCode: string
-  explanation: string
-  suggestions?: string[]
-  usedSkills?: string[]
-  agentPrompt?: string
-  compileResult?: IntentCompileResponse
-}

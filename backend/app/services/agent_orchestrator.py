@@ -13,10 +13,9 @@ from paranet.agent.core.controller.agent_controller import AgentController
 from paranet.agent.core.events.stream import EventStream, EventStreamSubscriber
 from paranet.agent.core.runtime.factory import RuntimeFactory
 
-logger = logging.getLogger(__name__)
+import config
 
-# Max iterations for the agent loop (can be overridden via env var)
-MAX_ITERATIONS = int(os.getenv("PARANET_AGENT_MAX_ITERATIONS", "8"))
+logger = logging.getLogger(__name__)
 
 
 def _build_context_message(
@@ -71,34 +70,22 @@ def run_agent_chat(
         }
     """
     # 1. Build ParaNetAgentConfig
-    #    后端启动时 load_dotenv 已加载 .env → os.environ
-    #    优先级: PARANET_LLM_* > ZHIPU_* > 硬编码默认值
-    config = ParaNetAgentConfig(
-        model=(
-            os.getenv("PARANET_LLM_MODEL")
-            or os.getenv("ZHIPU_MODEL")
-            or "glm-4-flash"
-        ),
-        api_key=(
-            os.getenv("PARANET_LLM_API_KEY")
-            or os.getenv("ZHIPU_API_KEY")
-            or ""
-        ),
-        api_base=(
-            os.getenv("PARANET_LLM_API_BASE")
-            or os.getenv("ZHIPU_BASE_URL")
-            or "https://open.bigmodel.cn/api/paas/v4/"
-        ),
-        max_iterations=MAX_ITERATIONS,
+    agent_config = ParaNetAgentConfig(
+        model=config.LLM_MODEL,
+        api_key=config.LLM_API_KEY,
+        api_base=config.LLM_API_BASE,
+        max_iterations=config.AGENT_MAX_ITERATIONS,
     )
 
     # 2. Create ParaNetAgent
-    agent = ParaNetAgent(config)
+    agent = ParaNetAgent(agent_config)
 
     # 3. Create Runtime via RuntimeFactory
     runtime = RuntimeFactory.create(
         force=os.getenv("PARANET_RUNTIME", "local"),
     )
+
+    max_iterations = config.AGENT_MAX_ITERATIONS
 
     # 4. Create EventStream, subscribe SSE_BRIDGE if on_step callback provided
     event_stream = EventStream()
@@ -113,7 +100,7 @@ def run_agent_chat(
         agent=agent,
         runtime=runtime,
         event_stream=event_stream,
-        max_iterations=MAX_ITERATIONS,
+        max_iterations=max_iterations,
     )
 
     # 6. If conversation_history provided, set it on controller.state.history
@@ -149,21 +136,35 @@ def run_agent_chat(
 
     for step in steps:
         formatted_steps.append(step)
+        if not isinstance(step, dict):
+            continue
+
         action_name = step.get("action", "")
+        result = step.get("result")
+        outputs = step.get("outputs")
 
-        # Extract final content from AgentFinishAction
-        if action_name == "AgentFinishAction":
-            result = step.get("result", {})
-            if isinstance(result, dict):
-                content = result.get("message", result.get("outputs", {}).get("message", ""))
+        # Extract content from AgentFinishAction
+        if action_name == "AgentFinishAction" and isinstance(result, dict):
+            content = (
+                result.get("message")
+                or result.get("content")
+                or ""
+            )
+        # Also try outputs.content for other step formats
+        elif isinstance(outputs, dict) and "content" in outputs:
+            content = outputs["content"]
 
-    # If no AgentFinishAction produced content, use the last step's observation
+    # Fallback: use last step's observation or result.content
     if not content and formatted_steps:
         last = formatted_steps[-1]
-        content = last.get("observation", last.get("result", ""))
+        if isinstance(last, dict):
+            content = last.get("observation", "")
+            if not content:
+                r = last.get("result")
+                if isinstance(r, dict):
+                    content = r.get("content", r.get("message", ""))
 
-    # If still no content, provide a fallback
-    if not content:
+    if not isinstance(content, str) or not content:
         content = "Agent completed execution."
 
     # 10. Detect frontend actions from steps

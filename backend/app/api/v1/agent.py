@@ -135,7 +135,7 @@ async def agent_chat(body: dict[str, Any]):
                 if item is None:
                     break
 
-                if "__final__" in item:
+                if isinstance(item, dict) and "__final__" in item:
                     final = item["__final__"]
                     yield f"event: message\ndata: {json.dumps({'content': final['content'], 'actions': final.get('actions', [])}, ensure_ascii=False)}\n\n"
                     yield "event: done\ndata: {}\n\n"

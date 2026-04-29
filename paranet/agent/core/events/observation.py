@@ -63,3 +63,14 @@ class TopologyObservation(Observation):
 @dataclass
 class DBQueryObservation(Observation):
     rows: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class DeployObservation(Observation):
+    deploy_id: str = ""
+    success: bool = False
+
+
+@dataclass
+class MonitorObservation(Observation):
+    metric_type: str = ""

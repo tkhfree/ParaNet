@@ -332,25 +332,39 @@ export const D3Canvas = forwardRef<D3CanvasHandle, D3CanvasProps>(({
 
     // 渲染函数
     const render = () => {
-      // 更新连线
+      // 更新连线。每条可见线旁边叠一条透明粗线，方便用户点击编辑/删除。
       const linkSelection = linksGroup
-        .selectAll<SVGLineElement, D3Link>('.link')
+        .selectAll<SVGGElement, D3Link>('.link-group')
         .data(links, (d: D3Link) => d.id)
 
       linkSelection.exit().remove()
 
       const linkEnter = linkSelection
         .enter()
-        .append('line')
-        .attr('class', 'link')
-        .attr('stroke', LINK_CONFIG.stroke)
-        .attr('stroke-width', LINK_CONFIG.strokeWidth)
-        .attr('stroke-linecap', 'round')
+        .append('g')
+        .attr('class', 'link-group')
+        .style('cursor', 'pointer')
         .on('click', (event: MouseEvent, d: D3Link) => {
           event.stopPropagation()
           const [x, y] = d3.pointer(event, svg)
           onLinkClick?.(d, x, y)
         })
+
+      linkEnter
+        .append('line')
+        .attr('class', 'link-hit-area')
+        .attr('stroke', 'transparent')
+        .attr('stroke-width', Math.max(LINK_CONFIG.strokeWidth + 12, 14))
+        .attr('stroke-linecap', 'round')
+        .attr('pointer-events', 'stroke')
+
+      linkEnter
+        .append('line')
+        .attr('class', 'link')
+        .attr('stroke', LINK_CONFIG.stroke)
+        .attr('stroke-width', LINK_CONFIG.strokeWidth)
+        .attr('stroke-linecap', 'round')
+        .attr('pointer-events', 'none')
 
       linkEnter.append('title').text((d: D3Link) => {
         const src = typeof d.source === 'string' ? d.source : d.source.name
@@ -461,23 +475,17 @@ export const D3Canvas = forwardRef<D3CanvasHandle, D3CanvasProps>(({
 
       // 模拟 tick 更新位置
       simulation.on('tick', () => {
-        allLinks
-          .attr('x1', (d: D3Link) => {
-            const source = typeof d.source === 'object' ? d.source : nodes.find(n => n.id === d.source)
-            return source?.x ?? 0
-          })
-          .attr('y1', (d: D3Link) => {
-            const source = typeof d.source === 'object' ? d.source : nodes.find(n => n.id === d.source)
-            return source?.y ?? 0
-          })
-          .attr('x2', (d: D3Link) => {
-            const target = typeof d.target === 'object' ? d.target : nodes.find(n => n.id === d.target)
-            return target?.x ?? 0
-          })
-          .attr('y2', (d: D3Link) => {
-            const target = typeof d.target === 'object' ? d.target : nodes.find(n => n.id === d.target)
-            return target?.y ?? 0
-          })
+        allLinks.each(function (d: D3Link) {
+          const source = typeof d.source === 'object' ? d.source : nodes.find(n => n.id === d.source)
+          const target = typeof d.target === 'object' ? d.target : nodes.find(n => n.id === d.target)
+
+          d3.select(this)
+            .selectAll<SVGLineElement, D3Link>('line')
+            .attr('x1', source?.x ?? 0)
+            .attr('y1', source?.y ?? 0)
+            .attr('x2', target?.x ?? 0)
+            .attr('y2', target?.y ?? 0)
+        })
 
         allNodes.attr('transform', (d: D3Node) => `translate(${d.x}, ${d.y})`)
       })

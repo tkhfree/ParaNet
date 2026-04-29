@@ -3,9 +3,9 @@ import {
   App,
   Button,
   Card,
+  Collapse,
   Empty,
   Input,
-  List,
   Modal,
   Select,
   Space,
@@ -33,6 +33,8 @@ import {
   FormOutlined,
   AimOutlined,
   BookOutlined,
+  DownOutlined,
+  UpOutlined,
 } from '@ant-design/icons'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -155,6 +157,7 @@ const DEFAULT_DSL_FILE_NAME = 'intent.pne'
 const FLOATING_PREVIEW_MARGIN = 16
 const DEVELOP_LAYOUT_STORAGE_KEY = 'paranet-develop-layout-widths'
 const DEVELOP_WORKSPACE_SPLIT_STORAGE_KEY = 'paranet-develop-workspace-split'
+const DEVELOP_TERMINAL_VISIBLE_STORAGE_KEY = 'paranet-develop-terminal-visible'
 const DEVICE_LEGEND_STORAGE_KEY = 'paranet-device-legends'
 const DEVELOP_LAYOUT_GAP = 16
 const DEVELOP_LEFT_MIN = 240
@@ -314,6 +317,13 @@ const Develop: React.FC = () => {
       return 620
     }
   })
+  const [terminalVisible, setTerminalVisible] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {
+      return true
+    }
+
+    return window.localStorage.getItem(DEVELOP_TERMINAL_VISIBLE_STORAGE_KEY) !== 'false'
+  })
   const [layoutWidths, setLayoutWidths] = useState<DevelopLayoutWidths>(() => {
     if (typeof window === 'undefined') {
       return { left: 280, right: 400 }
@@ -384,9 +394,12 @@ const Develop: React.FC = () => {
     ],
     []
   )
-  const isWorkspaceCompact = workspaceTopHeight < 620
-  const isWorkspaceTight = workspaceTopHeight < 500
-  const isWorkspaceUltraTight = workspaceTopHeight < 420
+  const workspaceContentHeight = terminalVisible
+    ? workspaceTopHeight
+    : workspaceColumnSize.height || workspaceTopHeight
+  const isWorkspaceCompact = workspaceContentHeight < 620
+  const isWorkspaceTight = workspaceContentHeight < 500
+  const isWorkspaceUltraTight = workspaceContentHeight < 420
 
   const startCustomLegendDrag = useCallback(
     (event: React.MouseEvent<HTMLDivElement>, deviceType: NodeType, label: string) => {
@@ -561,14 +574,14 @@ const Develop: React.FC = () => {
   }, [layoutWidths])
 
   useEffect(() => {
-    if (workspaceColumnSize.height <= 0) {
+    if (!terminalVisible || workspaceColumnSize.height <= 0) {
       return
     }
 
     setWorkspaceTopHeight((current) =>
       clampWorkspaceTopHeight(current, workspaceColumnSize.height)
     )
-  }, [workspaceColumnSize.height])
+  }, [terminalVisible, workspaceColumnSize.height])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -580,6 +593,14 @@ const Develop: React.FC = () => {
       JSON.stringify({ topHeight: workspaceTopHeight })
     )
   }, [workspaceTopHeight])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    window.localStorage.setItem(DEVELOP_TERMINAL_VISIBLE_STORAGE_KEY, String(terminalVisible))
+  }, [terminalVisible])
 
   useEffect(() => {
     if (!floatingPreviewOpen) {
@@ -980,7 +1001,7 @@ const Develop: React.FC = () => {
 
   const handleWorkspaceVerticalResizerMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      if (!workspaceColumnRef.current) {
+      if (!terminalVisible || !workspaceColumnRef.current) {
         return
       }
 
@@ -991,7 +1012,7 @@ const Develop: React.FC = () => {
       }
       event.preventDefault()
     },
-    [workspaceTopHeight]
+    [terminalVisible, workspaceTopHeight]
   )
 
   const handleFloatingPreviewMouseDown = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -1259,7 +1280,11 @@ const Develop: React.FC = () => {
         >
           <div
             className={`${styles.workspaceMainPane} ${isWorkspaceCompact ? styles.workspaceMainPaneCompact : ''}`}
-            style={{ height: workspaceTopHeight, flexBasis: workspaceTopHeight }}
+            style={
+              terminalVisible
+                ? { height: workspaceTopHeight, flexBasis: workspaceTopHeight }
+                : { flex: '1 1 auto', height: 'auto' }
+            }
           >
             <Card className={styles.workspaceCard} bodyStyle={{ height: '100%' }}>
               <Tabs
@@ -1479,7 +1504,7 @@ const Develop: React.FC = () => {
 
                             {topologyWorkbenchMode === 'assets' && (
                               <div className={`${styles.sideModeCard} ${styles.assetsPanel}`}>
-                                <div className={`${styles.orchestratorSection} ${styles.assetsSectionCard}`}>
+                                <div className={`${styles.orchestratorSection} ${styles.assetsSectionCard} ${styles.topologyAssetsSection}`}>
                                   <div className={styles.orchestratorSectionHeader}>
                                     <div className={styles.orchestratorSectionTitle}>项目拓扑</div>
                                     <Space size={4}>
@@ -1500,44 +1525,53 @@ const Develop: React.FC = () => {
                                       </Button>
                                     </Space>
                                   </div>
-                                  <List
-                                    split={false}
-                                    className={styles.topologyAssetList}
-                                    loading={topologyLoading}
-                                    dataSource={topologyList}
-                                    locale={{ emptyText: '当前项目还没有拓扑示例' }}
-                                    renderItem={(item) => (
-                                      <List.Item
-                                        className={`${styles.topologyListItem} ${item.id === activeTopologyId ? styles.activeTopologyItem : ''}`}
-                                        onClick={async () => {
-                                          await updateCurrentProject({ topologyId: item.id })
-                                        }}
-                                      >
-                                        <div className={styles.topologyItemContent}>
-                                          <div className={styles.topologyItemHeader}>
-                                            <div className={styles.topologyItemName}>{item.name}</div>
-                                            <div className={styles.topologyItemStats}>
+                                  {topologyLoading ? (
+                                    <div className={styles.topologyLoading}>拓扑加载中...</div>
+                                  ) : topologyList.length === 0 ? (
+                                    <Empty className={styles.topologyEmpty} description="当前项目还没有拓扑示例" />
+                                  ) : (
+                                    <Collapse
+                                      accordion
+                                      className={styles.topologyAssetCollapse}
+                                      activeKey={activeTopologyId ?? undefined}
+                                      onChange={(key) => {
+                                        const nextTopologyId = Array.isArray(key) ? key[0] : key
+                                        if (nextTopologyId && nextTopologyId !== activeTopologyId) {
+                                          void updateCurrentProject({ topologyId: nextTopologyId })
+                                        }
+                                      }}
+                                      items={topologyList.map((item) => ({
+                                        key: item.id,
+                                        className: item.id === activeTopologyId ? styles.activeTopologyPanel : undefined,
+                                        label: (
+                                          <div className={styles.topologyCollapseLabel}>
+                                            <span className={styles.topologyItemName}>{item.name}</span>
+                                            <span className={styles.topologyItemStats}>
                                               <span className={styles.topologyStatBadge}>
                                                 {(item.nodes as unknown as unknown[])?.length ?? 0} 节点
                                               </span>
                                               <span className={styles.topologyStatBadge}>
                                                 {(item.links as unknown as unknown[])?.length ?? 0} 链路
                                               </span>
+                                            </span>
+                                          </div>
+                                        ),
+                                        children: (
+                                          <div className={styles.topologyCollapseBody}>
+                                            {item.description && (
+                                              <div className={styles.topologyItemDesc}>{item.description}</div>
+                                            )}
+                                            <div className={styles.topologyItemMeta}>
+                                              <span>创建：{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-'}</span>
+                                              <span>更新：{item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : '-'}</span>
                                             </div>
                                           </div>
-                                          {item.description && (
-                                            <div className={styles.topologyItemDesc}>{item.description}</div>
-                                          )}
-                                          <div className={styles.topologyItemMeta}>
-                                            <span>创建：{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-'}</span>
-                                            <span>更新：{item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : '-'}</span>
-                                          </div>
-                                        </div>
-                                      </List.Item>
-                                    )}
-                                  />
+                                        ),
+                                      }))}
+                                    />
+                                  )}
                                 </div>
-                                <div className={`${styles.orchestratorSection} ${styles.assetsSectionCard}`}>
+                                <div className={`${styles.orchestratorSection} ${styles.assetsSectionCard} ${styles.deviceLegendSection}`}>
                                   <div className={styles.orchestratorSectionHeader}>
                                     <div className={styles.orchestratorSectionTitle}>设备图例</div>
                                     <Space size={4}>
@@ -1602,13 +1636,26 @@ const Develop: React.FC = () => {
           </div>
 
           <div
-            className={styles.workspaceRowResizer}
+            className={`${styles.workspaceRowResizer} ${!terminalVisible ? styles.workspaceRowResizerCollapsed : ''}`}
             onMouseDown={handleWorkspaceVerticalResizerMouseDown}
-          />
-
-          <div className={styles.terminalPane}>
-            <InteractiveTerminal projectId={currentProjectId} height="100%" />
+          >
+            <Button
+              size="small"
+              type="text"
+              className={styles.terminalToggleButton}
+              icon={terminalVisible ? <DownOutlined /> : <UpOutlined />}
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={() => setTerminalVisible((current) => !current)}
+            >
+              {terminalVisible ? '隐藏终端' : '显示终端'}
+            </Button>
           </div>
+
+          {terminalVisible && (
+            <div className={styles.terminalPane}>
+              <InteractiveTerminal projectId={currentProjectId} height="100%" />
+            </div>
+          )}
         </div>
 
         <div

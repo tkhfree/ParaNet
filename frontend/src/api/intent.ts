@@ -6,8 +6,6 @@ import type {
   IntentCompileRequest,
   IntentCompileResponse,
   CompilePreviewRequest,
-  NaturalLanguageRequest,
-  NaturalLanguageResponse,
   SaveDeployArtifactsRequest,
 } from '@/model/intent'
 
@@ -64,13 +62,6 @@ export const intentApi = {
       `${ARTIFACTS}/compile-preview`,
       data,
       { signal }
-    )
-  },
-
-  translateNaturalLanguage: (data: NaturalLanguageRequest) => {
-    return axios.post<NaturalLanguageRequest, ApiResponse<NaturalLanguageResponse>>(
-      `${ARTIFACTS}/translate`,
-      data
     )
   },
 }
