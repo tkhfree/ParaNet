@@ -20,6 +20,8 @@ from paranet.agent.core.events.action import (
 )
 from paranet.agent.core.events.observation import Observation, CmdOutputObservation
 from paranet.agent.core.runtime.base import Runtime
+from paranet.agent.core.loop_protection import StuckDetector, CancelFlag, IterationControlFlag
+from paranet.agent.core.persistence.session_store import SessionStore
 from paranet.agent.tools.code_exec import CodeExecToolHandler
 from paranet.agent.tools.dsl import DSLToolHandler
 from paranet.agent.tools.topology import TopologyToolHandler
@@ -41,20 +43,33 @@ class AgentController:
         runtime: Runtime,
         event_stream: EventStream,
         max_iterations: int = 30,
+        session_store: SessionStore | None = None,
+        stuck_detector: StuckDetector | None = None,
+        cancel_flag: CancelFlag | None = None,
     ):
         self.agent = agent
         self.runtime = runtime
         self.event_stream = event_stream
         self.max_iterations = max_iterations
         self.state = State(max_iterations=max_iterations)
+        self._session_store = session_store
+        self._stuck_detector = stuck_detector or StuckDetector()
+        self._cancel_flag = cancel_flag or CancelFlag()
+        self._iteration_control = IterationControlFlag(max_iterations=max_iterations)
 
     def step(self) -> Action | None:
-        if self.state.iteration >= self.max_iterations:
+        if self._cancel_flag.is_cancelled:
+            logger.info("Agent cancelled by user")
+            self.state.agent_state = AgentState.FINISHED
+            return None
+
+        if self._iteration_control.is_exceeded:
             logger.warning("Max iterations reached")
             self.state.agent_state = AgentState.FINISHED
             return None
 
-        self.state.iteration += 1
+        self._iteration_control.increment()
+        self.state.iteration = self._iteration_control.iteration
         action = self.agent.step(self.state)
         self.event_stream.add_event(action, EventSource.AGENT)
 
@@ -139,10 +154,50 @@ class AgentController:
                 break
 
             obs = self.execute_action(action)
+
+            # Check stuck detector
+            if obs is not None:
+                result = self._stuck_detector.check(action, obs)
+                if result.is_stuck:
+                    logger.warning("Stuck detected: %s — %s", result.pattern, result.details)
+                    self.state.agent_state = AgentState.ERROR
+                    step_info["observation"] = obs.content
+                    step_info["stuck"] = True
+                    step_info["stuck_pattern"] = result.pattern.value
+                    step_info["stuck_details"] = result.details
+                    steps.append(step_info)
+                    break
+
             step_info["observation"] = obs.content if obs else None
             steps.append(step_info)
 
+        self._save_session_metadata()
         return steps
 
     def close(self):
         self.runtime.close()
+
+    def _save_session_metadata(self) -> None:
+        if self._session_store is None:
+            return
+        from paranet.agent.core.persistence.session_store import SessionMetadata
+        final_status = "cancelled" if self._cancel_flag.is_cancelled else self.state.agent_state.value
+        meta = SessionMetadata(
+            session_id=self.state.session_id,
+            status=final_status,
+            agent_state=self.state.agent_state.value,
+            iteration=self.state.iteration,
+            max_iterations=self.max_iterations,
+            event_count=self.state.iteration * 2,
+        )
+        self._session_store.save(meta)
+
+    def restore_session(self, session_id: str, user_message: str) -> list[dict[str, Any]]:
+        """Restore a previous session from persisted events and resume."""
+        from paranet.agent.core.persistence.persisted_stream import PersistedEventStream
+        if not isinstance(self.event_stream, PersistedEventStream):
+            raise ValueError("restore_session requires PersistedEventStream")
+        replayed = self.event_stream.replay_to_history()
+        self.state.history = replayed
+        self.state.session_id = session_id
+        return self.run_loop(user_message)

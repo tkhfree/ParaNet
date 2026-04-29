@@ -12,6 +12,8 @@ from paranet.agent.agenthub.paranet_agent.config import ParaNetAgentConfig
 from paranet.agent.core.controller.agent_controller import AgentController
 from paranet.agent.core.events.stream import EventStream, EventStreamSubscriber
 from paranet.agent.core.runtime.factory import RuntimeFactory
+from paranet.agent.core.loop_protection import StuckDetector, CancelFlag
+from paranet.agent.core.persistence import LocalFileStore, PersistedEventStream, SessionStore
 
 import config
 
@@ -56,6 +58,8 @@ def run_agent_chat(
     project_id: str | None = None,
     conversation_history: list[dict[str, str]] | None = None,
     on_step: Callable[[dict[str, Any]], None] | None = None,
+    session_id: str | None = None,
+    cancel_flag: CancelFlag | None = None,
 ) -> dict[str, Any]:
     """Run the agent via AgentController.
 
@@ -95,13 +99,30 @@ def run_agent_chat(
             on_step,
         )
 
+    # 4.5 Set up persistence and loop protection
+    session_store: SessionStore | None = None
+    if session_id:
+        from pathlib import Path
+        data_dir = Path(config.DATA_DIR) / "agent_sessions"
+        file_store = LocalFileStore(data_dir)
+        session_store = SessionStore(file_store)
+        event_stream = PersistedEventStream(session_id, file_store, event_stream)
+
+    stuck_detector = StuckDetector()
+    effective_cancel = cancel_flag or CancelFlag()
+
     # 5. Create AgentController
     controller = AgentController(
         agent=agent,
         runtime=runtime,
         event_stream=event_stream,
         max_iterations=max_iterations,
+        session_store=session_store,
+        stuck_detector=stuck_detector,
+        cancel_flag=effective_cancel,
     )
+    if session_id:
+        controller.state.session_id = session_id
 
     # 6. If conversation_history provided, set it on controller.state.history
     if conversation_history:

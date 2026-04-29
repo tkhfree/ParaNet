@@ -21,3 +21,4 @@ class State:
     agent_state: AgentState = AgentState.RUNNING
     history: list[dict[str, Any]] = field(default_factory=list)
     extra_data: dict[str, Any] = field(default_factory=dict)
+    session_id: str = ""
